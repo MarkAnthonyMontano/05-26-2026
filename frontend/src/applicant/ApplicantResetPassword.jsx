@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { SettingsContext } from "../App";
-import axios from "axios";
 import {
   Button,
   TextField,
@@ -17,6 +16,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Visibility,
@@ -25,6 +26,7 @@ import {
   Cancel,
   LockReset,
 } from "@mui/icons-material";
+import axios from "axios";
 import API_BASE_URL from "../apiConfig";
 
 const passwordRules = [
@@ -37,12 +39,13 @@ const passwordRules = [
 
 const ApplicantResetPassword = () => {
   const settings = useContext(SettingsContext);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-
 
   useEffect(() => {
     if (settings) {
@@ -50,7 +53,6 @@ const ApplicantResetPassword = () => {
       if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
       if (settings.border_color) setBorderColor(settings.border_color);
       if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
-
     }
   }, [settings]);
 
@@ -58,22 +60,13 @@ const ApplicantResetPassword = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [validations, setValidations] = useState([]);
-  const [showPassword, setShowPassword] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
-  const [snack, setSnack] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+  const [showPassword, setShowPassword] = useState({ current: false, new: false, confirm: false });
+  const [snack, setSnack] = useState({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
     const storedUser = localStorage.getItem("email");
     const storedRole = localStorage.getItem("role");
     const storedID = localStorage.getItem("person_id");
-
     if (!(storedUser && storedRole && storedID && storedRole === "applicant")) {
       window.location.href = "/login";
     }
@@ -95,95 +88,62 @@ const ApplicantResetPassword = () => {
         currentPassword,
         newPassword,
       });
-
-      setSnack({
-        open: true,
-        message: response.data.message,
-        severity: "success",
-      });
+      setSnack({ open: true, message: response.data.message, severity: "success" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setSnack({
-        open: true,
-        message: err.response?.data?.message || "Error updating password.",
-        severity: "error",
-      });
+      setSnack({ open: true, message: err.response?.data?.message || "Error updating password.", severity: "error" });
     }
   };
 
-  const toggleShowPassword = (field) => {
+  const toggleShowPassword = (field) =>
     setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
-
 
   return (
-    <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
-      {/* 🔝 Header Section */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "flex-start",
-          alignItems: "center",
-          flexWrap: "wrap",
-          mb: 2,
-        }}
-      >
+    <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: { xs: 1, sm: 2 } }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "flex-start", alignItems: "center", flexWrap: "wrap", mb: 2 }}>
         <Typography
           variant="h4"
-          sx={{
-            fontWeight: "bold",
-            color: titleColor,
-            fontSize: "36px",
-          }}
+          sx={{ fontWeight: "bold", color: titleColor, fontSize: { xs: "20px", sm: "28px", md: "36px" } }}
         >
           APPLICANT RESET PASSWORD
         </Typography>
-
       </Box>
 
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
       <br />
 
-      {/* 🔒 Password Form Section */}
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+      {/* Form — full width on mobile, centered card on desktop */}
+      <Box sx={{ display: "flex", justifyContent: "center", mt: { xs: 1, sm: 4 } }}>
         <Paper
           elevation={6}
           sx={{
-            p: 3,
-            width: "40%",
+            p: { xs: 2, sm: 3 },
+            width: { xs: "100%", sm: "80%", md: "40%" },
             maxWidth: "540px",
             borderRadius: 4,
             backgroundColor: "#fff",
-            border: `1px solid ${borderColor}`,   // ✅ APPLY DYNAMIC BORDER COLOR
+            border: `1px solid ${borderColor}`,
             boxShadow: "0px 4px 20px rgba(0,0,0,0.1)",
             mb: 12,
           }}
         >
-
           {/* Lock Icon Header */}
           <Box textAlign="center" mb={2}>
             <LockReset
               sx={{
-                fontSize: 80,
+                fontSize: { xs: 60, sm: 80 },
                 color: "#000000",
                 backgroundColor: "#f0f0f0",
                 borderRadius: "50%",
                 p: 1,
               }}
             />
-            <Typography
-              variant="h5"
-              fontWeight="bold"
-              sx={{
-                mt: 1,
-                color: subtitleColor,   // ✅ apply subtitle color here
-              }}
-            >
+            <Typography variant="h5" fontWeight="bold" sx={{ mt: 1, color: subtitleColor, fontSize: { xs: "18px", sm: "22px" } }}>
               Reset Your Password
             </Typography>
-
             <Typography fontSize={13} color="text.secondary">
               Update your password to keep your account secure.
             </Typography>
@@ -191,97 +151,57 @@ const ApplicantResetPassword = () => {
 
           <Divider sx={{ mb: 2 }} />
 
-          {/* Form */}
           <form onSubmit={handleUpdate}>
-            <Box mb={2}>
-              <InputLabel>Current Password</InputLabel>
-              <TextField
-                fullWidth
-                type={showPassword.current ? "text" : "password"}
-                size="small"
-                variant="outlined"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => toggleShowPassword("current")} edge="end">
-                        {showPassword.current ? <Visibility /> : <VisibilityOff />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
+            {[
+              { label: "Current Password", value: currentPassword, setter: setCurrentPassword, field: "current" },
+              { label: "New Password", value: newPassword, setter: setNewPassword, field: "new" },
+              { label: "Confirm Password", value: confirmPassword, setter: setConfirmPassword, field: "confirm" },
+            ].map(({ label, value, setter, field }) => (
+              <Box mb={2} key={field}>
+                <InputLabel sx={{ fontSize: { xs: "13px", sm: "14px" } }}>{label}</InputLabel>
+                <TextField
+                  fullWidth
+                  type={showPassword[field] ? "text" : "password"}
+                  size="small"
+                  variant="outlined"
+                  value={value}
+                  onChange={(e) => setter(e.target.value)}
+                  error={field === "confirm" && Boolean(confirmPassword && confirmPassword !== newPassword)}
+                  helperText={field === "confirm" && confirmPassword && confirmPassword !== newPassword ? "Passwords do not match" : ""}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => toggleShowPassword(field)} edge="end" size={isMobile ? "small" : "medium"}>
+                          {showPassword[field] ? <Visibility /> : <VisibilityOff />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+            ))}
 
-            <Box mb={2}>
-              <InputLabel>New Password</InputLabel>
-              <TextField
-                fullWidth
-                type={showPassword.new ? "text" : "password"}
-                size="small"
-                variant="outlined"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => toggleShowPassword("new")} edge="end">
-                        {showPassword.new ? <Visibility /> : <VisibilityOff />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            <Box mb={2}>
-              <InputLabel>Confirm Password</InputLabel>
-              <TextField
-                fullWidth
-                type={showPassword.confirm ? "text" : "password"}
-                size="small"
-                variant="outlined"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                error={Boolean(confirmPassword && confirmPassword !== newPassword)}
-                helperText={
-                  confirmPassword && confirmPassword !== newPassword
-                    ? "Passwords do not match"
-                    : ""
-                }
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => toggleShowPassword("confirm")} edge="end">
-                        {showPassword.confirm ? <Visibility /> : <VisibilityOff />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontSize: { xs: "12px", sm: "14px" } }}>
               Your new password must include:
             </Typography>
 
             <List dense disablePadding>
               {passwordRules.map((rule, i) => (
-                <ListItem key={i}>
-                  <ListItemIcon>
-                    {validations[i] ? (
-                      <CheckCircle sx={{ color: "green" }} />
-                    ) : (
-                      <Cancel sx={{ color: "red" }} />
-                    )}
+                <ListItem key={i} sx={{ py: 0.25, px: 0 }}>
+                  <ListItemIcon sx={{ minWidth: 32 }}>
+                    {validations[i]
+                      ? <CheckCircle sx={{ color: "green", fontSize: { xs: 18, sm: 22 } }} />
+                      : <Cancel sx={{ color: "red", fontSize: { xs: 18, sm: 22 } }} />}
                   </ListItemIcon>
-                  <ListItemText primary={rule.label} />
+                  <ListItemText
+                    primary={rule.label}
+                    primaryTypographyProps={{ fontSize: { xs: "12px", sm: "14px" } }}
+                  />
                 </ListItem>
               ))}
             </List>
 
-            <Typography variant="body2" color="warning.main" sx={{ mt: 1, mb: 2 }}>
+            <Typography variant="body2" color="warning.main" sx={{ mt: 1, mb: 2, fontSize: { xs: "11px", sm: "13px" } }}>
               Note: You are required to change your password to continue using the system securely.
             </Typography>
 
@@ -293,35 +213,28 @@ const ApplicantResetPassword = () => {
               sx={{
                 py: 1.2,
                 borderRadius: 2,
-                backgroundColor: mainButtonColor,   // ✅ dynamic
+                backgroundColor: mainButtonColor,
                 border: `1px solid ${borderColor}`,
                 textTransform: "none",
                 fontWeight: "bold",
-                "&:hover": {
-                  backgroundColor: mainButtonColor,  // ✅ same color (prevents mismatch)
-                  opacity: 0.9,                      // ✅ subtle hover effect
-                },
+                fontSize: { xs: "13px", sm: "15px" },
+                "&:hover": { backgroundColor: mainButtonColor, opacity: 0.9 },
+                "&.Mui-disabled": { backgroundColor: "#b0b8c8", color: "#fff", opacity: 0.7 },
               }}
             >
               Update Password
             </Button>
-
           </form>
         </Paper>
       </Box>
 
-      {/* Snackbar */}
       <Snackbar
         open={snack.open}
         autoHideDuration={4000}
         onClose={() => setSnack((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert
-          severity={snack.severity}
-          onClose={() => setSnack((prev) => ({ ...prev, open: false }))}
-          sx={{ width: "100%" }}
-        >
+        <Alert severity={snack.severity} onClose={() => setSnack((prev) => ({ ...prev, open: false }))} sx={{ width: "100%" }}>
           {snack.message}
         </Alert>
       </Snackbar>

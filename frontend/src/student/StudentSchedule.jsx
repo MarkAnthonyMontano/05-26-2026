@@ -1,11 +1,7 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { SettingsContext } from "../App";
-
 import {
   Box,
-  Button,
-  Card,
-  CardContent,
   Typography,
   Table,
   TableBody,
@@ -17,96 +13,68 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import API_BASE_URL from "../apiConfig";
+
+const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const DAY_LABELS = {
+  MON: "Monday",
+  TUE: "Tuesday",
+  WED: "Wednesday",
+  THU: "Thursday",
+  FRI: "Friday",
+  SAT: "Saturday",
+  SUN: "Sunday",
+};
+
+const TIME_SLOTS = [
+  ["7:00 AM", "8:00 AM"],
+  ["8:00 AM", "9:00 AM"],
+  ["9:00 AM", "10:00 AM"],
+  ["10:00 AM", "11:00 AM"],
+  ["11:00 AM", "12:00 PM"],
+  ["12:00 PM", "1:00 PM"],
+  ["1:00 PM", "2:00 PM"],
+  ["2:00 PM", "3:00 PM"],
+  ["3:00 PM", "4:00 PM"],
+  ["4:00 PM", "5:00 PM"],
+  ["5:00 PM", "6:00 PM"],
+  ["6:00 PM", "7:00 PM"],
+  ["7:00 PM", "8:00 PM"],
+  ["8:00 PM", "9:00 PM"],
+];
+
+const parseTime = (t) => new Date(`1970-01-01 ${t}`);
+
 const StudentSchedule = () => {
   const settings = useContext(SettingsContext);
 
   const [titleColor, setTitleColor] = useState("#000000");
-  const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-  const [subButtonColor, setSubButtonColor] = useState("#ffffff"); // ✅ NEW
-  const [stepperColor, setStepperColor] = useState("#000000"); // ✅ NEW
 
-  const [fetchedLogo, setFetchedLogo] = useState(null);
-  const [companyName, setCompanyName] = useState("");
-  const [shortTerm, setShortTerm] = useState("");
-  const [campusAddress, setCampusAddress] = useState("");
+  const [studentSchedule, setStudentSchedule] = useState([]);
+  const [activeDay, setActiveDay] = useState("MON");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     if (!settings) return;
-
-    // 🎨 Colors
     if (settings.title_color) setTitleColor(settings.title_color);
-    if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
     if (settings.border_color) setBorderColor(settings.border_color);
-    if (settings.main_button_color)
-      setMainButtonColor(settings.main_button_color);
-    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color); // ✅ NEW
-    if (settings.stepper_color) setStepperColor(settings.stepper_color); // ✅ NEW
-
-    // 🏫 Logo
-    if (settings.logo_url) {
-      setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
-    } else {
-      setFetchedLogo(EaristLogo);
-    }
-
-    // 🏷️ School Information
-    if (settings.company_name) setCompanyName(settings.company_name);
-    if (settings.short_term) setShortTerm(settings.short_term);
-    if (settings.campus_address) setCampusAddress(settings.campus_address);
+    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
   }, [settings]);
 
-  const [userID, setUserID] = useState("");
-  const [user, setUser] = useState("");
-  const [userRole, setUserRole] = useState("");
-  const [personData, setPerson] = useState({
-    student_number: "",
-    first_name: "",
-    middle_name: "",
-    last_name: "",
-  });
-  const [studentSchedule, setStudentSchedule] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const toWholeUnit = (value) => {
-    const num = Number(value);
-    return Number.isFinite(num) ? Math.round(num) : 0;
-  };
-  const sortedSchedule = [...studentSchedule].sort((a, b) =>
-    (a.course_code || "").localeCompare(b.course_code || ""),
-  );
-
   useEffect(() => {
-    const storedUser = localStorage.getItem("email");
-    const storedRole = localStorage.getItem("role");
-    const storedID = localStorage.getItem("person_id");
-
-    if (storedUser && storedRole && storedID) {
-      setUser(storedUser);
-      setUserRole(storedRole);
-      setUserID(storedID);
-
-      if (storedRole !== "student") {
-        window.location.href = "/faculty_dashboard";
-      } else {
-        fetchPersonData(storedID);
-        fetchStudentSchedule(storedID);
-        console.log("you are an student");
-      }
-    } else {
-      window.location.href = "/login";
-    }
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const fetchPersonData = async (id) => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/api/student/${id}`);
-      setPerson(res.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    const storedID = localStorage.getItem("person_id");
+    if (!storedID) { window.location.href = "/login"; return; }
+    if (storedRole !== "student") { window.location.href = "/faculty_dashboard"; return; }
+    fetchStudentSchedule(storedID);
+  }, []);
 
   const fetchStudentSchedule = async (id) => {
     try {
@@ -117,808 +85,304 @@ const StudentSchedule = () => {
     }
   };
 
-  const isTimeInSchedule = (start, end, day) => {
-    const parseTime = (timeStr) => {
-      // Converts "5:00 PM" into a Date object
-      return new Date(`1970-01-01 ${timeStr}`);
-    };
+  const toWholeUnit = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? Math.round(num) : 0;
+  };
 
-    return studentSchedule.some((entry) => {
+  const sortedSchedule = [...studentSchedule].sort((a, b) =>
+    (a.course_code || "").localeCompare(b.course_code || "")
+  );
+
+  const isTimeInSchedule = (start, end, day) =>
+    studentSchedule.some((entry) => {
       if (entry.day_description !== day) return false;
-
       const slotStart = parseTime(start);
       const slotEnd = parseTime(end);
       const schedStart = parseTime(entry.school_time_start);
       const schedEnd = parseTime(entry.school_time_end);
-
       return slotStart >= schedStart && slotEnd <= schedEnd;
+    });
+
+  const getEntryForSlot = (start, day) => {
+    const slotStart = parseTime(start);
+    return studentSchedule.find((entry) => {
+      if (entry.day_description !== day) return false;
+      const schedStart = parseTime(entry.school_time_start);
+      const schedEnd = parseTime(entry.school_time_end);
+      return slotStart >= schedStart && slotStart < schedEnd;
     });
   };
 
   const hasAdjacentSchedule = (start, end, day, direction = "top") => {
-    const parseTime = (timeStr) => new Date(`1970-01-01 ${timeStr}`);
-
     const minutesOffset = direction === "top" ? -60 : 60;
-
-    const newStart = new Date(
-      parseTime(start).getTime() + minutesOffset * 60000,
-    );
+    const newStart = new Date(parseTime(start).getTime() + minutesOffset * 60000);
     const newEnd = new Date(parseTime(end).getTime() + minutesOffset * 60000);
-
-    const currentEntry = studentSchedule.find((entry) => {
-      if (entry.day_description !== day) return false;
-
-      const schedStart = parseTime(entry.school_time_start);
-      const schedEnd = parseTime(entry.school_time_end);
-
-      return parseTime(start) >= schedStart && parseTime(end) <= schedEnd;
-    });
-
+    const currentEntry = getEntryForSlot(start, day);
     const adjacentEntry = studentSchedule.find((entry) => {
       if (entry.day_description !== day) return false;
-
       const schedStart = parseTime(entry.school_time_start);
       const schedEnd = parseTime(entry.school_time_end);
-
       return newStart >= schedStart && newEnd <= schedEnd;
     });
-
     if (!adjacentEntry) return false;
-
-    if (
-      currentEntry &&
-      adjacentEntry.course_code === currentEntry.course_code
-    ) {
-      return "same";
-    } else {
-      return "different";
-    }
+    if (currentEntry && adjacentEntry.course_code === currentEntry.course_code) return "same";
+    return "different";
   };
 
   const getCenterText = (start, day) => {
-    const parseTime = (t) => new Date(`1970-01-01 ${t}`);
-    const SLOT_HEIGHT_REM = 2.5;
-
     const slotStart = parseTime(start);
+    const SLOT_HEIGHT_REM = 2.5;
 
     for (const entry of studentSchedule) {
       if (entry.day_description !== day) continue;
-
       const schedStart = parseTime(entry.school_time_start);
       const schedEnd = parseTime(entry.school_time_end);
-
       if (!(slotStart >= schedStart && slotStart < schedEnd)) continue;
 
       const totalHours = Math.round((schedEnd - schedStart) / (1000 * 60 * 60));
-      const idxInBlock = Math.round(
-        (slotStart - schedStart) / (1000 * 60 * 60),
-      );
-
+      const idxInBlock = Math.round((slotStart - schedStart) / (1000 * 60 * 60));
       const isOdd = totalHours % 2 === 1;
       const centerIndex = isOdd ? (totalHours - 1) / 2 : totalHours / 2;
       const isCenter = idxInBlock === centerIndex;
-
       if (!isCenter) return "";
 
       let marginTop = isOdd ? 0 : -(SLOT_HEIGHT_REM / 2);
       if (!isOdd) marginTop = `calc(${marginTop}rem - 1rem)`;
 
-      let text;
-      if (totalHours === 1) {
-        text = (
-          <div className="w-full min-w-0 px-1">
-            <span className="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px]">
-              {entry.course_code}
-            </span>
-            <span className="block mx-auto whitespace-normal break-words text-[8px] leading-tight">
-              {entry.room_description === "TBA"
-                ? "TBA"
-                : `${entry.room_description}`}
-            </span>
-            <span className="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[8px]">
-              {entry.prof_lastname === "TBA"
-                ? "TBA"
-                : `Prof. ${entry.prof_lastname}`}
-            </span>
-          </div>
-        );
-      } else {
-        text = (
-          <div className="w-full min-w-0 px-1">
-            <span className="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[11px]">
-              {entry.course_code}
-            </span>
-            <span className="block max-w-[92px] mx-auto whitespace-normal break-words text-[11px] leading-tight">
-              (
-              {entry.room_description === "TBA"
-                ? "TBA"
-                : `${entry.room_description}`}
-              )
-            </span>
-            <span className="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px]">
-              {entry.prof_lastname === "TBA"
-                ? "TBA"
-                : `Prof. ${entry.prof_lastname}`}
-            </span>
-          </div>
-        );
-      }
-
+      const fontSize = totalHours === 1 ? "10px" : "11px";
       return (
-        <span
-          className={`relative inline-block text-center w-full min-w-0 ${
-            totalHours === 1 ? "text-[10px]" : "text-[11px]"
-          }`}
-          style={{ marginTop }}
-        >
-          {text}
+        <span style={{ position: "relative", display: "inline-block", textAlign: "center", width: "100%", fontSize, marginTop }}>
+          <div style={{ width: "100%", padding: "0 2px" }}>
+            <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize }}>
+              {entry.course_code}
+            </span>
+            <span style={{ display: "block", whiteSpace: "normal", wordBreak: "break-word", fontSize: "8px", lineHeight: 1.2 }}>
+              {entry.room_description === "TBA" ? "TBA" : entry.room_description}
+            </span>
+            <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: totalHours === 1 ? "8px" : "10px" }}>
+              {entry.prof_lastname === "TBA" ? "TBA" : `Prof. ${entry.prof_lastname}`}
+            </span>
+          </div>
         </span>
       );
     }
-
     return "";
   };
 
-  // 🔒 Disable right-click
-  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  // ── Mobile: card list for the selected day ──
+  const renderMobileDaySchedule = () => {
+    const dayEntries = studentSchedule
+      .filter((e) => e.day_description === activeDay)
+      .sort((a, b) => parseTime(a.school_time_start) - parseTime(b.school_time_start));
 
-  // 🔒 Block DevTools shortcuts silently
-  document.addEventListener("keydown", (e) => {
-    const isBlockedKey =
-      e.key === "F12" ||
-      e.key === "F11" ||
-      (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J")) ||
-      (e.ctrlKey && e.key === "U");
-
-    if (isBlockedKey) {
-      e.preventDefault();
-      e.stopPropagation();
+    if (!dayEntries.length) {
+      return (
+        <Box sx={{ textAlign: "center", py: 6, color: "#888" }}>
+          <Typography sx={{ fontSize: 14 }}>No classes on {DAY_LABELS[activeDay]}</Typography>
+        </Box>
+      );
     }
-  });
+
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 1 }}>
+        {dayEntries.map((entry, i) => (
+          <Box
+            key={i}
+            sx={{
+              background: "#fffde7",
+              border: `1.5px solid ${borderColor}`,
+              borderLeft: `5px solid ${mainButtonColor}`,
+              borderRadius: "8px",
+              p: 1.5,
+            }}
+          >
+            <Typography sx={{ fontWeight: 700, fontSize: 14, color: mainButtonColor }}>
+              {entry.course_code}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: "#333", mt: 0.3 }}>
+              {entry.course_description}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, mt: 0.8, flexWrap: "wrap" }}>
+              <Typography sx={{ fontSize: 11, color: "#555" }}>
+                🕐 {entry.school_time_start} – {entry.school_time_end}
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: "#555" }}>
+                📍 {entry.room_description}
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: "#555" }}>
+                👤 {entry.prof_lastname === "TBA" ? "TBA" : `Prof. ${entry.prof_lastname}`}
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: "#555" }}>
+                📚 {entry.program_code} {entry.section_description}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  };
+
+  // ── Desktop: full weekly grid ──
+  const renderDesktopGrid = () => (
+    <Box sx={{ overflowX: "auto", width: "100%" }}>
+      <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
+        <thead>
+          <tr style={{ display: "flex", alignItems: "center" }}>
+            <td style={{ minWidth: "6.5rem", minHeight: "2.2rem", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${borderColor}`, fontSize: 14 }}>
+              TIME
+            </td>
+            <td style={{ padding: 0, margin: 0 }}>
+              <div style={{ minWidth: "6.6rem", textAlign: "center", border: `1px solid ${borderColor}`, borderLeft: 0, borderBottom: 0, fontSize: 14 }}>DAY</div>
+              <p style={{ minWidth: "6.6rem", textAlign: "center", border: `1px solid ${borderColor}`, borderLeft: 0, fontSize: "11.5px", fontWeight: "bold", marginTop: "-3px" }}>Official Time</p>
+            </td>
+            {DAYS.map((day) => (
+              <td key={day} style={{ padding: 0, margin: 0 }}>
+                <div style={{ minWidth: "8.5rem", textAlign: "center", border: `1px solid ${borderColor}`, borderLeft: 0, borderBottom: 0, fontSize: 14 }}>{DAY_LABELS[day].toUpperCase()}</div>
+                <p style={{ minWidth: "8.5rem", textAlign: "center", border: `1px solid ${borderColor}`, borderLeft: 0, fontSize: "11.5px", marginTop: "-3px" }}>7:00AM - 9:00PM</p>
+              </td>
+            ))}
+          </tr>
+        </thead>
+        <tbody style={{ display: "flex", flexDirection: "column", marginTop: "-0.1px" }}>
+          {TIME_SLOTS.map(([start, end]) => (
+            <tr key={start} style={{ display: "flex", width: "100%" }}>
+              <td style={{ margin: 0, padding: 0, minWidth: "13.1rem" }}>
+                <div style={{ height: "2.5rem", border: `1px solid ${borderColor}`, borderTop: 0, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {start.replace(":00 ", ":00 ")} - {end}
+                </div>
+              </td>
+              {DAYS.map((day) => {
+                const inSched = isTimeInSchedule(start, end, day);
+                const topAdj = hasAdjacentSchedule(start, end, day, "top");
+                const botAdj = hasAdjacentSchedule(start, end, day, "bottom");
+                return (
+                  <td key={day} style={{ margin: 0, padding: 0, minWidth: "8.5rem" }}>
+                    <div style={{
+                      height: "2.5rem",
+                      border: `1px solid ${borderColor}`,
+                      borderTop: inSched && topAdj === "same" ? 0 : `1px solid ${borderColor}`,
+                      borderBottom: inSched && botAdj === "same" ? 0 : `1px solid ${borderColor}`,
+                      borderLeft: 0,
+                      fontSize: 14,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: inSched ? "#fef08a" : "transparent",
+                    }}>
+                      {getCenterText(start, day)}
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Box>
+  );
 
   return (
-    <Box
-      sx={{
-        height: "calc(100vh - 150px)",
-        overflowY: "auto",
-        paddingRight: 1,
-        backgroundColor: "transparent",
-        mt: 1,
-        padding: 2,
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-
-          mb: 2,
-          px: 2,
-        }}
-      >
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: "bold",
-            color: titleColor,
-            fontSize: "36px",
-          }}
-        >
+    <Box sx={{ minHeight: "calc(100vh - 150px)", overflowY: "auto", backgroundColor: "transparent", mt: 1, p: { xs: 1, sm: 2 } }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 2, px: { xs: 0, sm: 2 } }}>
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: titleColor, fontSize: { xs: "22px", sm: "28px", md: "36px" } }}>
           CLASS SCHEDULE
         </Typography>
       </Box>
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
-
       <br />
 
-      <TableContainer
-        component={Paper}
-        sx={{ mb: 3, mx: "auto", width: "100%", maxWidth: "1400px" }}
-      >
-        <Table size="small">
-          <TableHead
-            sx={{
-              backgroundColor: settings?.header_color || "#1976d2",
-              border: `1px solid ${borderColor}`,
-            }}
-          >
+      {/* Table */}
+      <TableContainer component={Paper} sx={{ mb: 3, mx: "auto", width: "100%", maxWidth: "1400px", overflowX: "auto" }}>
+        <Table size="small" sx={{ minWidth: isMobile ? 600 : "auto" }}>
+          <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2", border: `1px solid ${borderColor}` }}>
             <TableRow>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                #
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Course Description
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Course Code
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Lec
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Lab
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Units
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Section
-              </TableCell>
-              <TableCell
-                sx={{ color: "white", border: `1px solid ${borderColor}` }}
-              >
-                Schedule
-              </TableCell>
+              {["#", "Course Description", "Course Code", "Lec", "Lab", "Units", "Section", "Schedule"].map((h) => (
+                <TableCell key={h} sx={{ color: "white", border: `1px solid ${borderColor}`, fontSize: { xs: "0.65rem", sm: "0.75rem" }, whiteSpace: "nowrap" }}>{h}</TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {sortedSchedule.map((row, index) => (
-              <TableRow
-                key={index}
-                style={{ border: `1px solid ${borderColor}` }}
-              >
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {index + 1}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {row.course_description}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {row.course_code}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  1
-                </TableCell>
-
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {row.lab_unit == null ? "" : toWholeUnit(row.lab_unit)}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {row.course_unit == null ? "" : toWholeUnit(row.course_unit)}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {row.program_code} {row.section_description}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontSize: "0.75rem",
-                    border: `1px solid ${borderColor}`,
-                  }}
-                >
-                  {row.day_description}, {row.school_time_start} -{" "}
-                  {row.school_time_end} {row.room_description}
-                </TableCell>
+              <TableRow key={index}>
+                {[
+                  index + 1,
+                  row.course_description,
+                  row.course_code,
+                  1,
+                  row.lab_unit == null ? "" : toWholeUnit(row.lab_unit),
+                  row.course_unit == null ? "" : toWholeUnit(row.course_unit),
+                  `${row.program_code} ${row.section_description}`,
+                  `${row.day_description}, ${row.school_time_start} - ${row.school_time_end} ${row.room_description}`,
+                ].map((cell, ci) => (
+                  <TableCell key={ci} sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" }, border: `1px solid ${borderColor}` }}>
+                    {cell}
+                  </TableCell>
+                ))}
               </TableRow>
             ))}
-            <TableRow
-              sx={{ fontSize: "0.75rem", border: `1px solid ${borderColor}` }}
-            >
-              <TableCell
-                colSpan={3}
-                style={{ border: `1px solid ${borderColor}` }}
-              />
-              <TableCell
-                colSpan={2}
-                style={{
-                  fontWeight: "600",
-                  border: `1px solid ${borderColor}`,
-                }}
-              >
-                Total Units
+            <TableRow>
+              <TableCell colSpan={3} style={{ border: `1px solid ${borderColor}` }} />
+              <TableCell colSpan={2} style={{ fontWeight: "600", border: `1px solid ${borderColor}`, fontSize: "0.75rem" }}>Total Units</TableCell>
+              <TableCell style={{ border: `1px solid ${borderColor}`, fontSize: "0.75rem" }}>
+                {sortedSchedule.reduce((total, row) => total + toWholeUnit(row.course_unit), 0)}
               </TableCell>
-              <TableCell style={{ border: `1px solid ${borderColor}` }}>
-                {sortedSchedule.reduce(
-                  (total, row) => total + toWholeUnit(row.course_unit),
-                  0,
-                )}
-              </TableCell>
+              <TableCell colSpan={2} style={{ border: `1px solid ${borderColor}` }} />
             </TableRow>
           </TableBody>
         </Table>
       </TableContainer>
 
-      <Box
-        sx={{
-          display: "flex",
-          gap: 3,
-          justifyContent: "center",
-          width: "100%",
-        }}
-      >
-        {/* Event */}
-        <Box
-          style={{ border: `1px solid ${borderColor}`, padding: "1rem 1rem" }}
-        >
-          <table>
-            <thead className="">
-              <tr className="flex align-center">
-                <td className="min-w-[6.5rem] min-h-[2.2rem] flex items-center justify-center border border-black text-[14px] ">
-                  TIME
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[6.6rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    DAY
-                  </div>
-                  <p className="min-w-[6.6rem] text-center border border-black border-l-0 text-[11.5px] font-bold mt-[-3px]">
-                    Official Time
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    MONDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    TUESDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    WEDNESDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    THURSDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    FRIDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    SATUDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-                <td className="p-0 m-0">
-                  <div className="min-w-[8.5rem] text-center border border-black border-l-0 border-b-0 text-[14px]">
-                    SUNDAY
-                  </div>
-                  <p className="min-w-[8.5rem] text-center border border-black border-l-0 text-[11.5px] mt-[-3px]">
-                    7:00AM - 9:00PM
-                  </p>
-                </td>
-              </tr>
-            </thead>
-            <tbody className="flex flex-col mt-[-0.1px]">
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    07:00 AM - 08:00 AM
-                  </div>
-                </td>
+      {/* Weekly Grid Section */}
+      <Box sx={{ border: `1px solid ${borderColor}`, p: { xs: 1, sm: "1rem" }, overflowX: "auto" }}>
 
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("7:00 AM", "8:00 AM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("7:00 AM", "8:00 AM", day) && hasAdjacentSchedule("7:00 AM", "8:00 AM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("7:00 AM", "8:00 AM", day) && hasAdjacentSchedule("7:00 AM", "8:00 AM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("7:00 AM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
+        {/* Mobile: day tab switcher */}
+        {isMobile ? (
+          <>
+            {/* Day pill tabs */}
+            <Box sx={{ display: "flex", gap: 0.75, overflowX: "auto", pb: 1, mb: 1, scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" } }}>
+              {DAYS.map((day) => {
+                const hasClass = studentSchedule.some((e) => e.day_description === day);
+                const isActive = activeDay === day;
+                return (
+                  <Box
+                    key={day}
+                    onClick={() => setActiveDay(day)}
+                    sx={{
+                      flexShrink: 0,
+                      px: 1.5,
+                      py: 0.75,
+                      borderRadius: "20px",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: isActive ? 700 : 400,
+                      border: `1.5px solid ${isActive ? mainButtonColor : borderColor}`,
+                      backgroundColor: isActive ? mainButtonColor : "transparent",
+                      color: isActive ? "#fff" : hasClass ? mainButtonColor : "#999",
+                      position: "relative",
+                      transition: "all 0.18s ease",
+                    }}
+                  >
+                    {day}
+                    {hasClass && !isActive && (
+                      <Box sx={{ position: "absolute", top: 2, right: 2, width: 5, height: 5, borderRadius: "50%", backgroundColor: mainButtonColor }} />
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
 
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    08:00 AM - 09:00 AM
-                  </div>
-                </td>
+            {/* Day label */}
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: mainButtonColor, mb: 1 }}>
+              {DAY_LABELS[activeDay]}
+            </Typography>
 
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("8:00 AM", "9:00 AM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("8:00 AM", "9:00 AM", day) && hasAdjacentSchedule("8:00 AM", "9:00 AM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("8:00 AM", "9:00 AM", day) && hasAdjacentSchedule("8:00 AM", "9:00 AM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("8:00 AM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    09:00 AM - 10:00 AM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("9:00 AM", "10:00 AM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("9:00 AM", "10:00 AM", day) && hasAdjacentSchedule("9:00 AM", "10:00 AM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("9:00 AM", "10:00 AM", day) && hasAdjacentSchedule("9:00 AM", "10:00 AM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("9:00 AM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    10:00 AM - 11:00 AM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("10:00 AM", "11:00 AM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("10:00 AM", "11:00 AM", day) && hasAdjacentSchedule("10:00 AM", "11:00 AM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("10:00 AM", "11:00 AM", day) && hasAdjacentSchedule("10:00 AM", "11:00 AM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("10:00 AM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    11:00 AM - 12:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("11:00 AM", "12:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("11:00 AM", "12:00 PM", day) && hasAdjacentSchedule("11:00 AM", "12:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("11:00 AM", "12:00 PM", day) && hasAdjacentSchedule("11:00 AM", "12:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("11:00 AM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    12:00 PM - 01:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("12:00 PM", "1:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("12:00 PM", "1:00 PM", day) && hasAdjacentSchedule("12:00 PM", "1:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("12:00 PM", "1:00 PM", day) && hasAdjacentSchedule("12:00 PM", "1:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("12:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    01:00 PM - 02:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("1:00 PM", "2:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("1:00 PM", "2:00 PM", day) && hasAdjacentSchedule("1:00 PM", "2:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("1:00 PM", "2:00 PM", day) && hasAdjacentSchedule("1:00 PM", "2:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("1:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    02:00 PM - 03:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("2:00 PM", "3:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("2:00 PM", "3:00 PM", day) && hasAdjacentSchedule("2:00 PM", "3:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("2:00 PM", "3:00 PM", day) && hasAdjacentSchedule("2:00 PM", "3:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("2:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    03:00 PM - 04:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("3:00 PM", "4:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("3:00 PM", "4:00 PM", day) && hasAdjacentSchedule("3:00 PM", "4:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("3:00 PM", "4:00 PM", day) && hasAdjacentSchedule("3:00 PM", "4:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("3:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    04:00 PM - 05:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("4:00 PM", "5:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("4:00 PM", "5:00 PM", day) && hasAdjacentSchedule("4:00 PM", "5:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("4:00 PM", "5:00 PM", day) && hasAdjacentSchedule("4:00 PM", "5:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("4:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    05:00 PM - 06:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("5:00 PM", "6:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("5:00 PM", "6:00 PM", day) && hasAdjacentSchedule("5:00 PM", "6:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("5:00 PM", "6:00 PM", day) && hasAdjacentSchedule("5:00 PM", "6:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("5:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    06:00 PM - 07:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("6:00 PM", "7:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("6:00 PM", "7:00 PM", day) && hasAdjacentSchedule("6:00 PM", "7:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("6:00 PM", "7:00 PM", day) && hasAdjacentSchedule("6:00 PM", "7:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("6:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    07:00 PM - 08:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("7:00 PM", "8:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("7:00 PM", "8:00 PM", day) && hasAdjacentSchedule("7:00 PM", "8:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("7:00 PM", "8:00 PM", day) && hasAdjacentSchedule("7:00 PM", "8:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("7:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-
-              <tr className="flex w-full">
-                <td className="m-0 p-0 min-w-[13.1rem]">
-                  <div className="h-[2.5rem] border border-black border-t-0 text-[14px] flex items-center justify-center">
-                    08:00 PM - 09:00 PM
-                  </div>
-                </td>
-
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
-                  (day, i) => (
-                    <td
-                      key={day}
-                      className={`m-0 p-0 ${day === "WED" ? "min-w-[8.5rem]" : day === "THU" ? "min-w-[8.5rem]" : "min-w-[8.5rem]"}`}
-                    >
-                      <div
-                        className={`h-[2.5rem] border border-black border-t-0 border-l-0 text-[14px] flex items-center justify-center  
-                      ${isTimeInSchedule("8:00 PM", "9:00 PM", day) ? "bg-yellow-300" : ""} 
-                      ${isTimeInSchedule("8:00 PM", "9:00 PM", day) && hasAdjacentSchedule("8:00 PM", "9:00 PM", day, "top") === "same" ? "border-t-0" : ""} 
-                      ${isTimeInSchedule("8:00 PM", "9:00 PM", day) && hasAdjacentSchedule("8:00 PM", "9:00 PM", day, "bottom") === "same" ? "border-b-0" : ""}`}
-                      >
-                        {getCenterText("8:00 PM", day)}
-                      </div>
-                    </td>
-                  ),
-                )}
-              </tr>
-            </tbody>
-          </table>
-        </Box>
+            {renderMobileDaySchedule()}
+          </>
+        ) : (
+          renderDesktopGrid()
+        )}
       </Box>
     </Box>
   );

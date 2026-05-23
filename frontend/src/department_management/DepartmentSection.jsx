@@ -26,9 +26,9 @@ import API_BASE_URL from "../apiConfig";
 import SaveIcon from '@mui/icons-material/Save';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-
 import TextField from "@mui/material/TextField";
 import SearchIcon from "@mui/icons-material/Search";
+import Switch from "@mui/material/Switch";
 
 const DepartmentSection = () => {
 
@@ -324,6 +324,49 @@ const DepartmentSection = () => {
       setSnackbar({
         open: true,
         message: err.response?.data?.message || "Failed to delete department section.",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (departmentSectionId, value) => {
+    if (value === null) return;
+
+    if (!canEdit) {
+      setSnackbar({
+        open: true,
+        message: "You do not have permission to edit items on this page.",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/department_section/${departmentSectionId}/status`,
+        {
+          dsstat: value,
+        },
+        {
+          headers: getPermissionHeaders(),
+        }
+      );
+
+      fetchDepartmentSections();
+
+      setSnackbar({
+        open: true,
+        message: `Department section ${value === 1 ? "activated" : "deactivated"
+          } successfully!`,
+        severity: "success",
+      });
+    } catch (err) {
+      console.error(err);
+
+      setSnackbar({
+        open: true,
+        message:
+          err.response?.data?.message || "Failed to update status.",
         severity: "error",
       });
     }
@@ -733,7 +776,17 @@ const DepartmentSection = () => {
                     textAlign: "center",
                   }}
                 >
-                  {section.dsstat === 0 ? "Inactive" : "Active"}
+                  <Switch
+                    size="medium"
+                    checked={Number(section.dsstat) === 1}
+                    onChange={(e) =>
+                      handleToggleStatus(
+                        section.department_section_id,
+                        e.target.checked ? 1 : 0
+                      )
+                    }
+                    disabled={!canEdit}
+                  />
                 </td>
                 {(canEdit || canDelete) && (
                   <td
@@ -749,11 +802,22 @@ const DepartmentSection = () => {
                           size="small"
                           variant="contained"
                           color="primary"
-                          startIcon={<EditIcon />}
+
                           onClick={() => openEditDepartmentSection(section)}
-                          sx={{ textTransform: "none" }}
+                          sx={{
+                            backgroundColor: "green",
+                            color: "white",
+                            borderRadius: "5px",
+                            padding: "8px 14px",
+                            width: "100px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                            cursor: "pointer",
+                          }}
                         >
-                          Edit
+                          <EditIcon fontSize="small" /> Edit
                         </Button>
                       )}
                       {canDelete && (
@@ -761,11 +825,22 @@ const DepartmentSection = () => {
                           size="small"
                           variant="contained"
                           color="error"
-                          startIcon={<DeleteIcon />}
+
                           onClick={() => setDeleteTarget(section)}
-                          sx={{ textTransform: "none" }}
+                          sx={{
+                            backgroundColor: "#9E0000",
+                            color: "white",
+                            borderRadius: "5px",
+                            padding: "8px 14px",
+                            width: "100px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                            cursor: "pointer",
+                          }}
                         >
-                          Delete
+                          <DeleteIcon fontSize="small" /> Delete
                         </Button>
                       )}
                     </Box>
@@ -1065,7 +1140,7 @@ const DepartmentSection = () => {
         >
 
           <Button
-           color="error"
+            color="error"
             variant="outlined"
             sx={{
               textTransform: "none",

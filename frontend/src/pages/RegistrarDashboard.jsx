@@ -15,6 +15,7 @@ import {
   Avatar,
   useMediaQuery,
   useTheme,
+  Stack
 } from "@mui/material";
 import SchoolIcon from "@mui/icons-material/School";
 import PersonIcon from "@mui/icons-material/Person";
@@ -325,14 +326,14 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
       (p) => p.schedule_id != null && p.exam_status === 1
     ).length;
     setPieData([
-      { name: "Applied",   value: filtered.length },
+      { name: "Applied", value: filtered.length },
       { name: "Scheduled", value: total_scheduled },
-      { name: "Pending",   value: total_pending   },
-      { name: "Finished",  value: total_finished  },
+      { name: "Pending", value: total_pending },
+      { name: "Finished", value: total_finished },
     ]);
 
     // Applicant overview stats
-    const male   = filtered.filter((p) => String(p.gender) === "0").length;
+    const male = filtered.filter((p) => String(p.gender) === "0").length;
     const female = filtered.filter((p) => String(p.gender) === "1").length;
     setApplicant({
       totalApplicants: filtered.length,
@@ -436,19 +437,19 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
   // ── Derived chart data ──────────────────────────────────────────
   const programData = data
     ? [
-        { name: "Techvoc",       value: Number(data.Techvoc)       || 0 },
-        { name: "Graduate",      value: Number(data.Graduate)      || 0 },
-        { name: "Undergraduate", value: Number(data.Undergraduate) || 0 },
-      ]
+      { name: "Techvoc", value: Number(data.Techvoc) || 0 },
+      { name: "Graduate", value: Number(data.Graduate) || 0 },
+      { name: "Undergraduate", value: Number(data.Undergraduate) || 0 },
+    ]
     : [];
 
   const studentTypeData = data
     ? [
-        { name: "Returnee",   value: Number(data.Returnee)       || 0 },
-        { name: "Shiftee",    value: Number(data.Shiftee)        || 0 },
-        { name: "Foreign",    value: Number(data.ForeignStudent) || 0 },
-        { name: "Transferee", value: Number(data.Transferee)     || 0 },
-      ]
+      { name: "Returnee", value: Number(data.Returnee) || 0 },
+      { name: "Shiftee", value: Number(data.Shiftee) || 0 },
+      { name: "Foreign", value: Number(data.ForeignStudent) || 0 },
+      { name: "Transferee", value: Number(data.Transferee) || 0 },
+    ]
     : [];
 
   const stats = [
@@ -478,9 +479,6 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
     },
   ];
 
-  const backgroundImage = settings?.bg_image
-    ? `url(${API_BASE_URL}${settings.bg_image})`
-    : "linear-gradient(to right, #e0e0e0, #bdbdbd)";
 
   const headerColor = settings?.header_color || "#1976d2";
 
@@ -512,7 +510,7 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
       sx={{
         height: "calc(100vh - 100px)",
         width: "100%",
-        backgroundImage,
+       
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -544,105 +542,136 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
         }}
       >
         {/* ── Welcome Card ── */}
-        <Card sx={{ ...cardSx, backgroundColor: "#fff9ec", mb: 2 }}>
-          <CardContent sx={{ py: 2 }}>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                alignItems: { xs: "flex-start", sm: "center" },
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              {/* Avatar + Name */}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box
-                  position="relative"
-                  display="inline-block"
-                  onMouseEnter={() => setHovered(true)}
-                  onMouseLeave={() => setHovered(false)}
-                >
-                  <Avatar
-                    src={
-                      profileImage ||
-                      `${API_BASE_URL}/uploads/Admin1by1/${personData?.profile_image}`
-                    }
-                    alt={personData?.fname}
-                    sx={{
-                      width: isMobile ? 60 : 80,
-                      height: isMobile ? 60 : 80,
-                      border: `2px solid ${borderColor}`,
-                      cursor: "pointer",
-                    }}
-                    onClick={() => fileInputRef.current.click()}
-                  >
-                    {personData?.fname?.[0]}
-                  </Avatar>
-                  {hovered && (
-                    <label
-                      onClick={() => fileInputRef.current.click()}
-                      style={{
-                        position: "absolute",
-                        bottom: -4,
-                        right: 0,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "50%",
-                        backgroundColor: "#ffffff",
-                        border: `2px solid ${borderColor}`,
-                        width: 30,
-                        height: 30,
-                      }}
-                    >
-                      <AddCircleIcon
-                        sx={{ color: headerColor, fontSize: 26 }}
-                      />
-                    </label>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    style={{ display: "none" }}
-                    onChange={handleFileChange}
-                  />
-                </Box>
+        <Box
+          sx={{
+            width: "100%",
+            mt: 2,
+            borderRadius: "12px",
+            overflow: "hidden",
+            backgroundColor: settings?.header_color || "#1976d2",
+            color: "#fff",
+            border: `2px solid ${borderColor}`,
+            mb: 2,
 
-                <Box sx={{ color: titleColor }}>
-                  <Typography
-                    variant={isMobile ? "h6" : "h5"}
-                    fontWeight="bold"
-                    lineHeight={1.2}
+          }}
+        >
+          <Box
+            sx={{
+              px: { xs: 2, md: 4 },
+              py: { xs: 2.5, md: 3 },
+              display: "flex",
+              alignItems: "center",
+
+              justifyContent: "space-between",
+              gap: 2,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* LEFT SIDE */}
+            <Stack direction="row" alignItems="center" spacing={2}>
+              {/* AVATAR */}
+              <Box
+                position="relative"
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                sx={{ display: "inline-flex" }}
+              >
+                <Avatar
+                  src={
+                    profileImage ||
+                    `${API_BASE_URL}/uploads/Admin1by1/${personData?.profile_image}`
+                  }
+                  alt={personData?.fname || "Admin"}
+                  onClick={() => fileInputRef.current?.click()}
+                  sx={{
+                    width: 70,
+                    height: 70,
+                    border: "2px solid white",
+                    bgcolor: "rgba(255,255,255,0.15)",
+                    cursor: "pointer",
+                    display: { xs: "none", sm: "flex" },
+                    color: "white",
+                  }}
+                >
+                  {personData?.fname?.[0]}
+                </Avatar>
+
+                {hovered && (
+                  <IconButton
+                    size="small"
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{
+                      position: "absolute",
+                      bottom: -4,
+                      right: 0,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "50%",
+                      backgroundColor: "#ffffff",
+                      border: `2px solid ${borderColor}`,
+                      width: 30,
+                      height: 30,
+
+                      "&:hover": {
+                        backgroundColor: "#f5f5f5",
+                      },
+                    }}
                   >
-                    Welcome back!{" "}
-                    {personData
-                      ? `${personData.lname}, ${personData.fname} ${
-                          personData.mname || ""
-                        }`
-                      : ""}
-                  </Typography>
-                  <Typography variant="body1" color="black" mt={0.5}>
-                    <b>Employee ID:</b> {personData?.employee_id || "N/A"}
-                  </Typography>
-                </Box>
+                    <AddCircleIcon
+                      sx={{
+                        color: mainButtonColor,
+                        fontSize: 24,
+                      }}
+                    />
+                  </IconButton>
+                )}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  style={{ display: "none" }}
+                  onChange={handleFileChange}
+                />
               </Box>
 
-              {/* Date + Time */}
-              {!isMobile && (
-                <Box sx={{ textAlign: "right" }}>
-                  <Typography variant="h6" fontWeight="bold">
-                    {formattedDate}
-                  </Typography>
-                  <Typography variant="h6">{formattedTime}</Typography>
-                </Box>
-              )}
-            </Box>
-          </CardContent>
-        </Card>
+              {/* TEXT */}
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: "32px",
+                    fontWeight: 800,
+                    lineHeight: 1.1,
+                    color: "white",
+                  }}
+                >
+                  Welcome Back!{" "}
+                  {personData
+                    ? `${personData.lname}, ${personData.fname} ${personData.mname || ""
+                    }`
+                    : ""}
+                </Typography>
 
+                <Typography
+                  sx={{
+                    fontSize: "22px",
+                    letterSpacing: 0,
+                    opacity: 0.9,
+                    color: "white",
+                    mt: 0.5,
+                  }}
+                >
+                  <Box component="span" sx={{ fontWeight: 700 }}>
+                    Employee ID:
+                  </Box>{" "}
+                  {personData?.employee_id || "N/A"}
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+        </Box>
         {/* ── Stats Row ── */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
           {stats.map((stat, i) => (
@@ -820,8 +849,8 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
                               backgroundColor: isToday
                                 ? headerColor
                                 : isHoliday
-                                ? "#E8C999"
-                                : "#fff",
+                                  ? "#E8C999"
+                                  : "#fff",
                               color: isToday ? "white" : "black",
                               fontWeight: isHoliday ? "bold" : "500",
                               cursor: isHoliday ? "pointer" : "default",
@@ -1076,7 +1105,7 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
                     label: "Total Applicants",
                     value: applicant.totalApplicants,
                   },
-                  { label: "Male",   value: applicant.male   },
+                  { label: "Male", value: applicant.male },
                   { label: "Female", value: applicant.female },
                 ].map((item, i) => (
                   <Grid item xs={4} key={i}>

@@ -18,43 +18,30 @@ import axios from "axios";
 import API_BASE_URL from "../apiConfig";
 import EaristLogo from "../assets/EaristLogo.png";
 import PersonIcon from "@mui/icons-material/Person";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 // ─── Remark Badge ─────────────────────────────────────────────────
 const REMARK_MAP = {
-  0: { label: "Ongoing", bg: "#E8F5E9", color: "#9e9c1e", border: "#807700" },
-  1: { label: "Passed", bg: "#E8F5E9", color: "#2E7D32", border: "#A5D6A7" },
-  2: { label: "Failed", bg: "#FFEBEE", color: "#C62828", border: "#EF9A9A" },
-  3: {
-    label: "Incomplete",
-    bg: "#FFF8E1",
-    color: "#E65100",
-    border: "#FFE082",
-  },
-  4: { label: "Dropped", bg: "#F3F4F6", color: "#4B5563", border: "#D1D5DB" },
+  0: { label: "Ongoing",    bg: "#E8F5E9", color: "#9e9c1e", border: "#807700" },
+  1: { label: "Passed",     bg: "#E8F5E9", color: "#2E7D32", border: "#A5D6A7" },
+  2: { label: "Failed",     bg: "#FFEBEE", color: "#C62828", border: "#EF9A9A" },
+  3: { label: "Incomplete", bg: "#FFF8E1", color: "#E65100", border: "#FFE082" },
+  4: { label: "Dropped",    bg: "#F3F4F6", color: "#4B5563", border: "#D1D5DB" },
 };
 
 const RemarkBadge = ({ value }) => {
   const style = REMARK_MAP[value];
   if (!style) return <span style={{ color: "#9CA3AF", fontSize: 12 }}>—</span>;
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        background: style.bg,
-        color: style.color,
-        border: `1px solid ${style.border}`,
-        borderRadius: 6,
-        padding: "2px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
-      }}
-    >
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      background: style.bg, color: style.color,
+      border: `1px solid ${style.border}`,
+      borderRadius: 6, padding: "2px 8px",
+      fontSize: 11, fontWeight: 600,
+      letterSpacing: "0.04em", textTransform: "uppercase",
+      whiteSpace: "nowrap",
+    }}>
       {style.label}
     </span>
   );
@@ -70,139 +57,141 @@ const getUnitDisplay = (row) => {
 };
 
 // ─── Term Sorting ─────────────────────────────────────────────────
-// Order within a year: First Semester → Second Semester → Summer / Midyear
-
-const yearOrder = {
-  "First Year": 1,
-  "Second Year": 2,
-  "Third Year": 3,
-  "Fourth Year": 4,
-  "Fifth Year": 5,
-};
-
-const semesterOrder = {
-  "First Semester": 1,
-  "Second Semester": 2,
-  Summer: 3,
+const yearOrder = { "First Year": 1, "Second Year": 2, "Third Year": 3, "Fourth Year": 4, "Fifth Year": 5 };
+const semesterOrder = { "First Semester": 1, "Second Semester": 2, "Summer": 3 };
+const yearLabelMap = {
+  "First Year": "1st Year", "Second Year": "2nd Year", "Third Year": "3rd Year",
+  "Fourth Year": "4th Year", "Fifth Year": "5th Year",
 };
 
 const parseTerm = (term) => {
   const parts = String(term || "").split(" ");
   const yearLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : term;
   const semesterLabel = parts.slice(2).join(" ");
-
   return { yearLabel, semesterLabel };
 };
 
 const sortTerms = (terms) =>
   [...terms].sort((a, b) => {
-    const termA = parseTerm(a);
-    const termB = parseTerm(b);
-    const yA = yearOrder[termA.yearLabel] || 0;
-    const yB = yearOrder[termB.yearLabel] || 0;
-
-    // ✅ DESCENDING YEAR (4th → 1st)
+    const tA = parseTerm(a); const tB = parseTerm(b);
+    const yA = yearOrder[tA.yearLabel] || 0;
+    const yB = yearOrder[tB.yearLabel] || 0;
     if (yA !== yB) return yB - yA;
-
-    // ✅ DESCENDING SEM (2nd → 1st → summer)
-    return (
-      (semesterOrder[termB.semesterLabel] || 0) -
-      (semesterOrder[termA.semesterLabel] || 0)
-    );
+    return (semesterOrder[tB.semesterLabel] || 0) - (semesterOrder[tA.semesterLabel] || 0);
   });
+
+const formatYearLabel = (year) => yearLabelMap[year] || year;
+
+// ─── Mobile grade card ────────────────────────────────────────────
+const MobileGradeCard = ({ row, index, borderColor, subtitleColor, titleColor }) => (
+  <Box sx={{
+    border: `1px solid ${borderColor}`,
+    borderRadius: "8px",
+    p: 1.5,
+    mb: 1.5,
+    backgroundColor: "#fff",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+  }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: 13, color: titleColor, mb: 0.2 }}>
+          {row.course_code}
+        </Typography>
+        <Typography sx={{ fontSize: 11.5, color: subtitleColor, lineHeight: 1.3 }}>
+          {row.course_description}
+        </Typography>
+      </Box>
+      <Box sx={{ ml: 1, flexShrink: 0 }}>
+        {row.numeric_grade
+          ? <Typography sx={{ fontWeight: 700, fontSize: 16, color: titleColor }}>{row.numeric_grade}</Typography>
+          : <Typography sx={{ color: "#9CA3AF", fontSize: 14 }}>—</Typography>
+        }
+      </Box>
+    </Box>
+
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", mt: 0.8, alignItems: "center" }}>
+      <Typography sx={{ fontSize: 11, color: "#555" }}>
+        👤 {row.fname === "TBA" && row.lname === "TBA" ? "TBA" : `Prof. ${row.fname} ${row.lname}`}
+      </Typography>
+      <Typography sx={{ fontSize: 11, color: "#555" }}>
+        📚 {row.program_code}-{row.section_description}
+      </Typography>
+      <Typography sx={{ fontSize: 11, color: "#555" }}>
+        🔢 {getUnitDisplay(row)} unit{getUnitDisplay(row) !== 1 ? "s" : ""}
+      </Typography>
+      <RemarkBadge value={row.en_remarks} />
+    </Box>
+  </Box>
+);
+
 // ─── Main Component ───────────────────────────────────────────────
 const StudentGradingPage = () => {
   const settings = useContext(SettingsContext);
 
-  const [titleColor, setTitleColor] = useState("#000000");
-  const [subtitleColor, setSubtitleColor] = useState("#555555");
-  const [borderColor, setBorderColor] = useState("#e0e0e0");
-  const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-  const [subButtonColor, setSubButtonColor] = useState("#ffffff");
-  const [stepperColor, setStepperColor] = useState("#000000");
+  const [titleColor,     setTitleColor]     = useState("#000000");
+  const [subtitleColor,  setSubtitleColor]  = useState("#555555");
+  const [borderColor,    setBorderColor]    = useState("#e0e0e0");
+  const [mainButtonColor,setMainButtonColor]= useState("#1976d2");
+  const [fetchedLogo,    setFetchedLogo]    = useState(null);
+  const [companyName,    setCompanyName]    = useState("");
+  const [shortTerm,      setShortTerm]      = useState("");
+  const [campusAddress,  setCampusAddress]  = useState("");
 
-  const [fetchedLogo, setFetchedLogo] = useState(null);
-  const [companyName, setCompanyName] = useState("");
-  const [shortTerm, setShortTerm] = useState("");
-  const [campusAddress, setCampusAddress] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (!settings) return;
-    if (settings.title_color) setTitleColor(settings.title_color);
-    if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
-    if (settings.border_color) setBorderColor(settings.border_color);
-    if (settings.main_button_color)
-      setMainButtonColor(settings.main_button_color);
-    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color);
-    if (settings.stepper_color) setStepperColor(settings.stepper_color);
-    if (settings.logo_url)
-      setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
-    else setFetchedLogo(EaristLogo);
-    if (settings.company_name) setCompanyName(settings.company_name);
-    if (settings.short_term) setShortTerm(settings.short_term);
-    if (settings.campus_address) setCampusAddress(settings.campus_address);
+    if (settings.title_color)       setTitleColor(settings.title_color);
+    if (settings.subtitle_color)    setSubtitleColor(settings.subtitle_color);
+    if (settings.border_color)      setBorderColor(settings.border_color);
+    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
+    if (settings.logo_url)          setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
+    else                            setFetchedLogo(EaristLogo);
+    if (settings.company_name)      setCompanyName(settings.company_name);
+    if (settings.short_term)        setShortTerm(settings.short_term);
+    if (settings.campus_address)    setCampusAddress(settings.campus_address);
   }, [settings]);
 
-  const [userID, setUserID] = useState("");
-  const [user, setUser] = useState("");
-  const [userRole, setUserRole] = useState("");
-  const [studentGrade, setStudentGrade] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [gradingActive, setGradingActive] = useState(false);
-  const [matriculationBalanceInfo, setMatriculationBalanceInfo] = useState({
-    hasBalance: false,
-    balance: 0,
-  });
+  const [userID,      setUserID]      = useState("");
+  const [userRole,    setUserRole]    = useState("");
+  const [studentGrade,setStudentGrade]= useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [message,     setMessage]     = useState("");
+  const [gradingActive,setGradingActive] = useState(false);
+  const [matriculationBalanceInfo, setMatriculationBalanceInfo] = useState({ hasBalance: false, balance: 0 });
 
   useEffect(() => {
     const storedUser = localStorage.getItem("email");
     const storedRole = localStorage.getItem("role");
-    const storedID = localStorage.getItem("person_id");
-
+    const storedID   = localStorage.getItem("person_id");
     if (storedUser && storedRole && storedID) {
-      setUser(storedUser);
       setUserRole(storedRole);
       setUserID(storedID);
-      if (storedRole !== "student") {
-        window.location.href = "/faculty_dashboard";
-      } else {
-        fetchStudentGrade(storedID);
-      }
-    } else {
-      window.location.href = "/login";
-    }
+      if (storedRole !== "student") { window.location.href = "/faculty_dashboard"; }
+      else { fetchStudentGrade(storedID); }
+    } else { window.location.href = "/login"; }
   }, []);
 
   const fetchMatriculationBalance = async (studentNumber) => {
-    if (!studentNumber) {
-      return { hasBalance: false, balance: 0 };
-    }
-
+    if (!studentNumber) return { hasBalance: false, balance: 0 };
     try {
-      const { data } = await axios.post(
-        `${API_BASE_URL}/api/check-student-balance`,
-        { student_number: studentNumber },
-      );
+      const { data } = await axios.post(`${API_BASE_URL}/api/check-student-balance`, { student_number: studentNumber });
       const balance = Number(data?.balance || 0);
-
-      return {
-        hasBalance: Boolean(data?.hasBalance) && balance > 0,
-        balance: Number.isFinite(balance) ? balance : 0,
-      };
-    } catch (error) {
-      console.error("Failed to check matriculation balance:", error);
+      return { hasBalance: Boolean(data?.hasBalance) && balance > 0, balance: Number.isFinite(balance) ? balance : 0 };
+    } catch {
       return { hasBalance: false, balance: 0 };
     }
   };
 
   const hideGradeFields = (subject) => ({
-    ...subject,
-    final_grade: null,
-    numeric_grade: null,
-    descriptive_grade: null,
-    en_remarks: null,
-    gwa: null,
+    ...subject, final_grade: null, numeric_grade: null,
+    descriptive_grade: null, en_remarks: null, gwa: null,
   });
 
   const fetchStudentGrade = async (id) => {
@@ -210,16 +199,10 @@ const StudentGradingPage = () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/student_grade/${id}`);
       const data = res.data;
-      const balanceInfo = await fetchMatriculationBalance(
-        data[0]?.student_number,
-      );
-
+      const balanceInfo = await fetchMatriculationBalance(data[0]?.student_number);
       setMatriculationBalanceInfo(balanceInfo);
 
-      if (balanceInfo.hasBalance) {
-        setStudentGrade(data.map(hideGradeFields));
-        return;
-      }
+      if (balanceInfo.hasBalance) { setStudentGrade(data.map(hideGradeFields)); return; }
 
       const groupedByTerm = {};
       data.forEach((subj) => {
@@ -228,27 +211,19 @@ const StudentGradingPage = () => {
         groupedByTerm[termKey].push(subj);
       });
 
-      const processedGrades = Object.values(groupedByTerm).flatMap(
-        (termSubjects) => {
-          const allReleased = termSubjects.every(
-            (s) => s.fe_status === 1 || s.is_migrated,
-          );
-          if (!allReleased) {
-            return termSubjects.map((s) => ({
-              ...s,
-              final_grade:
-                s.fe_status === 1 || s.is_migrated ? s.final_grade : null,
-              numeric_grade:
-                s.fe_status === 1 || s.is_migrated ? s.numeric_grade : null,
-              descriptive_grade:
-                s.fe_status === 1 || s.is_migrated ? s.descriptive_grade : null,
-              en_remarks:
-                s.fe_status === 1 || s.is_migrated ? s.en_remarks : null,
-            }));
-          }
-          return termSubjects;
-        },
-      );
+      const processedGrades = Object.values(groupedByTerm).flatMap((termSubjects) => {
+        const allReleased = termSubjects.every((s) => s.fe_status === 1 || s.is_migrated);
+        if (!allReleased) {
+          return termSubjects.map((s) => ({
+            ...s,
+            final_grade:        s.fe_status === 1 || s.is_migrated ? s.final_grade        : null,
+            numeric_grade:      s.fe_status === 1 || s.is_migrated ? s.numeric_grade      : null,
+            descriptive_grade:  s.fe_status === 1 || s.is_migrated ? s.descriptive_grade  : null,
+            en_remarks:         s.fe_status === 1 || s.is_migrated ? s.en_remarks         : null,
+          }));
+        }
+        return termSubjects;
+      });
 
       setStudentGrade(processedGrades);
     } catch (error) {
@@ -260,188 +235,83 @@ const StudentGradingPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (matriculationBalanceInfo.hasBalance) {
-      setMessage("");
-      return;
-    }
-
-    if (!gradingActive || studentGrade.length === 0) return;
-    const pending = studentGrade.filter(
-      (subj) => subj.fe_status === 0 && !subj.is_migrated,
-    ).length;
-    if (pending > 0) {
-      setMessage(
-        `Grades are available. Please evaluate all your professors. Remaining: ${pending}`,
-      );
-    } else {
-      setMessage("");
-    }
-  }, [gradingActive, matriculationBalanceInfo.hasBalance, studentGrade]);
-
   const fetchGradingStatus = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/grading_status`);
-      if (res.data.status === 1) {
-        setGradingActive(true);
-        setMessage("");
-      } else {
-        setGradingActive(false);
-        setMessage("Grades are not available yet.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch grading status:", error);
-      setMessage("Error fetching grading status.");
-    }
+      if (res.data.status === 1) { setGradingActive(true); setMessage(""); }
+      else { setGradingActive(false); setMessage("Grades are not available yet."); }
+    } catch { setMessage("Error fetching grading status."); }
   };
+
+  useEffect(() => { fetchGradingStatus(); }, []);
 
   useEffect(() => {
-    fetchGradingStatus();
-  }, []);
+    if (matriculationBalanceInfo.hasBalance) { setMessage(""); return; }
+    if (!gradingActive || studentGrade.length === 0) return;
+    const pending = studentGrade.filter((s) => s.fe_status === 0 && !s.is_migrated).length;
+    if (pending > 0) setMessage(`Grades are available. Please evaluate all your professors. Remaining: ${pending}`);
+    else setMessage("");
+  }, [gradingActive, matriculationBalanceInfo.hasBalance, studentGrade]);
 
-
-  const yearLabelMap = {
-    "First Year": "1st Year",
-    "Second Year": "2nd Year",
-    "Third Year": "3rd Year",
-    "Fourth Year": "4th Year",
-    "Fifth Year": "5th Year",
-  };
-
-  const formatYearLabel = (year) => {
-    return yearLabelMap[year] || year;
-  };
-
-  const rawTerms = [
-    ...new Set(
-      studentGrade.map(
-        (row) => `${row.year_level_description} ${row.semester_description}`,
-      ),
-    ),
-  ];
+  const rawTerms = [...new Set(studentGrade.map((row) => `${row.year_level_description} ${row.semester_description}`))];
   const sortedTerms = sortTerms(rawTerms);
-  const headerBg = settings?.header_color || "#1976d2";
+  const headerBg   = settings?.header_color || "#1976d2";
   const programInfo = studentGrade[0] || null;
-  const formattedMatriculationBalance =
-    matriculationBalanceInfo.balance.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formattedMatriculationBalance = matriculationBalanceInfo.balance.toLocaleString(undefined, {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
 
-  // ── Shared cell styles ─────────────────────────────────────────
   const headCell = {
-    backgroundColor: headerBg,
-    color: "#fff",
-    fontWeight: 600,
-    fontSize: 12,
-    letterSpacing: "0.05em",
-    textTransform: "uppercase",
-    padding: "10px 14px",
-    borderBottom: "none",
-    whiteSpace: "nowrap",
+    backgroundColor: headerBg, color: "#fff", fontWeight: 600,
+    fontSize: 12, letterSpacing: "0.05em", textTransform: "uppercase",
+    padding: "10px 14px", borderBottom: "none", whiteSpace: "nowrap",
   };
-
   const bodyCell = {
-    fontSize: 13,
-    padding: "10px 14px",
-    color: "#1a1a1a",
-    borderBottom: `1px solid ${borderColor}`,
-    verticalAlign: "middle",
+    fontSize: 13, padding: "10px 14px", color: "#1a1a1a",
+    borderBottom: `1px solid ${borderColor}`, verticalAlign: "middle",
   };
 
-  // ──────────────────────────────────────────────────────────────
   return (
-    <Box
-      sx={{
-        height: "calc(100vh - 150px)",
-        overflowY: "auto",
-        paddingRight: 1,
-        backgroundColor: "transparent",
-        mt: 1,
-        padding: 2,
-      }}
-    >
+    <Box sx={{
+      minHeight: "calc(100vh - 150px)",
+      overflowY: "auto",
+      backgroundColor: "transparent",
+      mt: 1,
+      p: { xs: 1, sm: 2 },
+    }}>
+
       {/* ── Snackbar ── */}
-      <Snackbar
-        open={!!message}
-        autoHideDuration={4000}
-        onClose={() => setMessage("")}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={() => setMessage("")}
-          severity="warning"
-          sx={{ width: "100%" }}
-        >
+      <Snackbar open={!!message} autoHideDuration={4000} onClose={() => setMessage("")}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+        <Alert onClose={() => setMessage("")} severity="warning" sx={{ width: "100%" }}>
           {message}
         </Alert>
       </Snackbar>
 
       {/* ── Page Header ── */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          mb: 2.5,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            mb: 2.5,
-          }}
-        >
-          <Box>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: "bold",
-                color: titleColor,
-                fontSize: "36px",
-                lineHeight: 1.2,
-              }}
-            >
-              STUDENT GRADES
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2.5, flexWrap: "wrap", gap: 1 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: "bold", color: titleColor, fontSize: { xs: "22px", sm: "28px", md: "36px" }, lineHeight: 1.2 }}>
+            STUDENT GRADES
+          </Typography>
+          {programInfo && (
+            <Typography variant="body2" sx={{ color: subtitleColor, mt: "6px", fontSize: { xs: 13, sm: 16, md: 18 } }}>
+              {programInfo.program_description} ({programInfo.program_code})
             </Typography>
-            {programInfo && (
-              <Typography
-                variant="body2"
-                sx={{ color: subtitleColor, mt: "6px", fontSize: 18 }}
-              >
-                {programInfo.program_description} ({programInfo.program_code})
-              </Typography>
-            )}
-          </Box>
+          )}
         </Box>
 
         {/* Grading Status Pill */}
-        <Box
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            px: "14px",
-            py: "6px",
-            borderRadius: "20px",
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: "0.03em",
-            backgroundColor: gradingActive ? "#E8F5E9" : "#FFF3E0",
-            color: gradingActive ? "#2E7D32" : "#E65100",
-            border: `1px solid ${gradingActive ? "#A5D6A7" : "#FFCC80"}`,
-          }}
-        >
-          <Box
-            sx={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              backgroundColor: gradingActive ? "#43A047" : "#FB8C00",
-            }}
-          />
+        <Box sx={{
+          display: "inline-flex", alignItems: "center", gap: "6px",
+          px: "14px", py: "6px", borderRadius: "20px",
+          fontSize: 12, fontWeight: 600, letterSpacing: "0.03em",
+          backgroundColor: gradingActive ? "#E8F5E9" : "#FFF3E0",
+          color: gradingActive ? "#2E7D32" : "#E65100",
+          border: `1px solid ${gradingActive ? "#A5D6A7" : "#FFCC80"}`,
+          flexShrink: 0, alignSelf: "flex-start",
+        }}>
+          <Box sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: gradingActive ? "#43A047" : "#FB8C00" }} />
           {gradingActive ? "Grades Available" : "Not Yet Available"}
         </Box>
       </Box>
@@ -449,502 +319,202 @@ const StudentGradingPage = () => {
       {/* ── Divider ── */}
       <Box sx={{ height: "1px", backgroundColor: borderColor, mb: 3 }} />
 
-      <Alert
-        severity="info"
-        icon={<InfoOutlinedIcon />}
-        sx={{
-          borderRadius: "12px",
-          mt: 2,
-
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          "& .MuiAlert-message": {
-            width: "100%",
-            textAlign: "center",
-          },
-          "& .MuiAlert-icon": {
-            alignItems: "center",
-          },
-        }}
-      >
-        <AlertTitle
-          sx={{
-            fontWeight: 600,
-            textAlign: "center",
-          }}
-        >
-          Attention to All Students
-        </AlertTitle>
-        Viewing grades online through the <b>Student Information System</b> is
-        strictly for personal use only. Students who need an official copy from
-        the Registrar for interoffice transactions must submit a request for the
-        official document at the Registrar’s Office.
-        <br />
-        <br />
-        Please note that the grades posted in the
-        <b> Student Information System</b> from previous school years were
-        migrated from the old enrollment system and are still subject to
-        checking and validation by the Registrar.
+      {/* ── Info Alert ── */}
+      <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{
+        borderRadius: "12px", mt: 2,
+        justifyContent: "center", alignItems: "center", textAlign: "center",
+        "& .MuiAlert-message": { width: "100%", textAlign: "center" },
+        "& .MuiAlert-icon": { alignItems: "center" },
+      }}>
+        <AlertTitle sx={{ fontWeight: 600, textAlign: "center" }}>Attention to All Students</AlertTitle>
+        Viewing grades online through the <b>Student Information System</b> is strictly for personal use only.
+        Students who need an official copy must submit a request at the Registrar's Office.
+        <br /><br />
+        Grades from previous school years were migrated from the old enrollment system and are still subject
+        to checking and validation by the Registrar.
       </Alert>
 
       <br />
 
-      {/* ── Grade Tables per Term ── */}
+      {/* ── Balance Warning ── */}
       {matriculationBalanceInfo.hasBalance && (
-        <Alert
-          severity="warning"
-          sx={{
-            borderRadius: "12px",
-            mb: 3,
-            alignItems: "center",
-          }}
-        >
-          <AlertTitle sx={{ fontWeight: 700 }}>
-            Grades Hidden Due to Matriculation Balance
-          </AlertTitle>
-          Your grades are hidden because you still have a remaining
-          matriculation balance of <b>{formattedMatriculationBalance}</b>.
-          Please settle your balance to view your grades.
+        <Alert severity="warning" sx={{ borderRadius: "12px", mb: 3 }}>
+          <AlertTitle sx={{ fontWeight: 700 }}>Grades Hidden Due to Matriculation Balance</AlertTitle>
+          Your grades are hidden because you still have a remaining matriculation balance of{" "}
+          <b>{formattedMatriculationBalance}</b>. Please settle your balance to view your grades.
         </Alert>
       )}
 
+      {/* ── Loading / Empty / Grade Tables ── */}
       {loading ? (
         <Box sx={{ textAlign: "center", py: 8 }}>
-          <Typography sx={{ color: subtitleColor, fontSize: 14 }}>
-            Loading grades...
-          </Typography>
+          <Typography sx={{ color: subtitleColor, fontSize: 14 }}>Loading grades...</Typography>
         </Box>
       ) : studentGrade.length > 0 ? (
         sortedTerms.map((term, idx) => {
-          const [schoolYear, ...semParts] = term.split(" ");
-          const semester = semParts.join(" ");
-
           const termSubjects = studentGrade
-            .filter(
-              (row) =>
-                `${row.year_level_description} ${row.semester_description}` ===
-                term,
-            )
-            .sort((a, b) =>
-              (a.course_code || "").localeCompare(b.course_code || ""),
-            );
+            .filter((row) => `${row.year_level_description} ${row.semester_description}` === term)
+            .sort((a, b) => (a.course_code || "").localeCompare(b.course_code || ""));
 
-          const yearLevel = termSubjects[0]?.year_level_description;
-          const semesterLabel = termSubjects[0]?.semester_description;
-          const honorTitle = termSubjects[0]?.honor_title;
-          const gwaValue = termSubjects[0]?.gwa;
+          const yearLevel    = termSubjects[0]?.year_level_description;
+          const semesterLabel= termSubjects[0]?.semester_description;
+          const gwaValue     = termSubjects[0]?.gwa;
 
           return (
             <Box key={idx} sx={{ mb: 5 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  mb: 2,
-                  p: 2,
-                  borderRadius: "10px",
-                  backgroundColor: "#fff",
-                  border: `1px solid ${borderColor}`,
-                  boxShadow: 2,
-                }}
-              >
-                {/* LEFT SECTION */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    width: "100%",
-                  }}
-                >
-                  {/* PERSON ICON */}
-                  <Box
-                    sx={{
-                      width: 45,
-                      height: 45,
-                      borderRadius: "50%",
-                      backgroundColor: headerBg,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#fff",
-                    }}
-                  >
-                    <PersonIcon />
-                  </Box>
 
-                  {/* ACCENT BAR */}
-                  <Box
-                    sx={{
-                      width: 4,
-                      height: 50,
-                      borderRadius: 2,
-                      backgroundColor: headerBg,
-                      flexShrink: 0,
-                    }}
-                  />
+              {/* ── Student Info Card ── */}
+              <Box sx={{
+                display: "flex", alignItems: "flex-start",
+                mb: 2, p: { xs: 1.5, sm: 2 },
+                borderRadius: "10px", backgroundColor: "#fff",
+                border: `1px solid ${borderColor}`, boxShadow: 2,
+                gap: 1.5,
+              }}>
+                {/* Person icon */}
+                <Box sx={{
+                  width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+                  backgroundColor: headerBg, display: "flex",
+                  alignItems: "center", justifyContent: "center", color: "#fff",
+                }}>
+                  <PersonIcon fontSize="small" />
+                </Box>
 
-                  {/* CONTENT */}
-                  <Box
-                    sx={{
+                {/* Accent bar */}
+                <Box sx={{ width: 4, borderRadius: 2, backgroundColor: headerBg, flexShrink: 0, alignSelf: "stretch" }} />
+
+                {/* Info — stacks vertically on mobile, side-by-side on desktop */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  {programInfo && (
+                    <Box sx={{
                       display: "flex",
+                      flexDirection: { xs: "column", md: "row" },
                       justifyContent: "space-between",
-                      width: "100%",
-                    }}
-                  >
-                    {/* LEFT SIDE */}
-                    <Box>
-                      {programInfo && (
-                        <Box>
-                          {/* STUDENT NUMBER */}
-                          <Typography
-                            sx={{
-                              fontSize: 15,
-                              fontWeight: 700,
-                              color: titleColor,
-                            }}
-                          >
-                            STUDENT NUMBER:{" "}
-                            <Box
-                              component="span"
-                              style={{
-                                fontWeight: "normal",
-                                marginLeft: "15px",
-                              }}
-                            >
-                              {programInfo.student_number}
-                            </Box>
-                          </Typography>
-
-                          {/* NAME */}
-                          <Typography
-                            sx={{
-                              fontSize: 15,
-                              fontWeight: 700,
-                              color: titleColor,
-                            }}
-                          >
-                            NAME:
-                            <Box
-                              component="span"
-                              style={{
-                                fontWeight: "normal",
-                                marginLeft: "15px",
-                              }}
-                            >
-                              {programInfo.last_name}, {programInfo.first_name}{" "}
-                              {programInfo.middle_name}
-                            </Box>
-                          </Typography>
-                          {/* GWA BELOW NAME */}
-                          {gwaValue && (
-                            <Typography
-                              sx={{
-                                fontSize: 14,
-                                fontWeight: 700,
-                                color: titleColor,
-                              }}
-                            >
-                              GWA:
-                              <Box
-                                component="span"
-                                sx={{
-                                  fontWeight: "normal",
-                                  marginLeft: "15px",
-                                  color: headerBg,
-                                }}
-                              >
-                                {gwaValue !== null && gwaValue !== undefined
-                                  ? Number(gwaValue).toFixed(3)
-                                  : "—"}
-                              </Box>
-                              <br />
-                              {/* {honorTitle && (
-                                <Box
-
-                                  sx={{
-
-                                    color: "green",
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  ACADEMIC AWARD: {honorTitle}
-                                </Box>
-                              )} */}
-                            </Typography>
-                          )}
-                        </Box>
-                      )}
-                    </Box>
-
-                    {/* RIGHT SIDE */}
-                    {programInfo && (
-                      <Box sx={{ textAlign: "right" }}>
-                        {/* PROGRAM */}
-                        <Typography
-                          sx={{
-                            fontSize: 15,
-                            fontWeight: 700,
-                            color: titleColor,
-                          }}
-                        >
-                          PROGRAM:
-                          <Box
-                            component="span"
-                            style={{ fontWeight: "normal", marginLeft: "15px" }}
-                          >
-                            ({programInfo.program_code}){" "}
-                            {programInfo.program_description}{" "}
-                            {programInfo.major}
+                      gap: { xs: 0.5, md: 0 },
+                    }}>
+                      {/* LEFT */}
+                      <Box>
+                        <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color: titleColor }}>
+                          STUDENT NUMBER:{" "}
+                          <Box component="span" sx={{ fontWeight: "normal", ml: "8px" }}>
+                            {programInfo.student_number}
                           </Box>
                         </Typography>
+                        <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color: titleColor }}>
+                          NAME:{" "}
+                          <Box component="span" sx={{ fontWeight: "normal", ml: "8px" }}>
+                            {programInfo.last_name}, {programInfo.first_name} {programInfo.middle_name}
+                          </Box>
+                        </Typography>
+                        {gwaValue && (
+                          <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color: titleColor }}>
+                            GWA:{" "}
+                            <Box component="span" sx={{ fontWeight: "normal", ml: "8px", color: headerBg }}>
+                              {Number(gwaValue).toFixed(3)}
+                            </Box>
+                          </Typography>
+                        )}
+                      </Box>
 
-                        {/* YEAR / SEM */}
-                        <Typography
-                          sx={{
-                            fontSize: 15,
-                            fontWeight: 700,
-                            color: titleColor,
-                          }}
-                        >
-                          YEAR / SEMESTER:
-                          <Box
-                            component="span"
-                            style={{ fontWeight: "normal", marginLeft: "15px" }}
-                          >
+                      {/* RIGHT */}
+                      <Box sx={{ textAlign: { xs: "left", md: "right" } }}>
+                        <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color: titleColor }}>
+                          PROGRAM:{" "}
+                          <Box component="span" sx={{ fontWeight: "normal", ml: "8px" }}>
+                            ({programInfo.program_code}) {programInfo.program_description} {programInfo.major}
+                          </Box>
+                        </Typography>
+                        <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color: titleColor }}>
+                          YEAR / SEMESTER:{" "}
+                          <Box component="span" sx={{ fontWeight: "normal", ml: "8px" }}>
                             {formatYearLabel(yearLevel)} - {semesterLabel}
                           </Box>
                         </Typography>
                       </Box>
-                    )}
-                  </Box>
+                    </Box>
+                  )}
                 </Box>
-
-                {/* GWA BADGE */}
               </Box>
 
-              {/* ── Table ── */}
-              <TableContainer
-                component={Paper}
-                elevation={0}
-                sx={{
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: "10px",
+              {/* ── Mobile: cards | Desktop: table ── */}
+              {isMobile ? (
+                <Box>
+                  {termSubjects.map((row, i) => (
+                    <MobileGradeCard
+                      key={i} row={row} index={i}
+                      borderColor={borderColor}
+                      subtitleColor={subtitleColor}
+                      titleColor={titleColor}
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <TableContainer component={Paper} elevation={0} sx={{
+                  border: `1px solid ${borderColor}`, borderRadius: "10px",
                   overflow: "hidden",
-                }}
-              >
-                <Table size="small" sx={{ tableLayout: "fixed" }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "48px",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        #
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "120px",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        Code
-                      </TableCell>
-                      <TableCell
-                        sx={{ ...headCell, border: `1px solid ${borderColor}` }}
-                      >
-                        Subject
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "200px",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        Faculty
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "70px",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        Units
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "120px",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        Section
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "110px",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        Final Grade
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          ...headCell,
-                          width: "120px",
-                          textAlign: "center",
-                          border: `1px solid ${borderColor}`,
-                        }}
-                      >
-                        Status
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-
-                  <TableBody>
-                    {termSubjects.map((row, i) => {
-                      row.numeric_grade;
-                      row.descriptive_grade;
-                      return (
-                        <TableRow
-                          key={i}
-                          sx={{
-                            "&:hover": { backgroundColor: "#f9f9f9" },
-                            "&:last-child td": { borderBottom: "none" },
-                          }}
-                        >
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              border: `1px solid ${borderColor}`,
-                              width: "48px",
-                              textAlign: "center",
-                              color: subtitleColor,
-                              fontSize: 12,
-                            }}
-                          >
+                }}>
+                  <Table size="small" sx={{ tableLayout: "fixed" }}>
+                    <TableHead>
+                      <TableRow>
+                        {[
+                          { label: "#",           width: "48px",  align: "center" },
+                          { label: "Code",        width: "120px"               },
+                          { label: "Subject",     width: undefined             },
+                          { label: "Faculty",     width: "200px"               },
+                          { label: "Units",       width: "70px",  align: "center" },
+                          { label: "Section",     width: "120px", align: "center" },
+                          { label: "Final Grade", width: "110px", align: "center" },
+                          { label: "Status",      width: "120px", align: "center" },
+                        ].map(({ label, width, align }) => (
+                          <TableCell key={label} sx={{ ...headCell, width, textAlign: align || "left", border: `1px solid ${borderColor}` }}>
+                            {label}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {termSubjects.map((row, i) => (
+                        <TableRow key={i} sx={{ "&:hover": { backgroundColor: "#f9f9f9" }, "&:last-child td": { borderBottom: "none" } }}>
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, textAlign: "center", color: subtitleColor, fontSize: 12 }}>
                             {i + 1}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              border: `1px solid ${borderColor}`,
-                              fontWeight: 600,
-                              fontSize: 12,
-                              color: subtitleColor,
-                            }}
-                          >
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, fontWeight: 600, fontSize: 12, color: subtitleColor }}>
                             {row.course_code}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              border: `1px solid ${borderColor}`,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {row.course_description}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              border: `1px solid ${borderColor}`,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {row.fname === "TBA" && row.lname === "TBA" ? (
-                              <span
-                                style={{
-                                  color: "#9CA3AF",
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                TBA
-                              </span>
-                            ) : (
-                              `Prof. ${row.fname} ${row.lname}`
-                            )}
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {row.fname === "TBA" && row.lname === "TBA"
+                              ? <span style={{ color: "#9CA3AF", fontStyle: "italic" }}>TBA</span>
+                              : `Prof. ${row.fname} ${row.lname}`}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              border: `1px solid ${borderColor}`,
-                              textAlign: "center",
-                              fontWeight: 500,
-                            }}
-                          >
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, textAlign: "center", fontWeight: 500 }}>
                             {getUnitDisplay(row)}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              textAlign: "center",
-                              border: `1px solid ${borderColor}`,
-                            }}
-                          >
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, textAlign: "center" }}>
                             {row.program_code}-{row.section_description}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              textAlign: "center",
-                              border: `1px solid ${borderColor}`,
-                            }}
-                          >
-                            {row.numeric_grade ? (
-                              <span
-                                style={{
-                                  fontWeight: 700,
-                                  fontSize: 14,
-                                  color: titleColor,
-                                }}
-                              >
-                                {row.numeric_grade}
-                              </span>
-                            ) : (
-                              <span style={{ color: "#9CA3AF" }}>—</span>
-                            )}
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, textAlign: "center" }}>
+                            {row.numeric_grade
+                              ? <span style={{ fontWeight: 700, fontSize: 14, color: titleColor }}>{row.numeric_grade}</span>
+                              : <span style={{ color: "#9CA3AF" }}>—</span>}
                           </TableCell>
-                          <TableCell
-                            sx={{
-                              ...bodyCell,
-                              textAlign: "center",
-                              border: `1px solid ${borderColor}`,
-                            }}
-                          >
+                          <TableCell sx={{ ...bodyCell, border: `1px solid ${borderColor}`, textAlign: "center" }}>
                             <RemarkBadge value={row.en_remarks} />
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Box>
           );
         })
       ) : (
         <Box sx={{ textAlign: "center", py: 8 }}>
-          <Typography sx={{ color: subtitleColor, fontSize: 14 }}>
-            No grades available.
-          </Typography>
+          <Typography sx={{ color: subtitleColor, fontSize: 14 }}>No grades available.</Typography>
         </Box>
       )}
     </Box>

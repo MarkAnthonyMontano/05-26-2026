@@ -19,6 +19,8 @@ import {
   FormControlLabel,
   Checkbox,
   Button,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Dialog,
@@ -39,24 +41,25 @@ import KeyboardBackspaceIcon from "@mui/icons-material/KeyboardBackspace";
 import EaristLogo from "../assets/EaristLogo.png";
 import API_BASE_URL from "../apiConfig";
 import { useParams } from "react-router-dom";
-// Add these imports at the top of ApplicantDashboard.jsx
 import { motion, AnimatePresence } from "framer-motion";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import { ArrowBackIos, ArrowForwardIos } from "@mui/icons-material";
+import { ArrowBackIos, ArrowForwardIos, Campaign, } from "@mui/icons-material";
 
 
 const ApplicantDashboard = (props) => {
   const settings = useContext(SettingsContext);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));   // < 600px
 
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-  const [stepperColor, setStepperColor] = useState("#000000"); // ✅ NEW
+  const [stepperColor, setStepperColor] = useState("#000000");
 
   const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
@@ -65,23 +68,16 @@ const ApplicantDashboard = (props) => {
 
   useEffect(() => {
     if (!settings) return;
-
-    // 🎨 Colors
     if (settings.title_color) setTitleColor(settings.title_color);
     if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
     if (settings.border_color) setBorderColor(settings.border_color);
-    if (settings.main_button_color)
-      setMainButtonColor(settings.main_button_color);
-    if (settings.stepper_color) setStepperColor(settings.stepper_color); // ✅ NEW
-
-    // 🏫 Logo
+    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
+    if (settings.stepper_color) setStepperColor(settings.stepper_color);
     if (settings.logo_url) {
       setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
     } else {
       setFetchedLogo(EaristLogo);
     }
-
-    // 🏷️ School Information
     if (settings.company_name) setCompanyName(settings.company_name);
     if (settings.short_term) setShortTerm(settings.short_term);
     if (settings.campus_address) setCampusAddress(settings.campus_address);
@@ -101,10 +97,7 @@ const ApplicantDashboard = (props) => {
     first_name: "",
     middle_name: "",
     extension: "",
-    profile_img: "",
   });
-
-
 
   const [proctor, setProctor] = useState(null);
   const [applicantNumber, setApplicantNumber] = useState(null);
@@ -116,12 +109,10 @@ const ApplicantDashboard = (props) => {
     const storedUser = localStorage.getItem("email");
     const storedRole = localStorage.getItem("role");
     const storedID = localStorage.getItem("person_id");
-
     if (storedUser && storedRole && storedID) {
       setUser(storedUser);
       setUserRole(storedRole);
       setUserID(storedID);
-
       if (storedRole === "applicant") {
         fetchPersonData(storedID);
         fetchApplicantNumber(storedID);
@@ -140,24 +131,18 @@ const ApplicantDashboard = (props) => {
     setOpenAgreementModal(true);
   }, []);
 
-  // add these alongside your other useState declarations
   const [qualifyingExamScore, setQualifyingExamScore] = useState(null);
-  const [qualifyingInterviewScore, setQualifyingInterviewScore] =
-    useState(null);
+  const [qualifyingInterviewScore, setQualifyingInterviewScore] = useState(null);
   const [examScore, setExamScore] = useState(null);
 
   const normalizeSchedule = (schedule) => {
     if (!schedule) return null;
-
     return {
       ...schedule,
       schedule_id: schedule.schedule_id ?? schedule.exam_schedule_id ?? null,
-      day_description:
-        schedule.day_description ?? schedule.exam_day ?? schedule.date_of_exam ?? null,
-      building_description:
-        schedule.building_description ?? schedule.exam_building ?? null,
-      room_description:
-        schedule.room_description ?? schedule.exam_room ?? null,
+      day_description: schedule.day_description ?? schedule.exam_day ?? schedule.date_of_exam ?? null,
+      building_description: schedule.building_description ?? schedule.exam_building ?? null,
+      room_description: schedule.room_description ?? schedule.exam_room ?? null,
       start_time: schedule.start_time ?? schedule.exam_start_time ?? null,
       end_time: schedule.end_time ?? schedule.exam_end_time ?? null,
     };
@@ -165,19 +150,15 @@ const ApplicantDashboard = (props) => {
 
   const fetchProctorSchedule = async (applicantNumber) => {
     if (!applicantNumber) return;
-    console.log("fetchProctorSchedule called with:", applicantNumber); // 👈
+    console.log("fetchProctorSchedule called with:", applicantNumber);
     try {
-      const { data } = await axios.get(
-        `${API_BASE_URL}/api/applicant-schedule/${applicantNumber}`,
-      );
+      const { data } = await axios.get(`${API_BASE_URL}/api/applicant-schedule/${applicantNumber}`);
       console.log("proctor data:", data);
       setProctor(normalizeSchedule(data));
     } catch (err) {
       console.error("Error fetching schedule:", err);
       try {
-        const { data } = await axios.get(
-          `${API_BASE_URL}/api/exam-schedule/${applicantNumber}`,
-        );
+        const { data } = await axios.get(`${API_BASE_URL}/api/exam-schedule/${applicantNumber}`);
         setProctor(normalizeSchedule(data));
       } catch (fallbackErr) {
         console.error("Fallback schedule fetch failed:", fallbackErr);
@@ -185,18 +166,15 @@ const ApplicantDashboard = (props) => {
       }
     }
   };
+
   const [requirementsCompleted, setRequirementsCompleted] = useState(
     localStorage.getItem("requirementsCompleted") === "1",
   );
-
   const [allRequirementsCompleted, setAllRequirementsCompleted] = useState(false);
-
 
   const fetchApplicantNumber = async (personID) => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/applicant_number/${personID}`,
-      );
+      const res = await axios.get(`${API_BASE_URL}/api/applicant_number/${personID}`);
       if (res.data && res.data.applicant_number) {
         setApplicantID(res.data.applicant_number);
         setApplicantNumber(res.data.applicant_number);
@@ -212,11 +190,8 @@ const ApplicantDashboard = (props) => {
 
   const fetchPersonData = async (id) => {
     if (!id) return console.warn("fetchPersonData called with empty id");
-
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/person_with_applicant/${id}`,
-      );
+      const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${id}`);
       setPerson(res.data || {});
 
       const profileSchedule = normalizeSchedule(res.data);
@@ -224,59 +199,34 @@ const ApplicantDashboard = (props) => {
         setProctor(profileSchedule);
       }
 
-      // map many possible field names
-      let qExam =
-        res.data?.qualifying_exam_score ??
-        res.data?.qualifying_result ??
-        res.data?.exam_score ??
-        null;
-      let qInterview =
-        res.data?.qualifying_interview_score ??
-        res.data?.interview_result ??
-        null;
+      let qExam = res.data?.qualifying_exam_score ?? res.data?.qualifying_result ?? res.data?.exam_score ?? null;
+      let qInterview = res.data?.qualifying_interview_score ?? res.data?.interview_result ?? null;
       let ex = res.data?.exam_score ?? res.data?.exam_result ?? null;
 
-      // fallback: fetch person_status_by_applicant if scores not present
-      const applicantNumber =
-        res.data?.applicant_number ?? res.data?.applicantNumber ?? null;
+      const applicantNumber = res.data?.applicant_number ?? res.data?.applicantNumber ?? null;
 
       if (qExam === null && qInterview === null && ex === null && applicantNumber) {
         try {
-          const st = await axios.get(
-            `${API_BASE_URL}/api/person_status_by_applicant/${applicantNumber}`,
-          );
+          const st = await axios.get(`${API_BASE_URL}/api/person_status_by_applicant/${applicantNumber}`);
           console.info("person_status_by_applicant response:", st.data);
           qExam = qExam ?? st.data?.qualifying_result ?? null;
           qInterview = qInterview ?? st.data?.interview_result ?? null;
           ex = ex ?? st.data?.exam_result ?? null;
         } catch (err) {
-          console.warn(
-            "Fallback status endpoint failed:",
-            err?.response?.data || err.message,
-          );
+          console.warn("Fallback status endpoint failed:", err?.response?.data || err.message);
         }
       }
 
-      setQualifyingExamScore(
-        qExam !== undefined && qExam !== null ? normalizeExamStatus(qExam) : null,
-      );
-      setQualifyingInterviewScore(
-        qInterview !== undefined && qInterview !== null
-          ? normalizeExamStatus(qInterview)
-          : null,
-      );
+      setQualifyingExamScore(qExam !== undefined && qExam !== null ? normalizeExamStatus(qExam) : null);
+      setQualifyingInterviewScore(qInterview !== undefined && qInterview !== null ? normalizeExamStatus(qInterview) : null);
       setExamScore(ex !== undefined && ex !== null ? normalizeExamStatus(ex) : null);
 
       console.info("final mapped scores:", { qExam, qInterview, ex });
     } catch (err) {
-      console.error(
-        "fetchPersonData failed:",
-        err?.response?.data || err.message,
-      );
+      console.error("fetchPersonData failed:", err?.response?.data || err.message);
     }
   };
 
-  // Format start and end time
   const formatTime = (time) =>
     time
       ? new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
@@ -287,7 +237,6 @@ const ApplicantDashboard = (props) => {
       : "";
 
   const [dateTime, setDateTime] = useState(new Date());
-
   const formattedDate = new Date().toLocaleDateString("en-US", {
     weekday: "short",
     day: "2-digit",
@@ -296,12 +245,8 @@ const ApplicantDashboard = (props) => {
   });
 
   const [time, setTime] = useState(new Date());
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
-
+    const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -324,7 +269,6 @@ const ApplicantDashboard = (props) => {
   const normalizeExamStatus = (status) => {
     if (status === 0 || String(status).trim() === "0") return "PASSED";
     if (status === 1 || String(status).trim() === "1") return "FAILED";
-
     const normalized = String(status ?? "").trim().toUpperCase();
     if (["PASSED", "PASS"].includes(normalized)) return "PASSED";
     if (["FAILED", "FAIL"].includes(normalized)) return "FAILED";
@@ -333,57 +277,34 @@ const ApplicantDashboard = (props) => {
 
   const normalizeCollegeApproval = (status) => {
     const normalized = String(status ?? "").trim().toUpperCase();
-    if (status === 1 || normalized === "1" || normalized === "ACCEPTED") {
-      return "Accepted";
-    }
-    if (status === 2 || normalized === "2" || normalized === "REJECTED") {
-      return "Rejected";
-    }
+    if (status === 1 || normalized === "1" || normalized === "ACCEPTED") return "Accepted";
+    if (status === 2 || normalized === "2" || normalized === "REJECTED") return "Rejected";
     return "";
   };
 
   const fetchEntranceExamScores = async (applicantNumber) => {
     if (!applicantNumber) return;
-
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/applicants-with-number`
-      );
-
-      // API now returns { subjects, data }
-      const applicant = res.data.data.find(
-        (a) => a.applicant_number === applicantNumber
-      );
-
+      const res = await axios.get(`${API_BASE_URL}/api/applicants-with-number`);
+      const applicant = res.data.data.find((a) => a.applicant_number === applicantNumber);
       if (applicant) {
         setExamScores({
-          subjects: applicant.scores || {}, // dynamic subjects
-          final: applicant.final_rating
-            ? Number(applicant.final_rating).toFixed(2)
-            : "0.00",
+          subjects: applicant.scores || {},
+          final: applicant.final_rating ? Number(applicant.final_rating).toFixed(2) : "0.00",
           total: applicant.total || 0,
           percentage: applicant.percentage || 0,
           status: normalizeExamStatus(applicant.exam_status),
         });
       } else {
-        setExamScores({
-          subjects: {},
-          final: null,
-          total: null,
-          percentage: null,
-          status: null,
-        });
+        setExamScores({ subjects: {}, final: null, total: null, percentage: null, status: null });
       }
     } catch (err) {
       console.error("❌ Failed to fetch entrance exam scores:", err);
     }
   };
 
-  const hasScores =
-    examScores.subjects &&
-    Object.keys(examScores.subjects).length > 0;
+  const hasScores = examScores.subjects && Object.keys(examScores.subjects).length > 0;
 
-  // AFTER — shows whenever schedule data exists
   const hasSchedule = !!(
     proctor?.schedule_id ||
     proctor?.day_description ||
@@ -399,27 +320,16 @@ const ApplicantDashboard = (props) => {
   const fetchInterviewSchedule = async (applicantNumber) => {
     if (!applicantNumber) return;
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/applicant-interview-schedule/${applicantNumber}`,
-      );
+      const res = await axios.get(`${API_BASE_URL}/api/applicant-interview-schedule/${applicantNumber}`);
       console.info("Interview schedule + scores:", res.data);
-
       setInterviewSchedule(res.data);
-
-      // ✅ set scores directly from API
       const qExam = res.data.qualifying_result ?? null;
       const qInterview = res.data.interview_result ?? null;
       const ex = res.data.exam_result ?? null;
-
       setQualifyingExamScore(qExam !== null ? normalizeExamStatus(qExam) : null);
-      setQualifyingInterviewScore(
-        qInterview !== null ? normalizeExamStatus(qInterview) : null,
-      );
+      setQualifyingInterviewScore(qInterview !== null ? normalizeExamStatus(qInterview) : null);
       setExamScore(ex !== null ? normalizeExamStatus(ex) : null);
-
-      setHasInterviewScores(
-        qExam !== null || qInterview !== null || ex !== null,
-      );
+      setHasInterviewScores(qExam !== null || qInterview !== null || ex !== null);
     } catch (err) {
       console.error("❌ Failed to fetch interview schedule:", err);
       setInterviewSchedule(null);
@@ -427,18 +337,14 @@ const ApplicantDashboard = (props) => {
   };
 
   useEffect(() => {
-    if (applicantNumber) {
-      fetchEntranceExamScores(applicantNumber);
-    }
+    if (applicantNumber) fetchEntranceExamScores(applicantNumber);
   }, [applicantNumber]);
 
   const [collegeApproval, setCollegeApproval] = useState(null);
 
   const fetchCollegeApproval = async (applicantNumber) => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/interview_applicants/${applicantNumber}`,
-      );
+      const res = await axios.get(`${API_BASE_URL}/api/interview_applicants/${applicantNumber}`);
       setCollegeApproval(normalizeCollegeApproval(res.data?.status));
     } catch (err) {
       console.error("❌ Failed to fetch college approval:", err);
@@ -446,16 +352,12 @@ const ApplicantDashboard = (props) => {
   };
 
   const [date, setDate] = useState(new Date());
-
   const days = ["Sun", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat"];
-
   const year = date.getFullYear();
   const month = date.getMonth();
 
   const now = new Date();
-  const manilaDate = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Manila" }),
-  );
+  const manilaDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
   const today = manilaDate.getDate();
   const thisMonth = manilaDate.getMonth();
   const thisYear = manilaDate.getFullYear();
@@ -465,7 +367,6 @@ const ApplicantDashboard = (props) => {
 
   const weeks = [];
   let currentDay = 1 - firstDay;
-
   while (currentDay <= totalDays) {
     const week = [];
     for (let i = 0; i < 7; i++) {
@@ -484,47 +385,21 @@ const ApplicantDashboard = (props) => {
 
   const [docsCompleted, setDocsCompleted] = useState(false);
   const [mainStatus, setMainStatus] = useState(null);
-
-
   const [registrarApproved, setRegistrarApproved] = useState(false);
 
   const fetchDocumentsStatus = async () => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/applicant_uploaded_requirements/${person_id}`
-      );
-
+      const res = await axios.get(`${API_BASE_URL}/api/applicant_uploaded_requirements/${person_id}`);
       const rows = res.data;
-
-      if (!rows || rows.length === 0) {
-        setDocsCompleted(false);
-        return;
-      }
-
-      // Only check rows that actually have file_path (meaning uploaded)
+      if (!rows || rows.length === 0) { setDocsCompleted(false); return; }
       const uploaded = rows.filter((doc) => doc.file_path !== null);
-
-      // Total required = how many requirement IDs exist in DB for this person
       const totalRequired = rows.length;
-
-      // How many are submitted
-      const submittedCount = uploaded.filter(
-        (doc) => Number(doc.submitted_documents) === 1
-      ).length;
-
-      // Completed if uploaded == required
+      const submittedCount = uploaded.filter((doc) => Number(doc.submitted_documents) === 1).length;
       const allSubmitted = submittedCount === totalRequired;
-
       setDocsCompleted(allSubmitted);
-
-      // Auto-tag Document Verified
       if (allSubmitted) {
-        setPerson((prev) => ({
-          ...prev,
-          document_status: "Documents Verified & ECAT",
-        }));
+        setPerson((prev) => ({ ...prev, document_status: "Documents Verified & ECAT" }));
       }
-
     } catch (err) {
       console.error("❌ Failed fetching document status:", err);
     }
@@ -532,10 +407,7 @@ const ApplicantDashboard = (props) => {
 
   const fetchRegistrarStatus = async () => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/submitted-status/${person_id}`
-      );
-
+      const res = await axios.get(`${API_BASE_URL}/api/submitted-status/${person_id}`);
       setRegistrarApproved(Number(res.data.submitted_documents) === 1);
     } catch (err) {
       console.error("❌ Failed fetching registrar status:", err);
@@ -544,19 +416,19 @@ const ApplicantDashboard = (props) => {
 
   useEffect(() => {
     if (person_id) {
-      fetchDocumentsStatus();   // uploads
-      fetchRegistrarStatus();   // checkbox
+      fetchDocumentsStatus();
+      fetchRegistrarStatus();
     }
   }, [person_id]);
 
-  const stepIcons = {
-    0: <DescriptionIcon />,
-    1: <EventIcon />,
-    2: <AssignmentTurnedInIcon />,
-    3: <CheckCircleIcon />,
-    4: <LocalHospitalIcon />,
-    5: <PersonIcon />,
-  };
+  const stepIcons = [
+    <DescriptionIcon />,
+    <EventIcon />,
+    <AssignmentTurnedInIcon />,
+    <CheckCircleIcon />,
+    <LocalHospitalIcon />,
+    <PersonIcon />,
+  ];
 
   const steps = [
     "Documents Submitted",
@@ -568,62 +440,24 @@ const ApplicantDashboard = (props) => {
   ];
 
   const getCurrentStep = () => {
-    // STEP 6 — Final Status
-    if (
-      person?.final_status === "Accepted" ||
-      person?.final_status === "Rejected"
-    ) {
-      return 5;
-    }
-
-    // STEP 5 — Medical (ONLY if registrar approved)
-    if (registrarApproved) {
-      return 4;
-    }
-
-    // STEP 4 — College Approval
-    if (collegeApproval === "Accepted" || collegeApproval === "Rejected") {
-      return 3;
-    }
-
-    // STEP 3 — Interview
-    if (interviewSchedule || hasInterviewScores) {
-      return 2;
-    }
-
-    // STEP 2 — Exam
-    if (hasSchedule) {
-      return 1;
-    }
-
-    // STEP 1 — Documents uploaded
-    if (docsCompleted) {
-      return 0;
-    }
-
+    if (person?.final_status === "Accepted" || person?.final_status === "Rejected") return 5;
+    if (registrarApproved) return 4;
+    if (collegeApproval === "Accepted" || collegeApproval === "Rejected") return 3;
+    if (interviewSchedule || hasInterviewScores) return 2;
+    if (hasSchedule) return 1;
+    if (docsCompleted) return 0;
     return 0;
   };
 
-
   const activeStep = Math.min(getCurrentStep(), steps.length - 1);
 
-  const interview = person?.interview || null;
-  const medical = person?.medical || {};
-  const { active, completed, icon } = props; // <-- props are defined here
-  const IconComponent = stepIcons[icon - 1]; // MUI passes `icon` as 1-based index
-
   const [holidays, setHolidays] = useState({});
-
   useEffect(() => {
     const fetchHolidays = async () => {
       try {
-        const res = await axios.get(
-          `https://date.nager.at/api/v3/PublicHolidays/${year}/PH`,
-        );
+        const res = await axios.get(`https://date.nager.at/api/v3/PublicHolidays/${year}/PH`);
         const lookup = {};
-        res.data.forEach((h) => {
-          lookup[h.date] = h;
-        });
+        res.data.forEach((h) => { lookup[h.date] = h; });
         setHolidays(lookup);
       } catch (err) {
         console.error("❌ Failed to fetch PH holidays:", err);
@@ -634,29 +468,22 @@ const ApplicantDashboard = (props) => {
   }, [year]);
 
   const [announcements, setAnnouncements] = useState([]);
-
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const res = await axios.get(
-          `${API_BASE_URL}/api/announcements/applicant`,
-        );
+        const res = await axios.get(`${API_BASE_URL}/api/announcements/applicant`);
         setAnnouncements(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err);
       }
     };
-
     fetchAnnouncements();
   }, []);
 
-  // Lightbox state — add near your other useState declarations
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxZoom, setLightboxZoom] = useState(1);
 
-
-  // Lightbox helpers
   const openLightbox = (index) => { setLightboxIndex(index); setLightboxZoom(1); setLightboxOpen(true); };
   const closeLightbox = () => { setLightboxOpen(false); setLightboxZoom(1); };
   const lightboxNext = () => { setLightboxIndex(prev => (prev + 1) % announcements.length); setLightboxZoom(1); };
@@ -675,44 +502,28 @@ const ApplicantDashboard = (props) => {
     return () => window.removeEventListener("keydown", handleKey);
   }, [lightboxOpen, lightboxIndex, announcements.length]);
 
-
   const formatDate = (dateString) => {
     if (!dateString) return "TBA";
     const date = new Date(dateString);
-    if (isNaN(date)) return dateString; // In case it's not a valid date
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    if (isNaN(date)) return dateString;
+    return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     try {
       const person_id = localStorage.getItem("person_id");
       const role = localStorage.getItem("role");
       const formData = new FormData();
-
       formData.append("profile_picture", file);
       formData.append("person_id", person_id);
-
-      // ✅ Upload image using same backend API
       await axios.post(`${API_BASE_URL}/form/upload-profile-picture`, formData);
-
-      // ✅ Refresh profile info to display the new image
-      const updated = await axios.get(
-        `${API_BASE_URL}/api/person_data/${person_id}/${role}`,
-      );
-
+      const updated = await axios.get(`${API_BASE_URL}/api/person_data/${person_id}/${role}`);
       setPerson(updated.data);
       fetchPersonData(person_id, role);
-
       const baseUrl = `${API_BASE_URL}/uploads/Applicant1by1/${updated.data.profile_image}`;
       setProfileImage(`${baseUrl}?t=${Date.now()}`);
-
       console.log("✅ Profile updated successfully!");
     } catch (err) {
       console.error("❌ Upload failed:", err);
@@ -724,9 +535,7 @@ const ApplicantDashboard = (props) => {
 
   const checkStudentNumber = async (personId) => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/student_status/${personId}`,
-      );
+      const res = await axios.get(`${API_BASE_URL}/api/student_status/${personId}`);
       if (res.data.hasStudentNumber) {
         setHasStudentNumber(true);
         setStudentNumber(res.data.student_number);
@@ -743,10 +552,119 @@ const ApplicantDashboard = (props) => {
     if (storedID) {
       fetchPersonData(storedID);
       fetchApplicantNumber(storedID);
-      checkStudentNumber(storedID); // 👈 ADD THIS LINE
+      checkStudentNumber(storedID);
     }
   }, []);
 
+  // ── Step content helper (shared by desktop boxes + mobile accordion) ──────
+  const renderStepDetail = (index) => {
+    if (index === 0) {
+      return person?.document_status === "Documents Verified & ECAT" ? (
+        <Box>
+          <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+            ✅ Your submitted documents have been successfully verified.
+          </Typography>
+          <Divider sx={{ backgroundColor: "gray", height: "0.5px", my: 1.5, borderRadius: 1 }} />
+          <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+            <strong>Next Step:</strong><br />
+            Go to <strong>Applicant Profile</strong> → <strong>Examination Permit</strong> and <strong>print your permit</strong>.
+          </Typography>
+        </Box>
+      ) : (
+        <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>⏳ Status: Pending</Typography>
+      );
+    }
+
+    if (index === 1) return (
+      <Box sx={{ color: "maroon", fontWeight: "bold", fontSize: "13px", lineHeight: 1.6 }}>
+        {!hasSchedule && !hasScores && <span>⏳ Status: Pending</span>}
+        {!hasSchedule && hasScores && <span>Schedule: Not assigned</span>}
+        {hasSchedule && (
+          <Typography variant="body2" component="div" sx={{ color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+            📅 Date: {formatDate(proctor?.day_description)}<br />
+            🏢 Building: {proctor?.building_description || "TBA"}<br />
+            🚪 Room: {proctor?.room_description || "TBA"}<br />
+            ⏰ Time: {formatTime(proctor?.start_time)} – {formatTime(proctor?.end_time)}
+          </Typography>
+        )}
+        {(hasSchedule || hasScores) && <Divider sx={{ backgroundColor: "gray", height: "0.5px", my: 1.5, borderRadius: 1 }} />}
+        {hasScores && (
+          <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>
+            🎯 <strong>Entrance Examination Status:</strong>{" "}
+            {normalizeExamStatus(examScores.status) === "PASSED" ? (
+              <span style={{ color: "green" }}>PASSED</span>
+            ) : normalizeExamStatus(examScores.status) === "FAILED" ? (
+              <span style={{ color: "red" }}>FAILED</span>
+            ) : (
+              <span>Pending</span>
+            )}
+          </Typography>
+        )}
+      </Box>
+    );
+
+    if (index === 2) return (
+      <Box sx={{ color: "maroon", fontWeight: "bold", fontSize: "13px", lineHeight: 1.6 }}>
+        {!interviewSchedule && !hasInterviewScores && <span>⏳ Status: Pending</span>}
+        {interviewSchedule && (
+          <Typography variant="body2" component="div" sx={{ color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+            📅 Date: {formatDate(interviewSchedule?.day_description)}<br />
+            🏫 Building: {interviewSchedule.building_description || "TBA"}<br />
+            🏷️ Room: {interviewSchedule.room_description || "TBA"}<br />
+            ⏰ Time: {formatTime(interviewSchedule.start_time)} – {formatTime(interviewSchedule.end_time)}
+          </Typography>
+        )}
+        {(interviewSchedule || hasInterviewScores) && <Divider sx={{ backgroundColor: "gray", height: "0.5px", my: 1.5, borderRadius: 1 }} />}
+        {hasInterviewScores && (
+          <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>
+            🗣 Interview Status:{" "}
+            <span style={{ color: qualifyingInterviewScore === "PASSED" ? "green" : qualifyingInterviewScore === "FAILED" ? "red" : "orange" }}>
+              {qualifyingInterviewScore ?? "Pending"}
+            </span>
+            <br />
+            📝 Qualifying Exam Status:{" "}
+            <span style={{ color: qualifyingExamScore === "PASSED" ? "green" : qualifyingExamScore === "FAILED" ? "red" : "orange" }}>
+              {qualifyingExamScore ?? "Pending"}
+            </span>
+          </Typography>
+        )}
+      </Box>
+    );
+
+    if (index === 3) return (
+      <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>
+        {collegeApproval === "Accepted" ? "✅ Approved by College" : collegeApproval === "Rejected" ? "❌ Rejected by College" : "⏳ Waiting for College Approval"}
+      </Typography>
+    );
+
+    if (index === 4) return (
+      <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+        {registrarApproved
+          ? "⬇️ Your documents have been verified. Please proceed to your respective college to finalize your schedule and subjects."
+          : "⏳ Apply For Medical Processing"}
+      </Typography>
+    );
+
+    if (index === 5) return person?.final_status === "Rejected" ? (
+      <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>❌ Unfortunately, you were not accepted.</Typography>
+    ) : hasStudentNumber ? (
+      <Typography variant="body2" component="div" sx={{ color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+        🎉 <strong>Congratulations!</strong> You are now accepted at <strong>EARIST</strong>. Please follow the steps below:
+        <div style={{ marginTop: "6px", lineHeight: "1.6" }}>
+          1. Proceed to your <strong>College</strong> to tag your subjects.<br />
+          2. Get your <strong>Class Schedule</strong> from your department.<br />
+          {studentNumber && <span style={{ display: "block", fontWeight: "bold", marginTop: "5px" }}>Your Student Number: {studentNumber}</span>}
+        </div>
+      </Typography>
+    ) : person?.final_status === "Accepted" ? (
+      <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>✅ You have been accepted. Please wait while your student number is being processed.</Typography>
+    ) : (
+      <Typography variant="body2" sx={{ color: "maroon", fontWeight: "bold" }}>⏳ Application in Progress</Typography>
+    );
+  };
+
+  // Mobile accordion state
+  const [expandedStep, setExpandedStep] = useState(activeStep);
 
   return (
     <Box
@@ -756,84 +674,154 @@ const ApplicantDashboard = (props) => {
         paddingRight: 1,
         backgroundColor: "transparent",
         mt: 1,
-        padding: 2,
+        padding: { xs: 1, sm: 2 },
       }}
     >
-
-      {/* Scrollable content */}
       <Box
         sx={{
           position: "relative",
           zIndex: 1,
-          height: "100%", // take full height of parent
-          overflowY: "auto", // ✅ THIS allows scrolling
-          padding: 2,
+          height: "100%",
+          overflowY: "auto",
+          padding: { xs: 1, sm: 2 },
         }}
       >
-        <Grid container spacing={3}>
-          {/* Applicant Information */}
-          <Grid item xs={12}>
-            <Card
-              sx={{
-                border: `2px solid ${borderColor}`,
-                boxShadow: 3,
-                height: "135px",
-                width: "100%",
-                mt: 2,
-                backgroundColor: "#fff9ec",
-                marginLeft: "10px",
-                p: 2,
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                "&:hover": {
-                  transform: "scale(1.05)",
-                  boxShadow: 6,
-                },
-              }}
-            >
-              <CardContent>
-                {/* Wrap in row: left (avatar+info) | right (date) */}
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
+
+          {/* ── HEADER ─────────────────────────────────────────────────────── */}
+          {/* DESKTOP: original colored banner */}
+          {!isMobile && (
+            <Grid item xs={12}>
+              <Box
+                sx={{
+                  width: "100%",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  backgroundColor: settings?.header_color || "#1976d2",
+                  color: "#fff",
+                  border: `2px solid ${borderColor}`,
+                  mb: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 4,
+                    py: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    flexWrap: "wrap",
+                  }}
                 >
-                  {/* Left side */}
                   <Stack direction="row" alignItems="center" spacing={2}>
-                    {!person?.profile_img ? (
-                      <PersonIcon sx={{ color: "maroon" }} fontSize="large" />
-                    ) : (
+                    <Box
+                      position="relative"
+                      onMouseEnter={() => setHovered(true)}
+                      onMouseLeave={() => setHovered(false)}
+                      sx={{ display: "inline-flex" }}
+                    >
+                      <Avatar
+                        src={profileImage || `${API_BASE_URL}/uploads/Applicant1by1/${person?.profile_img}`}
+                        alt={person?.fname || "Applicant"}
+                        onClick={() => fileInputRef.current?.click()}
+                        sx={{ width: 70, height: 70, border: "2px solid white", bgcolor: "rgba(255,255,255,0.15)", cursor: "pointer", color: "white" }}
+                      >
+                        {person?.fname?.[0]}
+                      </Avatar>
+                      {hovered && (
+                        <IconButton
+                          size="small"
+                          onClick={() => fileInputRef.current?.click()}
+                          sx={{ position: "absolute", bottom: -4, right: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", backgroundColor: "#ffffff", border: `2px solid ${borderColor}`, width: 30, height: 30, "&:hover": { backgroundColor: "#f5f5f5" } }}
+                        >
+                          <AddCircleIcon sx={{ color: settings?.header_color || "#1976d2", fontSize: 24 }} />
+                        </IconButton>
+                      )}
+                      <input type="file" accept="image/*" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: "32px", fontWeight: 800, lineHeight: 1.1, color: "white" }}>
+                        Welcome Back!{" "}
+                        {person ? `${person.last_name}, ${person.first_name} ${person.middle_name || ""} ${person.extension || ""}` : ""}
+                      </Typography>
+                      <Typography sx={{ fontSize: "22px", letterSpacing: 0, opacity: 0.9, color: "white", mt: 0.5 }}>
+                        <Box component="span" sx={{ fontWeight: 700 }}>Applicant ID:</Box>{" "}
+                        {applicantID || "N/A"}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Box>
+            </Grid>
+          )}
+
+          {/* MOBILE: same web header design */}
+          {isMobile && (
+            <Grid item xs={12}>
+              <Box
+                sx={{
+                  width: "100%",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  backgroundColor: settings?.header_color || "#1976d2",
+                  color: "#fff",
+                  border: `2px solid ${borderColor}`,
+                  mb: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1.5,
+                  }}
+                >
+                  {/* TOP ROW */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: 1,
+                    }}
+                  >
+                    {/* LEFT SIDE */}
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
                       <Box
                         position="relative"
-                        display="inline-block"
-                        mr={2}
                         onMouseEnter={() => setHovered(true)}
                         onMouseLeave={() => setHovered(false)}
+                        sx={{ display: "inline-flex" }}
                       >
                         <Avatar
                           src={
                             profileImage ||
                             `${API_BASE_URL}/uploads/Applicant1by1/${person?.profile_img}`
                           }
-                          alt={person?.fname}
+                          alt={person?.fname || "Applicant"}
+                          onClick={() => fileInputRef.current?.click()}
                           sx={{
-                            width: 90,
-                            height: 90,
-                            border: `2px solid ${borderColor}`,
+                            width: 60,
+                            height: 60,
+                            border: "2px solid white",
+                            bgcolor: "rgba(255,255,255,0.15)",
                             cursor: "pointer",
-                            mt: -1.5,
+                            color: "white",
                           }}
-                          onClick={() => fileInputRef.current.click()}
                         >
                           {person?.fname?.[0]}
                         </Avatar>
 
-                        {/* Hover upload button */}
                         {hovered && (
-                          <label
-                            onClick={() => fileInputRef.current.click()}
-                            style={{
+                          <IconButton
+                            size="small"
+                            onClick={() => fileInputRef.current?.click()}
+                            sx={{
                               position: "absolute",
-                              bottom: "-5px",
+                              bottom: -4,
                               right: 0,
                               cursor: "pointer",
                               display: "flex",
@@ -842,21 +830,22 @@ const ApplicantDashboard = (props) => {
                               borderRadius: "50%",
                               backgroundColor: "#ffffff",
                               border: `2px solid ${borderColor}`,
-                              width: "32px",
-                              height: "32px",
+                              width: 28,
+                              height: 28,
+                              "&:hover": {
+                                backgroundColor: "#f5f5f5",
+                              },
                             }}
                           >
                             <AddCircleIcon
                               sx={{
                                 color: settings?.header_color || "#1976d2",
-                                fontSize: 28,
-                                borderRadius: "50%",
+                                fontSize: 22,
                               }}
                             />
-                          </label>
+                          </IconButton>
                         )}
 
-                        {/* Hidden file input */}
                         <input
                           type="file"
                           accept="image/*"
@@ -865,143 +854,101 @@ const ApplicantDashboard = (props) => {
                           onChange={handleFileChange}
                         />
                       </Box>
-                    )}
 
-                    <Box>
-                      <Typography
-                        variant="h4"
-                        fontWeight="bold"
-                        style={{ color: titleColor }}
-                      >
-                        Welcome,&nbsp;
-                        {person.last_name}, {person.first_name}{" "}
-                        {person.middle_name} {person.extension}
-                      </Typography>
-                      <Typography variant="body1" color="black" fontSize={20}>
-                        <b>Applicant ID:</b> {applicantID || "N/A"}
-                      </Typography>
-                    </Box>
-                  </Stack>
+                      {/* NAME + ID */}
+                      <Box>
+                        <Typography
+                          sx={{
+                            fontSize: "18px",
+                            fontWeight: 800,
+                            lineHeight: 1.2,
+                            color: "white",
+                          }}
+                        >
+                          Welcome Back!
+                        </Typography>
 
-                  {/* Right side (date) */}
-                  {/* 📅 Right Section - Date */}
-                  <Box textAlign="right" sx={{ color: "black" }}>
-                    <Typography
-                      variant="body1"
-                      fontSize="24px"
-                      fontWeight="bold"
-                    >
-                      {formattedDate}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      fontSize="24px"
-                      sx={{ textAlign: "center" }}
-                    >
-                      {formattedTime}
-                    </Typography>
+                        <Typography
+                          sx={{
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            color: "white",
+                            mt: 0.3,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {person
+                            ? `${person.last_name}, ${person.first_name} ${person.middle_name || ""} ${person.extension || ""}`
+                            : ""}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            fontSize: "13px",
+                            opacity: 0.9,
+                            color: "white",
+                            mt: 0.4,
+                          }}
+                        >
+                          <Box component="span" sx={{ fontWeight: 700 }}>
+                            Applicant ID:
+                          </Box>{" "}
+                          {applicantID || "N/A"}
+                        </Typography>
+                      </Box>
+                    </Stack>
+
+                    {/* DATE/TIME */}
+                   
                   </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
+                </Box>
+              </Box>
+            </Grid>
+          )}
 
-          <Grid container spacing={2} justifyContent="left" mt={2}>
-            {/* Group for Application + Upload + Notice */}
-            <Grid item>
-              <Grid container direction="column" spacing={2}>
-                {/* Row 1 - Application + Upload */}
-                <Grid item>
-                  <Grid container spacing={2}>
-                    {/* Common size for both cards */}
-                    {["Application Form", "Upload Requirements"].map(
-                      (title, idx) => (
+          {/* ── ACTION CARDS + NOTICE ──────────────────────────────────────── */}
+          {/* DESKTOP: original fixed-width horizontal layout */}
+          {!isMobile && (
+            <Grid container spacing={2} justifyContent="left" mt={2}>
+              <Grid item>
+                <Grid container direction="column" spacing={2}>
+                  <Grid item>
+                    <Grid container spacing={2}>
+                      {["Application Form", "Upload Requirements"].map((title, idx) => (
                         <Grid item key={idx}>
                           <Card
                             sx={{
-                              borderRadius: 3,
-                              boxShadow: 3,
-                              p: 2,
-                              backgroundColor: "#fff9ec",
-                              transition:
-                                "transform 0.3s ease, box-shadow 0.3s ease",
-                              "&:hover": {
-                                transform: "scale(1.05)",
-                              },
-                              width: 263, // same width
-                              height: 300, // same height
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
+                              borderRadius: 3, boxShadow: 3, p: 2, backgroundColor: "#fff9ec",
+                              transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                              "&:hover": { transform: "scale(1.05)" },
+                              width: 263, height: 300,
+                              display: "flex", justifyContent: "center", alignItems: "center",
                               border: `2px solid ${borderColor}`,
-                              marginLeft: idx === 0 ? "35px" : 0, // only first card has left margin
+                              marginLeft: idx === 0 ? "35px" : 0,
                             }}
                           >
                             <CardContent sx={{ textAlign: "center" }}>
-                              <Typography variant="h6" gutterBottom>
-                                {title}
-                              </Typography>
-
+                              <Typography variant="h6" gutterBottom>{title}</Typography>
                               {title === "Application Form" && (
                                 <button
-                                  style={{
-                                    padding: "10px 20px",
-                                    backgroundColor: mainButtonColor,
-                                    border: `2px solid ${borderColor}`,
-                                    color: "white",
-                                    fontSize: "15px",
-                                    borderRadius: "8px",
-                                    cursor: "pointer",
-                                    marginTop: "10px",
-                                  }}
+                                  style={{ padding: "10px 20px", backgroundColor: mainButtonColor, border: `2px solid ${borderColor}`, color: "white", fontSize: "15px", borderRadius: "8px", cursor: "pointer", marginTop: "10px" }}
                                   onClick={() => {
-                                    if (
-                                      !localStorage.getItem("dashboardKeys")
-                                    ) {
-                                      const generateKey = () =>
-                                        Math.random()
-                                          .toString(36)
-                                          .substring(2, 10);
-
-                                      const dashboardKeys = {
-                                        step1: generateKey(),
-                                        step2: generateKey(),
-                                        step3: generateKey(),
-                                        step4: generateKey(),
-                                        step5: generateKey(),
-                                      };
-
-                                      localStorage.setItem(
-                                        "dashboardKeys",
-                                        JSON.stringify(dashboardKeys),
-                                      );
+                                    if (!localStorage.getItem("dashboardKeys")) {
+                                      const generateKey = () => Math.random().toString(36).substring(2, 10);
+                                      const dashboardKeys = { step1: generateKey(), step2: generateKey(), step3: generateKey(), step4: generateKey(), step5: generateKey() };
+                                      localStorage.setItem("dashboardKeys", JSON.stringify(dashboardKeys));
                                     }
-                                    const keys = JSON.parse(
-                                      localStorage.getItem("dashboardKeys"),
-                                    );
+                                    const keys = JSON.parse(localStorage.getItem("dashboardKeys"));
                                     window.location.href = `/dashboard/${keys.step1}`;
                                   }}
                                 >
                                   Start Application
                                 </button>
                               )}
-
                               {title === "Upload Requirements" && (
                                 <button
-                                  style={{
-                                    padding: "10px 20px",
-                                    backgroundColor: mainButtonColor,
-                                    border: `2px solid ${borderColor}`,
-                                    color: "white",
-                                    fontSize: "15px",
-                                    borderRadius: "8px",
-                                    cursor: "pointer",
-                                    marginTop: "10px",
-                                  }}
-                                  onClick={() => {
-                                    window.location.href =
-                                      "/requirements_uploader";
-                                  }}
+                                  style={{ padding: "10px 20px", backgroundColor: mainButtonColor, border: `2px solid ${borderColor}`, color: "white", fontSize: "15px", borderRadius: "8px", cursor: "pointer", marginTop: "10px" }}
+                                  onClick={() => { window.location.href = "/requirements_uploader"; }}
                                 >
                                   Upload Now
                                 </button>
@@ -1009,965 +956,1026 @@ const ApplicantDashboard = (props) => {
                             </CardContent>
                           </Card>
                         </Grid>
-                      ),
-                    )}
+                      ))}
+                    </Grid>
+                  </Grid>
+                  <Grid item>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, p: 2, marginLeft: "35px", transition: "transform 0.2s ease", boxShadow: 3, "&:hover": { transform: "scale(1.03)" }, height: "90px", borderRadius: "10px", backgroundColor: "#fffaf5", border: `2px solid ${borderColor}`, boxShadow: "0px 2px 8px rgba(0,0,0,0.05)", width: "540px" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: mainButtonColor, borderRadius: "8px", width: 50, height: 50, flexShrink: 0 }}>
+                        <WarningAmberIcon sx={{ color: "white", fontSize: 35 }} />
+                      </Box>
+                      <Typography sx={{ fontSize: "15px", fontFamily: "Arial", fontWeight: "bold", color: "maroon" }}>
+                        <span>Notice:&nbsp;</span>
+                        <Typography component="span" sx={{ fontSize: "inherit", fontWeight: "inherit" }}>
+                          {allRequirementsCompleted ? "Your application is registered." : "Please complete all required documents to register your application."}
+                        </Typography>
+                      </Typography>
+                    </Box>
                   </Grid>
                 </Grid>
+              </Grid>
 
-                {/* Row 2 - Notice directly below */}
-                <Grid item>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 2,
-                      p: 2,
-                      marginLeft: "35px",
-                      transition: "transform 0.2s ease",
-                      boxShadow: 3,
-                      "&:hover": { transform: "scale(1.03)" },
-                      height: "90px",
-                      borderRadius: "10px",
-                      backgroundColor: "#fffaf5",
-                      border: `2px solid ${borderColor}`,
-                      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
-                      width: "540px", // same width as the two cards together
-                    }}
-                  >
-                    {/* Icon */}
+              {/* Desktop: Announcements */}
+          <Grid item xs="auto">
+  <Card
+    sx={{
+      borderRadius: "14px",
+      marginLeft: "10px",
+      boxShadow: 3,
+      width: "510px",
+      height: "405px",
+      display: "flex",
+      border: `2px solid ${borderColor}`,
+      flexDirection: "column",
+      overflow: "hidden",
+      transition: "all 0.3s ease",
+      background: "#fff",
+      "&:hover": {
+        transform: "scale(1.02)",
+        boxShadow: 6,
+      },
+    }}
+  >
+    <CardContent
+      sx={{
+        p: 0,
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+      }}
+    >
+      {/* HEADER */}
+      <Stack
+        direction="row"
+        spacing={1.5}
+        alignItems="center"
+        sx={{
+          px: 2,
+          py: 1.5,
+          backgroundColor: settings?.header_color || "#1976d2",
+          color: "#fff",
+          borderBottom: `2px solid ${borderColor}`,
+        }}
+      >
+        <Box
+          sx={{
+            width: 42,
+            height: 42,
+            borderRadius: "10px",
+            background: "rgba(255,255,255,0.18)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          <Campaign sx={{ color: "#fff", fontSize: 24 }} />
+        </Box>
+
+        <Typography
+          sx={{
+            fontSize: 18,
+            fontWeight: 800,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+            color: "#fff",
+          }}
+        >
+          Announcements
+        </Typography>
+      </Stack>
+
+      {/* CONTENT */}
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          px: 2,
+          py: 2,
+        }}
+      >
+        {announcements.length === 0 ? (
+          <Box
+            sx={{
+              height: "100%",
+              borderRadius: "12px",
+              border: `1px dashed ${borderColor}`,
+              display: "grid",
+              placeItems: "center",
+              color: "text.secondary",
+            }}
+          >
+            No active announcements.
+          </Box>
+        ) : (
+          <Stack spacing={2}>
+            {Array.isArray(announcements) &&
+              announcements.map((a) => (
+                <Box
+                  key={a.id}
+                  sx={{
+                    borderRadius: "14px",
+                    overflow: "hidden",
+                    border: `2px solid ${borderColor}`,
+                    background: "#fff",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  {/* IMAGE */}
+                  {a.file_path && (
                     <Box
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: mainButtonColor,
-                        borderRadius: "8px",
-
-                        width: 50,
-                        height: 50,
-                        flexShrink: 0,
+                        width: "100%",
+                        height: 190,
+                        overflow: "hidden",
+                        position: "relative",
                       }}
+                      onClick={() =>
+                        openLightbox(announcements.indexOf(a))
+                      }
                     >
-                      <WarningAmberIcon sx={{ color: "white", fontSize: 35 }} />
-                    </Box>
+                      <Box
+                        component="img"
+                        src={`${API_BASE_URL}/uploads/announcement/${a.file_path}`}
+                        alt={a.title}
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          transition: "transform 0.35s ease",
+                          "&:hover": {
+                            transform: "scale(1.05)",
+                          },
+                        }}
+                      />
 
-                    {/* Text */}
+                      {/* OVERLAY */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.05))",
+                        }}
+                      />
+
+                      {/* ZOOM ICON */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: 10,
+                          right: 10,
+                          background: "rgba(0,0,0,0.45)",
+                          borderRadius: "50%",
+                          p: 0.8,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backdropFilter: "blur(4px)",
+                        }}
+                      >
+                        <ZoomInIcon
+                          sx={{
+                            color: "#fff",
+                            fontSize: 18,
+                          }}
+                        />
+                      </Box>
+
+                      {/* TITLE OVERLAY */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          p: 1.5,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontWeight: 700,
+                            fontSize: 15,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {a.title}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* DETAILS */}
+                  <Box
+                    sx={{
+                      p: 1.8,
+                    }}
+                  >
                     <Typography
                       sx={{
-                        fontSize: "15px",
-                        fontFamily: "Arial",
-                        fontWeight: "bold",
-                        color: "maroon",
+                        fontSize: 13,
+                        color: "#555",
+                        lineHeight: 1.6,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
                       }}
                     >
-                      <span>Notice:&nbsp;</span>
+                      {a.content}
+                    </Typography>
 
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: "block",
+                        mt: 1.2,
+                        color: "#999",
+                        fontSize: 11,
+                      }}
+                    >
+                      Expires:{" "}
+                      {new Date(a.expires_at).toLocaleDateString(
+                        "en-US"
+                      )}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+          </Stack>
+        )}
+      </Box>
+    </CardContent>
+  </Card>
+</Grid>
+
+              {/* Desktop: Calendar */}
+              <Grid item xs="auto">
+                <Card sx={{ marginLeft: "10px", boxShadow: 3, p: 2, border: `2px solid ${borderColor}`, borderRadius: "10px", width: "425px", height: "406px", transition: "transform 0.2s ease", "&:hover": { transform: "scale(1.03)" }, display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center" }}>
+                  <CardContent sx={{ p: 0, width: "100%" }}>
+                    <Grid container alignItems="center" justifyContent="space-between" sx={{ backgroundColor: settings?.header_color || "#1976d2", color: "white", border: `2px solid ${borderColor}`, borderBottom: "none", borderRadius: "8px 8px 0 0", padding: "10px 8px" }}>
+                      <Grid item><IconButton size="small" onClick={handlePrevMonth} sx={{ color: "white" }}><ArrowBackIos fontSize="small" /></IconButton></Grid>
+                      <Grid item><Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>{date.toLocaleString("default", { month: "long" })} {year}</Typography></Grid>
+                      <Grid item><IconButton size="small" onClick={handleNextMonth} sx={{ color: "white" }}><ArrowForwardIos fontSize="small" /></IconButton></Grid>
+                    </Grid>
+                    <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderLeft: `2px solid ${borderColor}`, borderRight: `2px solid ${borderColor}`, borderBottom: `2px solid ${borderColor}`, borderTop: `2px solid ${borderColor}`, borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
+                      {days.map((day, idx) => (
+                        <Box key={idx} sx={{ backgroundColor: "#f3f3f3", textAlign: "center", py: 1, fontWeight: "bold", borderBottom: `1px solid ${borderColor}` }}>{day}</Box>
+                      ))}
+                      {weeks.map((week, i) =>
+                        week.map((day, j) => {
+                          if (!day) return <Box key={`${i}-${j}`} sx={{ height: 45, backgroundColor: "#fff" }} />;
+                          const isToday = day === today && month === thisMonth && year === thisYear;
+                          const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                          const isHoliday = holidays[dateKey];
+                          const dayCell = (
+                            <Box sx={{ height: 45, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", backgroundColor: isToday ? settings?.header_color || "#1976d2" : isHoliday ? "#E8C999" : "#fff", color: isToday ? "white" : "black", fontWeight: isHoliday ? "bold" : "500", cursor: isHoliday ? "pointer" : "default", "&:hover": { backgroundColor: isHoliday ? "#F5DFA6" : "#000", color: isHoliday ? "black" : "white" } }}>
+                              {day}
+                            </Box>
+                          );
+                          return isHoliday ? (
+                            <Tooltip key={`${i}-${j}`} title={<><Typography fontWeight="bold">{isHoliday.localName}</Typography><Typography variant="caption">{isHoliday.date}</Typography></>} arrow placement="top">{dayCell}</Tooltip>
+                          ) : (
+                            <React.Fragment key={`${i}-${j}`}>{dayCell}</React.Fragment>
+                          );
+                        })
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          )}
+
+          {/* MOBILE: clean fluid grid layout (from doc 2 approach) */}
+          {isMobile && (
+            <Grid item xs={12}>
+              <Grid container spacing={2}>
+                {/* Application Form */}
+                <Grid item xs={6}>
+                  <Card sx={{ borderRadius: 3, boxShadow: 3, p: 1.5, backgroundColor: "#fff9ec", transition: "transform 0.3s ease", "&:hover": { transform: "scale(1.05)" }, width: "100%", minHeight: 160, display: "flex", justifyContent: "center", alignItems: "center", border: `2px solid ${borderColor}` }}>
+                    <CardContent sx={{ textAlign: "center", p: "8px !important" }}>
+                      <Typography variant="body1" fontWeight="bold" gutterBottom fontSize={13}>Application Form</Typography>
+                      <button
+                        style={{ padding: "10px 20px", width: "100px", backgroundColor: mainButtonColor, border: `2px solid ${borderColor}`, color: "white", fontSize: "15px", borderRadius: "8px", cursor: "pointer", marginTop: "8px" }}
+                        onClick={() => {
+                          if (!localStorage.getItem("dashboardKeys")) {
+                            const generateKey = () => Math.random().toString(36).substring(2, 10);
+                            const dashboardKeys = { step1: generateKey(), step2: generateKey(), step3: generateKey(), step4: generateKey(), step5: generateKey() };
+                            localStorage.setItem("dashboardKeys", JSON.stringify(dashboardKeys));
+                          }
+                          const keys = JSON.parse(localStorage.getItem("dashboardKeys"));
+                          window.location.href = `/dashboard/${keys.step1}`;
+                        }}
+                      >
+                        Start
+                      </button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Upload Requirements */}
+                <Grid item xs={6}>
+                  <Card sx={{ borderRadius: 3, boxShadow: 3, p: 1.5, backgroundColor: "#fff9ec", transition: "transform 0.3s ease", "&:hover": { transform: "scale(1.05)" }, width: "100%", minHeight: 160, display: "flex", justifyContent: "center", alignItems: "center", border: `2px solid ${borderColor}` }}>
+                    <CardContent sx={{ textAlign: "center", p: "8px !important" }}>
+                      <Typography variant="body1" fontWeight="bold" gutterBottom fontSize={13}>Upload Requirements</Typography>
+                      <button
+                        style={{ padding: "10px 20px", width: "100px", backgroundColor: mainButtonColor, border: `2px solid ${borderColor}`, color: "white", fontSize: "15px", borderRadius: "8px", cursor: "pointer", marginTop: "8px" }}
+                        onClick={() => { window.location.href = "/requirements_uploader"; }}
+                      >
+                        Upload
+                      </button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Notice */}
+                <Grid item xs={12}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, boxShadow: 3, borderRadius: "10px", backgroundColor: "#fffaf5", border: `2px solid ${borderColor}`, minHeight: 70 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: mainButtonColor, borderRadius: "8px", width: 44, height: 44, flexShrink: 0 }}>
+                      <WarningAmberIcon sx={{ color: "white", fontSize: 28 }} />
+                    </Box>
+                    <Typography sx={{ fontSize: "12px", fontFamily: "Arial", fontWeight: "bold", color: "maroon" }}>
+                      <span>Notice: </span>
                       <Typography component="span" sx={{ fontSize: "inherit", fontWeight: "inherit" }}>
-                        {allRequirementsCompleted
-                          ? "Your application is registered."
-                          : "Please complete all required documents to register your application."}
+                        {allRequirementsCompleted ? "Your application is registered." : "Please complete all required documents to register your application."}
                       </Typography>
                     </Typography>
                   </Box>
                 </Grid>
-              </Grid>
-            </Grid>
 
-            {/* Third Card (Announcement) */}
-            <Grid item xs="auto">
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  marginLeft: "10px",
-                  boxShadow: 3,
-                  p: 2,
-                  width: "510px",
-                  height: "405px",
-                  display: "flex",
-                  border: `2px solid ${borderColor}`,
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                  "&:hover": { transform: "scale(1.05)", boxShadow: 6 },
-                }}
-              >
-                <CardContent>
-                  <Typography sx={{ textAlign: "center" }} variant="h6" gutterBottom>
-                    Announcements
-                  </Typography>
-                  <Divider sx={{ mb: 2 }} />
-
-                  {announcements.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" align="center">
-                      No active announcements.
-                    </Typography>
-                  ) : (
-                    <Box sx={{ maxHeight: 270, overflowY: "auto" }}>
-                      {Array.isArray(announcements) &&
-                        announcements.map((a) => (
-                          <Box
-                            key={a.id}
-                            sx={{
-                              mb: 2, p: 1, width: 430,
-                              borderRadius: 2,
-                              border: `2px solid ${borderColor}`,
-                              backgroundColor: "#fff8f6",
-                            }}
-                          >
-                            <Typography variant="subtitle2" sx={{ color: mainButtonColor, fontWeight: "bold" }}>
-                              {a.title}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                              {a.content}
-                            </Typography>
-
-                            {/* ── Thumbnail only — NO lightbox here ── */}
-                            {a.file_path && (
-                              <div
-                                style={{ position: "relative", cursor: "pointer" }}
-                                onClick={() => openLightbox(announcements.indexOf(a))}
-                              >
-                                <img
-                                  src={`${API_BASE_URL}/uploads/announcement/${a.file_path}`}
-                                  alt={a.title}
-                                  style={{
-                                    width: "100%", maxHeight: "171px",
-                                    objectFit: "cover", borderRadius: "6px",
-                                    marginBottom: "6px",
-                                  }}
-                                />
-                                <div style={{
-                                  position: "absolute", top: 8, right: 8,
-                                  background: "rgba(0,0,0,0.5)", borderRadius: "50%",
-                                  padding: "5px", display: "flex",
-                                  alignItems: "center", justifyContent: "center",
-                                }}>
-                                  <ZoomInIcon sx={{ color: "#fff", fontSize: 18 }} />
-                                </div>
-                              </div>
-                            )}
-
-                            <Typography variant="caption" color="text.secondary">
-                              Expires: {new Date(a.expires_at).toLocaleDateString("en-US")}
-                            </Typography>
-                          </Box>
-                        ))}
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* ── LIGHTBOX — ONE instance, fully outside the map and the Card ── */}
-            <AnimatePresence>
-              {lightboxOpen && announcements[lightboxIndex] && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  onClick={closeLightbox}
-                  style={{
-                    position: "fixed", inset: 0, zIndex: 9999,
-                    background: "rgba(0,0,0,0.88)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >
-                  {/* Inner box — clicks here don't close the lightbox */}
-                  <div
-                    onClick={e => e.stopPropagation()}
-                    style={{ position: "relative", maxWidth: "90vw", maxHeight: "90vh" }}
+                {/* Mobile: Announcements */}
+                {/* Mobile: Announcements */}
+                <Grid item xs={12}>
+                  <Card
+                    sx={{
+                      boxShadow: 3,
+                      border: `2px solid ${borderColor}`,
+                      borderRadius: "14px",
+                      width: "100%",
+                      overflow: "hidden",
+                      transition: "all 0.3s ease",
+                      background: "#fff",
+                      "&:hover": {
+                        transform: "scale(1.02)",
+                        boxShadow: 6,
+                      },
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
                   >
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: -10,
-                        left: -210,   // 👈 changed from right → left
+                    <CardContent
+                      sx={{
+                        p: 0,
                         display: "flex",
-                        gap: "8px",
-                        alignItems: "center",
+                        flexDirection: "column",
+                        height: "100%",
                       }}
                     >
-                      <IconButton
-                        onClick={closeLightbox}
+                      {/* HEADER */}
+                      <Stack
+                        direction="row"
+                        spacing={1.5}
+                        alignItems="center"
                         sx={{
-                          background: "rgba(255,255,255,0.15)",
+                          px: 2,
+                          py: 1.5,
+                          backgroundColor: settings?.header_color || "#1976d2",
                           color: "#fff",
-                          width: 75,           // ✅ size
-                          height: 75,          // ✅ size
-                          "&:hover": { background: "rgba(220,50,50,0.75)" },
+                          borderBottom: `2px solid ${borderColor}`,
                         }}
                       >
-                        <CloseIcon sx={{ fontSize: 28 }} /> {/* ✅ bigger icon */}
-                      </IconButton>
-                    </div>
-
-
-                    {/* Image */}
-                    <div style={{
-                      overflow: "auto", maxWidth: "85vw", maxHeight: "80vh",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      borderRadius: "12px",
-                    }}>
-                      <AnimatePresence mode="wait">
-                        <motion.img
-                          key={announcements[lightboxIndex].id}
-                          src={`${API_BASE_URL}/uploads/announcement/${announcements[lightboxIndex].file_path}`}
-                          alt={announcements[lightboxIndex].title}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          style={{
-                            transform: `scale(${lightboxZoom})`,
-                            transformOrigin: "center center",
-                            transition: "transform 0.25s ease",
-                            maxWidth: "85vw", maxHeight: "80vh",
-                            objectFit: "contain", display: "block",
-                            borderRadius: "12px", userSelect: "none",
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: "10px",
+                            background: "rgba(255,255,255,0.18)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backdropFilter: "blur(6px)",
                           }}
-                          draggable={false}
-                        />
-                      </AnimatePresence>
-                    </div>
+                        >
+                          <Campaign sx={{ color: "#fff", fontSize: 22 }} />
+                        </Box>
 
-                    {/* Caption */}
-                    <div style={{ marginTop: "12px", color: "#fff", textAlign: "center" }}>
-                      <h3 style={{ margin: 0 }}>{announcements[lightboxIndex].title}</h3>
-                      <p style={{ marginTop: "4px", fontSize: "0.85rem", color: "rgba(255,255,255,0.65)" }}>
-                        {announcements[lightboxIndex].content}
-                      </p>
-                      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", marginTop: "4px" }}>
-                        {lightboxIndex + 1} / {announcements.length}
-                      </p>
-                    </div>
-                  </div>
+                        <Typography
+                          sx={{
+                            fontSize: 17,
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                            color: "#fff",
+                          }}
+                        >
+                          Announcements
+                        </Typography>
+                      </Stack>
 
-                  {/* Left arrow */}
-                  <IconButton
-                    onClick={e => { e.stopPropagation(); lightboxPrev(); }}
-                    sx={{
-                      position: "fixed",
-                      left: 400,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      zIndex: 10000,
-                      width: 75,           // ✅ size
-                      height: 75,          // ✅ size
-                      background: "rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      "&:hover": { background: "rgba(255,255,255,0.3)" },
-                    }}
-                  >
-                    <ArrowBackIosNewIcon sx={{ fontSize: 28 }} /> {/* ✅ bigger icon */}
-                  </IconButton>
-
-                  {/* Right arrow */}
-                  <IconButton
-                    onClick={e => { e.stopPropagation(); lightboxNext(); }}
-                    sx={{
-                      position: "fixed",
-                      right: 400,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      zIndex: 10000,
-                      width: 75,           // ✅ size
-                      height: 75,          // ✅ size
-                      background: "rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      "&:hover": { background: "rgba(255,255,255,0.3)" },
-                    }}
-                  >
-                    <ArrowForwardIosIcon sx={{ fontSize: 28 }} /> {/* ✅ bigger icon */}
-                  </IconButton>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-
-            <Grid item xs="auto">
-              <Card
-                sx={{
-                  marginLeft: "10px",
-                  boxShadow: 3,
-                  p: 2,
-                  border: `2px solid ${borderColor}`,
-                  borderRadius: "10px",
-                  width: "425px",
-                  height: "406px",
-                  transition: "transform 0.2s ease",
-                  "&:hover": { transform: "scale(1.03)" },
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-start",
-                  alignItems: "center",
-                }}
-              >
-                <CardContent sx={{ p: 0, width: "100%" }}>
-                  {/* Header */}
-                  <Grid
-                    container
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{
-                      backgroundColor: settings?.header_color || "#1976d2",
-                      color: "white",
-                      border: `2px solid ${borderColor}`,
-                      borderBottom: "none", // prevent double border with body
-                      borderRadius: "8px 8px 0 0",
-                      padding: "10px 8px",
-                    }}
-                  >
-
-                    <Grid item>
-                      <IconButton
-                        size="small"
-                        onClick={handlePrevMonth}
-                        sx={{ color: "white" }}
-                      >
-                        <ArrowBackIos fontSize="small" />
-                      </IconButton>
-                    </Grid>
-                    <Grid item>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ fontWeight: "bold" }}
-                      >
-                        {date.toLocaleString("default", { month: "long" })}{" "}
-                        {year}
-                      </Typography>
-                    </Grid>
-                    <Grid item>
-                      <IconButton
-                        size="small"
-                        onClick={handleNextMonth}
-                        sx={{ color: "white" }}
-                      >
-                        <ArrowForwardIos fontSize="small" />
-                      </IconButton>
-                    </Grid>
-
-                  </Grid>
-
-                  {/* Calendar Table */}
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(7, 1fr)",
-                      borderLeft: `2px solid ${borderColor}`,
-                      borderRight: `2px solid ${borderColor}`,
-                      borderBottom: `2px solid ${borderColor}`, // ✅ add bottom border here
-                      borderTop: `2px solid ${borderColor}`,
-                      borderRadius: "10px",
-                      borderRadius: "0 0 8px 8px", // ✅ match with header rounding
-                      overflow: "hidden",
-                    }}
-                  >
-                    {/* Days of the week */}
-                    {days.map((day, idx) => (
+                      {/* IMAGE AREA */}
                       <Box
-                        key={idx}
                         sx={{
-                          backgroundColor: "#f3f3f3",
-                          textAlign: "center",
-                          py: 1,
-                          fontWeight: "bold",
-                          borderBottom: `1px solid ${borderColor}`,
+                          px: 2,
+                          pt: 2,
+                          pb: 1,
                         }}
                       >
-                        {day}
-                      </Box>
-                    ))}
-
-                    {/* Dates */}
-                    {weeks.map((week, i) =>
-                      week.map((day, j) => {
-                        if (!day) {
-                          return (
+                        {announcements.length > 0 ? (
+                          <>
                             <Box
-                              key={`${i}-${j}`}
                               sx={{
-                                height: 45,
-                                backgroundColor: "#fff",
+                                width: "100%",
+                                height: 220,
+                                borderRadius: "12px",
+                                overflow: "hidden",
+                                cursor: "pointer",
+                                border: `2px solid ${borderColor}`,
+                                position: "relative",
                               }}
-                            />
-                          );
-                        }
+                              onClick={() => openLightbox(0)}
+                            >
+                              <Box
+                                component="img"
+                                src={`${API_BASE_URL}/uploads/Announcement/${announcements[0].file_path}`}
+                                alt={announcements[0].title}
+                                sx={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  transition: "transform 0.35s ease",
+                                  "&:hover": {
+                                    transform: "scale(1.05)",
+                                  },
+                                }}
+                              />
 
-                        const isToday =
-                          day === today &&
-                          month === thisMonth &&
-                          year === thisYear;
-                        const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-                          day,
-                        ).padStart(2, "0")}`;
-                        const isHoliday = holidays[dateKey];
+                              {/* overlay */}
+                              <Box
+                                sx={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  background:
+                                    "linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.05))",
+                                }}
+                              />
 
-                        const dayCell = (
+                              {/* title overlay */}
+                              <Box
+                                sx={{
+                                  position: "absolute",
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  p: 1.5,
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color: "#fff",
+                                    fontWeight: 700,
+                                    fontSize: 14,
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  {announcements[0].title}
+                                </Typography>
+                              </Box>
+                            </Box>
+
+                            {/* dots */}
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              justifyContent="center"
+                              sx={{ py: 1.5 }}
+                            >
+                              {announcements.slice(0, 6).map((a, index) => (
+                                <Box
+                                  key={a.id || index}
+                                  sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: "50%",
+                                    bgcolor:
+                                      index === 0
+                                        ? settings?.header_color || "#1976d2"
+                                        : "#d1d1d1",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                />
+                              ))}
+                            </Stack>
+
+                            {/* content */}
+                            <Box
+                              sx={{
+                                px: 0.5,
+                                pb: 1,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  fontSize: 13,
+                                  color: "#555",
+                                  lineHeight: 1.5,
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {announcements[0].content}
+                              </Typography>
+
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: "block",
+                                  mt: 1,
+                                  color: "#999",
+                                  fontSize: 11,
+                                }}
+                              >
+                                Expires:{" "}
+                                {new Date(
+                                  announcements[0].expires_at
+                                ).toLocaleDateString("en-US")}
+                              </Typography>
+                            </Box>
+                          </>
+                        ) : (
                           <Box
                             sx={{
-                              height: 45,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: "50%",
-                              backgroundColor: isToday
-                                ? settings?.header_color || "#1976d2"
-                                : isHoliday
-                                  ? "#E8C999"
-                                  : "#fff",
-                              color: isToday ? "white" : "black",
-                              fontWeight: isHoliday ? "bold" : "500",
-                              cursor: isHoliday ? "pointer" : "default",
-                              "&:hover": {
-                                backgroundColor: isHoliday ? "#F5DFA6" : "#000",
-                                color: isHoliday ? "black" : "white",
-                              },
+                              height: 220,
+                              borderRadius: "12px",
+                              border: `1px dashed ${borderColor}`,
+                              display: "grid",
+                              placeItems: "center",
+                              color: "text.secondary",
+                              m: 2,
+                            }}
+                          >
+                            No active announcements.
+                          </Box>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                {/* Mobile: Calendar */}
+                <Grid item xs={12}>
+                  <Card
+                    sx={{
+                      boxShadow: 3,
+                      border: `2px solid ${borderColor}`,
+                      borderRadius: "10px",
+                      width: "100%",
+                      transition: "transform 0.2s ease",
+                      "&:hover": {
+                        transform: "scale(1.03)",
+                      },
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-start",
+                      alignItems: "center",
+                      overflow: "hidden",
+                      backgroundColor: "#fff",
+                    }}
+                  >
+                    <CardContent
+                      sx={{
+                        p: 0,
+                        width: "100%",
+                      }}
+                    >
+                      {/* TOP TITLE */}
+                      <Box
+                        sx={{
+                          px: 2,
+                          py: 1.2,
+                          borderBottom: `1px solid ${borderColor}`,
+                          backgroundColor: "#fff",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "16px",
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                            color: "#111",
+                          }}
+                        >
+                          Calendar
+                        </Typography>
+                      </Box>
+
+                      {/* MONTH HEADER */}
+                      <Grid
+                        container
+                        alignItems="center"
+                        justifyContent="space-between"
+                        sx={{
+                          backgroundColor: settings?.header_color || "#1976d2",
+                          color: "white",
+                          borderTop: `2px solid ${borderColor}`,
+                          borderBottom: `2px solid ${borderColor}`,
+                          padding: "8px 6px",
+                        }}
+                      >
+                        <Grid item>
+                          <IconButton
+                            size="small"
+                            onClick={handlePrevMonth}
+                            sx={{
+                              color: "white",
+                            }}
+                          >
+                            <ArrowBackIos fontSize="small" />
+                          </IconButton>
+                        </Grid>
+
+                        <Grid item>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontWeight: "bold",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {date.toLocaleString("default", { month: "long" })} {year}
+                          </Typography>
+                        </Grid>
+
+                        <Grid item>
+                          <IconButton
+                            size="small"
+                            onClick={handleNextMonth}
+                            sx={{
+                              color: "white",
+                            }}
+                          >
+                            <ArrowForwardIos fontSize="small" />
+                          </IconButton>
+                        </Grid>
+                      </Grid>
+
+                      {/* CALENDAR */}
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(7, 1fr)",
+                          borderLeft: `2px solid ${borderColor}`,
+                          borderRight: `2px solid ${borderColor}`,
+                          borderBottom: `2px solid ${borderColor}`,
+                          borderRadius: "0 0 8px 8px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* DAYS */}
+                        {days.map((day, idx) => (
+                          <Box
+                            key={idx}
+                            sx={{
+                              backgroundColor: "#f3f3f3",
+                              textAlign: "center",
+                              py: 1,
+                              fontWeight: "bold",
+                              borderBottom: `1px solid ${borderColor}`,
+                              fontSize: "11px",
                             }}
                           >
                             {day}
                           </Box>
-                        );
+                        ))}
 
-                        return isHoliday ? (
-                          <Tooltip
-                            key={`${i}-${j}`}
-                            title={
-                              <>
-                                <Typography fontWeight="bold">
-                                  {isHoliday.localName}
-                                </Typography>
-                                <Typography variant="caption">
-                                  {isHoliday.date}
-                                </Typography>
-                              </>
-                            }
-                            arrow
-                            placement="top"
-                          >
-                            {dayCell}
-                          </Tooltip>
-                        ) : (
-                          <React.Fragment key={`${i}-${j}`}>
-                            {dayCell}
-                          </React.Fragment>
-                        );
-                      }),
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
+                        {/* DATES */}
+                        {weeks.map((week, i) =>
+                          week.map((day, j) => {
+                            if (!day)
+                              return (
+                                <Box
+                                  key={`${i}-${j}`}
+                                  sx={{
+                                    height: 42,
+                                    backgroundColor: "#fff",
+                                  }}
+                                />
+                              );
+
+                            const isToday =
+                              day === today &&
+                              month === thisMonth &&
+                              year === thisYear;
+
+                            const dateKey = `${year}-${String(month + 1).padStart(
+                              2,
+                              "0"
+                            )}-${String(day).padStart(2, "0")}`;
+
+                            const isHoliday = holidays[dateKey];
+
+                            const dayCell = (
+                              <Box
+                                sx={{
+                                  height: 42,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  borderRadius: "50%",
+                                  margin: "2px",
+                                  backgroundColor: isToday
+                                    ? settings?.header_color || "#1976d2"
+                                    : isHoliday
+                                      ? "#E8C999"
+                                      : "#fff",
+                                  color: isToday ? "white" : "black",
+                                  fontWeight: isHoliday ? "bold" : "500",
+                                  cursor: isHoliday ? "pointer" : "default",
+                                  fontSize: "12px",
+                                  transition: "all 0.2s ease",
+                                  "&:hover": {
+                                    backgroundColor: isHoliday
+                                      ? "#F5DFA6"
+                                      : "#000",
+                                    color: isHoliday ? "black" : "white",
+                                  },
+                                }}
+                              >
+                                {day}
+                              </Box>
+                            );
+
+                            return isHoliday ? (
+                              <Tooltip
+                                key={`${i}-${j}`}
+                                title={
+                                  <>
+                                    <Typography fontWeight="bold">
+                                      {isHoliday.localName}
+                                    </Typography>
+
+                                    <Typography variant="caption">
+                                      {isHoliday.date}
+                                    </Typography>
+                                  </>
+                                }
+                                arrow
+                                placement="top"
+                              >
+                                {dayCell}
+                              </Tooltip>
+                            ) : (
+                              <React.Fragment key={`${i}-${j}`}>
+                                {dayCell}
+                              </React.Fragment>
+                            );
+                          })
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
             </Grid>
-          </Grid>
+          )}
 
-          <Box sx={{ width: "100%", mt: 2 }}>
-            {/* Title */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                mb: 2,
-              }}
-            >
-              <Typography
-                sx={{ fontSize: "42px", fontWeight: "bold", color: "black" }}
+          {/* ── LIGHTBOX (shared) ─────────────────────────────────────────── */}
+          <AnimatePresence>
+            {lightboxOpen && announcements[lightboxIndex] && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+                onClick={closeLightbox}
+                style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                APPLICATION STATUS
-              </Typography>
-            </Box>
+                <div onClick={e => e.stopPropagation()} style={{ position: "relative", maxWidth: "95vw", maxHeight: "90vh" }}>
+                  <IconButton
+                    onClick={closeLightbox}
+                    sx={{ position: "absolute", top: isMobile ? 8 : -14, right: isMobile ? 8 : -14, zIndex: 10001, background: "rgba(255,255,255,0.15)", color: "#fff", width: { xs: 44, sm: 75 }, height: { xs: 44, sm: 75 }, "&:hover": { background: "rgba(220,50,50,0.75)" } }}
+                  >
+                    <CloseIcon sx={{ fontSize: { xs: 20, sm: 28 } }} />
+                  </IconButton>
 
-            <Stepper
-              alternativeLabel
-              activeStep={activeStep}
-              sx={{
-                "& .MuiStepConnector-root": {
-                  top: "30px",
-                  left: "calc(-50% + 30px)",
-                  right: "calc(50% + 30px)",
-                },
-                "& .MuiStepConnector-line": {
-                  borderColor: "#000", // ✅ visible now
-                  borderTopWidth: 3,
-                  borderRadius: 8,
-                },
-              }}
-            >
-              {steps.map((label, index) => (
-                <Step key={index} completed={index < activeStep}>
-                  <StepLabel
-                    StepIconComponent={(stepProps) => {
-                      const icons = [
-                        <DescriptionIcon />,
-                        <EventIcon />,
-                        <AssignmentTurnedInIcon />,
-                        <CheckCircleIcon />,
-                        <LocalHospitalIcon />,
-                        <PersonIcon />,
-                      ];
+                  <div style={{ overflow: "auto", maxWidth: "90vw", maxHeight: "75vh", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
+                    <AnimatePresence mode="wait">
+                      <motion.img
+                        key={announcements[lightboxIndex].id}
+                        src={`${API_BASE_URL}/uploads/announcement/${announcements[lightboxIndex].file_path}`}
+                        alt={announcements[lightboxIndex].title}
+                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
+                        style={{ transform: `scale(${lightboxZoom})`, transformOrigin: "center center", transition: "transform 0.25s ease", maxWidth: "90vw", maxHeight: "72vh", objectFit: "contain", display: "block", borderRadius: "12px", userSelect: "none" }}
+                        draggable={false}
+                      />
+                    </AnimatePresence>
+                  </div>
 
-                      const isActive = stepProps.active;
-                      const isCompleted = stepProps.completed;
+                  <div style={{ marginTop: "10px", color: "#fff", textAlign: "center" }}>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "15px" : "18px" }}>{announcements[lightboxIndex].title}</h3>
+                    <p style={{ marginTop: "4px", fontSize: "0.8rem", color: "rgba(255,255,255,0.65)" }}>{announcements[lightboxIndex].content}</p>
+                    <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>{lightboxIndex + 1} / {announcements.length}</p>
+                  </div>
+                </div>
 
-                      return (
-                        <Box
-                          sx={{
-                            width: 60,
-                            height: 60,
-                            borderRadius: "50%",
-                            backgroundColor:
-                              isActive || isCompleted
-                                ? mainButtonColor
-                                : "#E8C999",
-                            border: `2px solid ${borderColor}`,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            margin: "0 auto",
+                <IconButton onClick={e => { e.stopPropagation(); lightboxPrev(); }}
+                  sx={{ position: "fixed", left: { xs: 4, sm: 16, md: 40 }, top: "50%", transform: "translateY(-50%)", zIndex: 10000, width: { xs: 44, sm: 60, md: 75 }, height: { xs: 44, sm: 60, md: 75 }, background: "rgba(255,255,255,0.15)", color: "#fff", "&:hover": { background: "rgba(255,255,255,0.3)" } }}>
+                  <ArrowBackIosNewIcon sx={{ fontSize: { xs: 18, sm: 24, md: 28 } }} />
+                </IconButton>
+                <IconButton onClick={e => { e.stopPropagation(); lightboxNext(); }}
+                  sx={{ position: "fixed", right: { xs: 4, sm: 16, md: 40 }, top: "50%", transform: "translateY(-50%)", zIndex: 10000, width: { xs: 44, sm: 60, md: 75 }, height: { xs: 44, sm: 60, md: 75 }, background: "rgba(255,255,255,0.15)", color: "#fff", "&:hover": { background: "rgba(255,255,255,0.3)" } }}>
+                  <ArrowForwardIosIcon sx={{ fontSize: { xs: 18, sm: 24, md: 28 } }} />
+                </IconButton>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          {/* ── APPLICATION STATUS ─────────────────────────────────────────── */}
+          <Grid item xs={12}>
+            <Box sx={{ width: "100%", mt: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mb: 2 }}>
+                <Typography sx={{ fontSize: { xs: "22px", sm: "30px", md: "42px" }, fontWeight: "bold", color: "black", textAlign: "center" }}>
+                  APPLICATION STATUS
+                </Typography>
+              </Box>
+
+              {/* DESKTOP: original horizontal stepper + boxes */}
+              {!isMobile && (
+                <>
+                  <Stepper
+                    alternativeLabel
+                    activeStep={activeStep}
+                    sx={{
+                      "& .MuiStepConnector-root": { top: "30px", left: "calc(-50% + 30px)", right: "calc(50% + 30px)" },
+                      "& .MuiStepConnector-line": { borderColor: "#000", borderTopWidth: 3, borderRadius: 8 },
+                    }}
+                  >
+                    {steps.map((label, index) => (
+                      <Step key={index} completed={index < activeStep}>
+                        <StepLabel
+                          StepIconComponent={(stepProps) => {
+                            const isActive = stepProps.active;
+                            const isCompleted = stepProps.completed;
+                            return (
+                              <Box sx={{ width: 60, height: 60, borderRadius: "50%", backgroundColor: isActive || isCompleted ? mainButtonColor : "#E8C999", border: `2px solid ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+                                {React.cloneElement(stepIcons[index], { sx: { color: isActive || isCompleted ? "white" : mainButtonColor, fontSize: 30 } })}
+                              </Box>
+                            );
                           }}
                         >
-                          {React.cloneElement(icons[index], {
-                            sx: {
-                              color:
-                                isActive || isCompleted
-                                  ? "white"
-                                  : mainButtonColor,
-                              fontSize: 30,
-                            },
-                          })}
+                          <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "black", textAlign: "center" }}>{label}</Typography>
+                        </StepLabel>
+                      </Step>
+                    ))}
+                  </Stepper>
+
+                  <Grid container justifyContent="space-between" sx={{ mt: 3 }}>
+                    {steps.map((label, index) => (
+                      <Grid item xs={2} key={index} sx={{ display: "flex", justifyContent: "center" }}>
+                        <Box sx={{ height: 360, width: "100%", maxWidth: 230, border: `2px solid ${borderColor}`, borderRadius: 2, p: 2, overflowY: "auto", fontSize: "13px", backgroundColor: "#fff9ec", transition: "transform 0.2s ease", boxShadow: 3, "&:hover": { transform: "scale(1.03)" }, color: "maroon", fontWeight: "bold", lineHeight: 1.6 }}>
+                          {renderStepDetail(index)}
                         </Box>
-                      );
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        color: "black",
-                        textAlign: "center",
-                      }}
-                    >
-                      {label}
-                    </Typography>
-                  </StepLabel>
-                </Step>
-              ))}
-            </Stepper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </>
+              )}
 
-            {/* Containers below each step */}
-            <Grid container justifyContent="space-between" sx={{ mt: 3 }}>
-              {steps.map((label, index) => (
-                <Grid
-                  item
-                  xs={2} // each step gets equal space (12/6 = 2)
-                  key={index}
-                  sx={{ display: "flex", justifyContent: "center" }}
-                >
-                  <Box
-                    sx={{
-                      height: 360,
-                      width: "100%", // let it stretch with grid
-                      maxWidth: 230, // same size as before
-                      border: `2px solid ${borderColor}`,
-                      borderRadius: 2,
-                      p: 2,
-                      overflowY: "auto",
-                      fontSize: "13px",
-                      backgroundColor: "#fff9ec",
-                      transition: "transform 0.2s ease",
-                      boxShadow: 3,
-                      "&:hover": { transform: "scale(1.03)" },
-                      color: "maroon",
-                      fontWeight: "bold",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {/* Step 1: Document Submitted */}
-                    {index === 0 && (
-                      <>
-                        {person?.document_status ===
-                          "Documents Verified & ECAT" ? (
-                          <div>
-                            ✅ Your submitted documents have been successfully
-                            verified.
-                            <br />
-                            <Divider
-                              sx={{
-                                backgroundColor: "gray",
-                                height: "0.5px",
-                                my: 2,
-                                borderRadius: 1,
-                              }}
-                            />
-                            <strong>Next Step:</strong>
-                            <br />
-                            Go to <strong>Applicant Profile</strong> →{" "}
-                            <strong>Examination Permit</strong>
-                            <br />
-                            and <strong>print your permit</strong>.
-                          </div>
-                        ) : (
-                          "⏳ Status: Pending"
-                        )}
-                      </>
-                    )}
+              {/* MOBILE: vertical accordion stepper (from doc 2) */}
+              {isMobile && (
+                <Box sx={{ px: 1 }}>
+                  {steps.map((label, index) => {
+                    const isActive = index === activeStep;
+                    const isCompleted = index < activeStep;
+                    const isExpanded = expandedStep === index;
 
-                    {index === 1 && (
-                      <>
-                        {/* Pending Status */}
-                        {!hasSchedule && !hasScores && (
-                          <span>⏳ Status: Pending</span>
-                        )}
-
-                        {!hasSchedule && hasScores && (
-                          <span>Schedule: Not assigned</span>
-                        )}
-
-                        {/* Scheduled Exam Info */}
-                        {hasSchedule && (
-                          <>
-                            📅 Date: {formatDate(proctor?.day_description)}{" "}
-                            <br />
-                            🏢 Building:{" "}
-                            {proctor?.building_description || "TBA"} <br />
-                            🚪 Room: {proctor?.room_description || "TBA"} <br />
-                            ⏰ Time: {formatTime(proctor?.start_time)} –{" "}
-                            {formatTime(proctor?.end_time)}
-                          </>
-                        )}
-
-                        <br />
-                        <Divider
+                    return (
+                      <Box key={index} sx={{ mb: 1.5 }}>
+                        <Box
+                          onClick={() => setExpandedStep(isExpanded ? -1 : index)}
                           sx={{
-                            backgroundColor: "gray",
-                            height: "0.5px",
-                            my: 2,
-                            borderRadius: 1,
+                            display: "flex", alignItems: "center", gap: 1.5, p: 1.5,
+                            backgroundColor: isActive || isCompleted ? mainButtonColor : "#E8C999",
+                            borderRadius: isExpanded ? "8px 8px 0 0" : "8px",
+                            border: `2px solid ${borderColor}`,
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            WebkitTapHighlightColor: "transparent",
                           }}
-                        />
+                        >
+                          <Box sx={{ width: 38, height: 38, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {React.cloneElement(stepIcons[index], { sx: { color: isActive || isCompleted ? "white" : mainButtonColor, fontSize: 22 } })}
+                          </Box>
+                          <Typography sx={{ fontWeight: "bold", color: isActive || isCompleted ? "white" : "#555", fontSize: "13px", flex: 1 }}>{label}</Typography>
+                          <Typography sx={{ color: isActive || isCompleted ? "white" : "#888", fontSize: "18px", lineHeight: 1 }}>
+                            {isExpanded ? "▲" : "▼"}
+                          </Typography>
+                        </Box>
 
-                        {/* Exam Status */}
-                        {hasScores && (
-                          <>
-                            🎯{" "}
-                            <b>
-                              Entrance Examination Status:
-                              {normalizeExamStatus(examScores.status) === "PASSED" ? (
-                                <span style={{ color: "green" }}> PASSED </span>
-                              ) : normalizeExamStatus(examScores.status) === "FAILED" ? (
-                                <span style={{ color: "red" }}> FAILED </span>
-                              ) : (
-                                <span> Pending </span>
-                              )}
-                            </b>
-                          </>
-                        )}
-                      </>
-                    )}
-                    {/* Step 3: Interview */}
-                    {index === 2 && (
-                      <>
-                        {!interviewSchedule &&
-                          !hasInterviewScores &&
-                          "⏳ Status: Pending"}
-
-                        {interviewSchedule && (
-                          <>
-                            📅 Date:{" "}
-                            {formatDate(interviewSchedule?.day_description)}{" "}
-                            <br />
-                            🏫 Building:{" "}
-                            {interviewSchedule.building_description ||
-                              "TBA"}{" "}
-                            <br />
-                            🏷️ Room:{" "}
-                            {interviewSchedule.room_description || "TBA"} <br />
-                            ⏰ Time: {formatTime(interviewSchedule.start_time)}{" "}
-                            – {formatTime(interviewSchedule.end_time)}
-                          </>
-                        )}
-                        <br />
-                        <Divider
-                          sx={{
-                            backgroundColor: "gray",
-                            height: "0.5px",
-                            my: 2,
-                            borderRadius: 1,
-                          }}
-                        />
-
-                        {hasInterviewScores && (
-                          <>
-                            🗣 Interview Status:{" "}
-                            <span
-                              style={{
-                                color:
-                                  qualifyingInterviewScore === "PASSED"
-                                    ? "green"
-                                    : qualifyingInterviewScore === "FAILED"
-                                      ? "red"
-                                      : "orange",
-                              }}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              style={{ overflow: "hidden" }}
                             >
-                              {qualifyingInterviewScore ?? "Pending"}
-                            </span>
-                            <br />
-
-                            📝 Qualifying Exam Status:{" "}
-                            <span
-                              style={{
-                                color:
-                                  qualifyingExamScore === "PASSED"
-                                    ? "green"
-                                    : qualifyingExamScore === "FAILED"
-                                      ? "red"
-                                      : "orange",
-                              }}
-                            >
-                              {qualifyingExamScore ?? "Pending"}
-                            </span>
-
-                          </>
-                        )}
-                      </>
-                    )}
-
-                    {/* Step 4: College Approval */}
-                    {index === 3 && (
-                      <>
-                        {collegeApproval === "Accepted"
-                          ? "✅ Approved by College"
-                          : collegeApproval === "Rejected"
-                            ? "❌ Rejected by College"
-                            : "⏳ Waiting for College Approval"}
-                      </>
-                    )}
-
-                    {/* Step 5: Medical Submitted */}
-                    {index === 4 && (
-                      <>
-                        {registrarApproved
-                          ? "⬇️ Your documents have been verified. Please proceed to your respective college to finalize your schedule and subjects."
-                          : "⏳ Apply For Medical Processing"}
-                      </>
-                    )}
-
-                    {/* Step 6: Applicant Status */}
-                    {index === 5 && (
-                      <>
-                        {person?.final_status === "Rejected" ? (
-                          "❌ Unfortunately, you were not accepted."
-                        ) : hasStudentNumber ? (
-                          <>
-                            🎉 <strong>Congratulations!</strong> You are now
-                            accepted at <strong>EARIST</strong>. Please follow
-                            the steps below:
-                            <div
-                              style={{ marginTop: "6px", lineHeight: "1.6" }}
-                            >
-                              1. Proceed to your <strong>College</strong> to tag
-                              your subjects. <br />
-                              2. Get your <strong>Class Schedule</strong> from
-                              your department. <br />
-                              {studentNumber && (
-                                <span
-                                  style={{
-                                    display: "block",
-                                    fontWeight: "bold",
-                                    marginTop: "5px",
-                                  }}
-                                >
-                                  Your Student Number: {studentNumber}
-                                </span>
-                              )}
-                            </div>
-                          </>
-                        ) : person?.final_status === "Accepted" ? (
-                          "✅ You have been accepted. Please wait while your student number is being processed."
-                        ) : (
-                          "⏳ Application in Progress"
-                        )}
-                      </>
-                    )}
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
-          <Dialog
-            open={openAgreementModal}
-            disableEscapeKeyDown
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{
-              sx: {
-                borderRadius: "16px",
-                overflow: "hidden",
-                minWidth: 420,
-                boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
-              },
-            }}
-          >
-            <DialogTitle
-              sx={{
-                bgcolor: mainButtonColor,
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                fontWeight: "bold",
-                px: 3,
-                py: 2,
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={1.5}>
-                <Box
-                  sx={{
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "50%",
-                    width: 40,
-                    height: 40,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <WarningAmberIcon sx={{ color: "white", fontSize: 22 }} />
+                              <Box sx={{ border: `2px solid ${borderColor}`, borderTop: "none", borderRadius: "0 0 8px 8px", p: 1.5, backgroundColor: "#fff9ec" }}>
+                                {renderStepDetail(index)}
+                              </Box>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </Box>
+                    );
+                  })}
                 </Box>
-                <Box>
-                  <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>
-                    Important Notice Before Proceeding
-                  </Typography>
-                  <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>
-                    Please read carefully before continuing
-                  </Typography>
-                </Box>
-              </Box>
-            </DialogTitle>
+              )}
+            </Box>
+          </Grid>
 
-            <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
-              {/* Warning notice box */}
-              <Box
-                sx={{
-                  border: "1px solid #f5a623",
-                  borderRadius: "8px",
-                  p: 1.5,
-                  mb: 2,
-                  mt: 2,
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "flex-start",
-                  backgroundColor: "#fffbf2",
-                }}
-              >
-                <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
-                <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
-                  Failure to complete the required information or document uploads may{" "}
-                  <strong>delay the evaluation of your application</strong>.
-                </Typography>
-              </Box>
-
-              <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
-                Welcome to the <strong>{companyName}</strong> Applicant Dashboard.
-                Before continuing, please make sure that you will:
-              </Typography>
-
-              <Box
-                sx={{
-                  mt: 1.5,
-                  pl: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.6,
-                }}
-              >
-                {[
-                  "Fill out all required personal information.",
-                  <>Fields marked with <span style={{ color: "red" }}>*</span> (Asterisk) are required to fill up.</>,
-                  "Upload your 2 by 2 Formal Picture.",
-                  "Upload All Main Required Online Documents.",
-                  "Ensure that the information you provide is accurate and correct.",
-                  "Regularly check your Applicant Dashboard or Your provided Gmail Account for updates.",
-                ].map((item, i) => (
-                  <Box key={i} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                    <Typography sx={{ fontSize: "13.5px", color: "#555", lineHeight: 1, mt: "4px" }}>•</Typography>
-                    <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>{item}</Typography>
-                  </Box>
-                ))}
-              </Box>
-
-              <Box
-                component="label"
-                htmlFor="agreementCheck"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  border: "1.5px solid #cc3333",
-                  borderRadius: "4px",
-                  px: 1.5,
-                  py: 1.25,
-                  mt: 2.5,
-                  mb: 0.5,
-                  cursor: "pointer",
-                  "&:hover": { backgroundColor: "#fff5f5" },
-                  transition: "background 0.15s",
-                }}
-              >
-                <Checkbox
-                  id="agreementCheck"
-                  checked={agreeChecked}
-                  onChange={(e) => setAgreeChecked(e.target.checked)}
-                  sx={{
-                    p: 0,
-                    color: "#cc3333",
-                    "&.Mui-checked": { color: "#cc3333" },
-                  }}
-                  size="small"
-                />
-                <Typography sx={{ fontSize: "13px", color: "#333", userSelect: "none" }}>
-                  I confirm that I will complete all required information and upload all required documents.
-                </Typography>
-              </Box>
-            </DialogContent>
-
-            <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1, mt: 1 }}>
-              <Button
-                variant="contained"
-                disabled={!agreeChecked}
-                onClick={() => setOpenAgreementModal(false)}
-                sx={{
-                  backgroundColor: agreeChecked ? mainButtonColor : "#b0b8c8",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  px: 4,
-                  py: 1.25,
-            
-                  textTransform: "none",
-                  letterSpacing: "0.02em",
-                  boxShadow: "none",
-                  "&:hover": {
-                    backgroundColor: agreeChecked ? mainButtonColor : "#b0b8c8",
-                    boxShadow: "none",
-                  },
-                  "&.Mui-disabled": {
-                    backgroundColor: "#b0b8c8",
-                    color: "#fff",
-                    opacity: 0.7,
-                  },
-                }}
-              >
-                I Agree & Continue
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Grid>
       </Box>
-    </Box >
+
+      {/* ── AGREEMENT MODAL ──────────────────────────────────────────────── */}
+      <Dialog
+        open={openAgreementModal}
+        disableEscapeKeyDown
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "16px",
+            overflow: "hidden",
+            mx: { xs: 1, sm: 2 },
+            minWidth: { xs: "unset", sm: 420 },
+            boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: mainButtonColor, color: "white", display: "flex", alignItems: "center", fontWeight: "bold", px: { xs: 2, sm: 3 }, py: 2 }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box sx={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <WarningAmberIcon sx={{ color: "white", fontSize: 22 }} />
+            </Box>
+            <Box>
+              <Typography fontWeight="bold" fontSize={{ xs: 14, sm: 16 }} color="white" lineHeight={1.2}>Important Notice Before Proceeding</Typography>
+              <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>Please read carefully before continuing</Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: { xs: 2, sm: 3 }, pt: 2.5, pb: 1 }}>
+          <Box sx={{ border: "1px solid #f5a623", borderRadius: "8px", p: 1.5, mb: 2, mt: 2, display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#fffbf2" }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+            <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
+              Failure to complete the required information or document uploads may <strong>delay the evaluation of your application</strong>.
+            </Typography>
+          </Box>
+          <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>
+            Welcome to the <strong>{companyName}</strong> Applicant Dashboard. Before continuing, please make sure that you will:
+          </Typography>
+          <Box sx={{ mt: 1.5, pl: 1, display: "flex", flexDirection: "column", gap: 0.6 }}>
+            {[
+              "Fill out all required personal information.",
+              <>Fields marked with <span style={{ color: "red" }}>*</span> (Asterisk) are required to fill up.</>,
+              "Upload your 2 by 2 Formal Picture.",
+              "Upload All Main Required Online Documents.",
+              "Ensure that the information you provide is accurate and correct.",
+              "Regularly check your Applicant Dashboard or Your provided Gmail Account for updates.",
+            ].map((item, i) => (
+              <Box key={i} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                <Typography sx={{ fontSize: "13.5px", color: "#555", lineHeight: 1, mt: "4px" }}>•</Typography>
+                <Typography sx={{ fontSize: "13.5px", color: "#333", lineHeight: 1.6 }}>{item}</Typography>
+              </Box>
+            ))}
+          </Box>
+          <Box component="label" htmlFor="agreementCheck" sx={{ display: "flex", alignItems: "center", gap: 1.5, border: "1.5px solid #cc3333", borderRadius: "4px", px: 1.5, py: 1.25, mt: 2.5, mb: 0.5, cursor: "pointer", "&:hover": { backgroundColor: "#fff5f5" }, transition: "background 0.15s" }}>
+            <Checkbox id="agreementCheck" checked={agreeChecked} onChange={(e) => setAgreeChecked(e.target.checked)} sx={{ p: 0, color: "#cc3333", "&.Mui-checked": { color: "#cc3333" } }} size="small" />
+            <Typography sx={{ fontSize: "13px", color: "#333", userSelect: "none" }}>
+              I confirm that I will complete all required information and upload all required documents.
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ justifyContent: "center", px: 3, pb: 2.5, pt: 1, mt: 1 }}>
+          <Button
+            variant="contained"
+            disabled={!agreeChecked}
+            onClick={() => setOpenAgreementModal(false)}
+            sx={{ backgroundColor: agreeChecked ? mainButtonColor : "#b0b8c8", color: "#fff", fontWeight: 600, fontSize: "14px", px: 4, py: 1.25, textTransform: "none", letterSpacing: "0.02em", boxShadow: "none", "&:hover": { backgroundColor: agreeChecked ? mainButtonColor : "#b0b8c8", boxShadow: "none" }, "&.Mui-disabled": { backgroundColor: "#b0b8c8", color: "#fff", opacity: 0.7 } }}
+          >
+            I Agree & Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

@@ -10,11 +10,25 @@ import CloseIcon from "@mui/icons-material/Close";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 
+/* ─── Hook: detect mobile breakpoint ─── */
+const useIsMobile = (breakpoint = 768) => {
+    const [isMobile, setIsMobile] = useState(
+        typeof window !== "undefined" ? window.innerWidth <= breakpoint : false
+    );
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth <= breakpoint);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, [breakpoint]);
+    return isMobile;
+};
+
 const AnnouncementSlider = () => {
     const [slides, setSlides] = useState([]);
     const [index, setIndex] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const isMobile = useIsMobile();
 
     // Lightbox state
     const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -33,7 +47,7 @@ const AnnouncementSlider = () => {
             .catch(err => console.error("Announcement fetch error:", err));
     }, []);
 
-    // Auto-advance slider (paused when lightbox is open)
+    // Auto-advance slider
     useEffect(() => {
         if (slides.length <= 1 || isDragging || isHovered || lightboxOpen) return;
         const timer = setTimeout(() => {
@@ -42,7 +56,7 @@ const AnnouncementSlider = () => {
         return () => clearTimeout(timer);
     }, [slides.length, index, isDragging, isHovered, lightboxOpen]);
 
-    // Close lightbox on Escape, arrow keys for nav
+    // Keyboard nav for lightbox
     useEffect(() => {
         if (!lightboxOpen) return;
         const handleKey = (e) => {
@@ -54,8 +68,22 @@ const AnnouncementSlider = () => {
         return () => window.removeEventListener("keydown", handleKey);
     }, [lightboxOpen, lightboxIndex, slides.length]);
 
+    // ── On mobile: render nothing (slider is shown inline in Login instead) ──
+    // Change the condition below to `false` if you want to always show the slider.
+    if (isMobile) return null;
+
     if (!slides.length) {
-        return <div style={{ width: "700px", height: "700px", background: "#f2f2f2" }} />;
+        return (
+            <div style={{
+                width: "900px",
+                height: "700px",
+                background: "#f2f2f2",
+                borderRadius: "30px",
+                marginRight: "300px",
+                marginTop: "-130px",
+                marginLeft: "125px",
+            }} />
+        );
     }
 
     const handleDragEnd = (_, info) => {
@@ -72,7 +100,6 @@ const AnnouncementSlider = () => {
     const goNext = () => setIndex(prev => (prev + 1) % slides.length);
     const goPrev = () => setIndex(prev => (prev - 1 + slides.length) % slides.length);
 
-    // Lightbox controls
     const openLightbox = () => {
         setLightboxIndex(index);
         setZoom(1);
@@ -103,7 +130,7 @@ const AnnouncementSlider = () => {
 
     return (
         <>
-            {/* ─── SLIDER ─── */}
+            {/* ─── SLIDER (desktop only) ─── */}
             <div
                 style={{
                     width: "900px",
@@ -167,7 +194,6 @@ const AnnouncementSlider = () => {
                             cursor: isDragging ? "grabbing" : "grab",
                         }}
                     >
-                        {/* Clickable image area */}
                         <div
                             onClick={() => !isDragging && openLightbox()}
                             style={{ width: "100%", height: "100%", position: "relative" }}
@@ -184,8 +210,6 @@ const AnnouncementSlider = () => {
                                 }}
                                 draggable={false}
                             />
-
-                            {/* Zoom hint icon */}
                             <div style={{
                                 position: "absolute", top: 12, right: 12,
                                 background: "rgba(0,0,0,0.5)", borderRadius: "50%",
@@ -223,18 +247,15 @@ const AnnouncementSlider = () => {
                             display: "flex", alignItems: "center", justifyContent: "center",
                         }}
                     >
-                        {/* Inner content — stop propagation so clicking image doesn't close */}
                         <div
                             onClick={e => e.stopPropagation()}
                             style={{ position: "relative", maxWidth: "90vw", maxHeight: "90vh" }}
                         >
-                            {/* TOP CONTROLS */}
-                    
                             <div
                                 style={{
                                     position: "absolute",
                                     top: -55,
-                                    left: -480,   // 👈 changed from right → left
+                                    left: -480,
                                     display: "flex",
                                     gap: "8px",
                                     alignItems: "center",
@@ -245,16 +266,15 @@ const AnnouncementSlider = () => {
                                     sx={{
                                         background: "rgba(255,255,255,0.15)",
                                         color: "#fff",
-                                        width: 75,           // ✅ size
-                                        height: 75,          // ✅ size
+                                        width: 75,
+                                        height: 75,
                                         "&:hover": { background: "rgba(220,50,50,0.75)" },
                                     }}
                                 >
-                                    <CloseIcon sx={{ fontSize: 28 }} /> {/* ✅ bigger icon */}
+                                    <CloseIcon sx={{ fontSize: 28 }} />
                                 </IconButton>
                             </div>
 
-                            {/* IMAGE with zoom */}
                             <div style={{
                                 overflow: "auto",
                                 maxWidth: "85vw", maxHeight: "80vh",
@@ -286,10 +306,7 @@ const AnnouncementSlider = () => {
                                 </AnimatePresence>
                             </div>
 
-                            {/* CAPTION */}
-                            <div style={{
-                                marginTop: "12px", color: "#fff", textAlign: "center",
-                            }}>
+                            <div style={{ marginTop: "12px", color: "#fff", textAlign: "center" }}>
                                 <h3 style={{ margin: 0 }}>{lightboxCurrent.title}</h3>
                                 <p style={{ marginTop: "4px", fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>
                                     {lightboxCurrent.content}
@@ -300,42 +317,30 @@ const AnnouncementSlider = () => {
                             </div>
                         </div>
 
-                        {/* Left arrow */}
                         <IconButton
                             onClick={e => { e.stopPropagation(); lightboxPrev(); }}
                             sx={{
-                                position: "fixed",
-                                left: 50,
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                zIndex: 10000,
-                                width: 75,           // ✅ size
-                                height: 75,          // ✅ size
-                                background: "rgba(255,255,255,0.15)",
-                                color: "#fff",
+                                position: "fixed", left: 50, top: "50%",
+                                transform: "translateY(-50%)", zIndex: 10000,
+                                width: 75, height: 75,
+                                background: "rgba(255,255,255,0.15)", color: "#fff",
                                 "&:hover": { background: "rgba(255,255,255,0.3)" },
                             }}
                         >
-                            <ArrowBackIosNewIcon sx={{ fontSize: 28 }} /> {/* ✅ bigger icon */}
+                            <ArrowBackIosNewIcon sx={{ fontSize: 28 }} />
                         </IconButton>
 
-                        {/* Right arrow */}
                         <IconButton
                             onClick={e => { e.stopPropagation(); lightboxNext(); }}
                             sx={{
-                                position: "fixed",
-                                right: 50,
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                zIndex: 10000,
-                                width: 75,           // ✅ size
-                                height: 75,          // ✅ size
-                                background: "rgba(255,255,255,0.15)",
-                                color: "#fff",
+                                position: "fixed", right: 50, top: "50%",
+                                transform: "translateY(-50%)", zIndex: 10000,
+                                width: 75, height: 75,
+                                background: "rgba(255,255,255,0.15)", color: "#fff",
                                 "&:hover": { background: "rgba(255,255,255,0.3)" },
                             }}
                         >
-                            <ArrowForwardIosIcon sx={{ fontSize: 28 }} /> {/* ✅ bigger icon */}
+                            <ArrowForwardIosIcon sx={{ fontSize: 28 }} />
                         </IconButton>
                     </motion.div>
                 )}

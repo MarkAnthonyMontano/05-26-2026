@@ -431,7 +431,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         .filter((termGwa) => termGwa !== null);
       const generalAverage = postedTermGwas.length
         ? postedTermGwas.reduce((sum, termGwa) => sum + termGwa, 0) /
-          postedTermGwas.length
+        postedTermGwas.length
         : null;
 
       setGradeSummary({
@@ -956,6 +956,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           student_number={String(personData.student_number || "")}
           onReadyChange={handleCorReadyChange}
         />
+
       </div>
       <Box
         sx={{
@@ -963,7 +964,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           mt: { xs: 1.5, md: 2.5 },
           borderRadius: "12px",
           overflow: "hidden",
-          backgroundColor: "#fff9ec",
+          backgroundColor: settings?.header_color || "#1976d2",
           color: "#fff",
           border: `2px solid ${borderColor}`
         }}
@@ -975,13 +976,28 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
                 src={profileImage || (personData?.profile_image ? `${API_BASE_URL}/uploads/Student1by1/${personData.profile_image}` : "")}
                 alt={personData?.first_name || "Student"}
                 onClick={() => fileInputRef.current?.click()}
-                sx={{ width: 64, height: 64, border: "1px solid black", bgcolor: "rgba(255,255,255,0.15)", cursor: "pointer", display: { xs: "none", sm: "flex", color: "black" } }}
+                sx={{ width: 64, height: 64, border: "1px solid white", bgcolor: "rgba(255,255,255,0.15)", cursor: "pointer", display: { xs: "none", sm: "flex", color: "white" } }}
               >
                 {personData?.first_name?.[0] || <PersonIcon />}
               </Avatar>
               {hovered && (
-                <IconButton size="small" onClick={() => fileInputRef.current?.click()} sx={{ position: "absolute", right: -6, bottom: -6, bgcolor: "#fff", color: maroon, border: "1px solid rgba(0,0,0,0.1)", display: { xs: "none", sm: "inline-flex" }, "&:hover": { bgcolor: "#fff5f3" } }}>
-                  <AddCircleIcon fontSize="small" />
+                <IconButton size="small" onClick={() => fileInputRef.current?.click()} style={{
+                  position: "absolute",
+                  bottom: -4,
+                  right: 0,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffffff",
+                  border: `2px solid ${borderColor}`,
+                  width: 30,
+                  height: 30,
+                }}>
+                  <AddCircleIcon
+                    sx={{ color: mainButtonColor, fontSize: 26 }}
+                  />
                 </IconButton>
               )}
               <input type="file" accept="image/*" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} />
@@ -989,10 +1005,10 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
             <Box>
               <Typography
                 sx={{
-                  fontSize: 32,
+                  fontSize: "32px",
                   fontWeight: 800,
                   lineHeight: 1.1,
-                  color: titleColor,
+                  color: "white",
                 }}
               >
                 Welcome Back!{" "}
@@ -1003,11 +1019,10 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
 
               <Typography
                 sx={{
-                  fontSize: 22,
+                  fontSize: "22px",
                   letterSpacing: 0,
-                  textTransform: "uppercase",
                   opacity: 0.86,
-                  color: "black",
+                  color: "white",
                 }}
               >
                 <Box component="span" sx={{ fontWeight: 700 }}>
@@ -1328,7 +1343,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
                         <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Latest Term GWA</Typography>
                         <Typography sx={{ color: maroon, fontSize: 18, fontWeight: 800 }}>
                           {gradeSummary.latestTermGwa !== null &&
-                          gradeSummary.latestTermGwa !== undefined
+                            gradeSummary.latestTermGwa !== undefined
                             ? Number(gradeSummary.latestTermGwa).toFixed(3)
                             : "N/A"}
                         </Typography>
@@ -1375,32 +1390,241 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
           </Grid>
 
           <Grid item xs={12} lg={7}>
-            <Card sx={{ ...cardSx, border: `2px solid ${borderColor}`, }}>
-              <CardContent sx={{ p: 0 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: 2, pb: 1.5 }}><Box sx={iconBoxSx}><Campaign /></Box><Typography sx={{ fontSize: 18, fontWeight: 800, textTransform: "uppercase" }}>Announcements</Typography></Stack>
-                <Box sx={{ px: 2 }}>
+            <Card
+              sx={{
+                borderRadius: "14px",
+                border: `2px solid ${borderColor}`,
+                boxShadow: 3,
+                height: 600,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                transition: "all 0.3s ease",
+                background: "#fff",
+                "&:hover": {
+                  transform: "scale(1.01)",
+                  boxShadow: 6,
+                },
+              }}
+            >
+              <CardContent
+                sx={{
+                  p: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
+                }}
+              >
+                {/* HEADER */}
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    backgroundColor: settings?.header_color || "#1976d2",
+                    color: "#fff",
+                    borderBottom: `2px solid ${borderColor}`,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: "10px",
+                      background: "rgba(255,255,255,0.18)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backdropFilter: "blur(6px)",
+                    }}
+                  >
+                    <Campaign sx={{ color: "#fff", fontSize: 24 }} />
+                  </Box>
+
+                  <Typography
+                    sx={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      color: "#fff",
+                    }}
+                  >
+                    Announcements
+                  </Typography>
+                </Stack>
+
+                {/* IMAGE AREA */}
+                <Box
+                  sx={{
+                    flex: 1,
+                    p: 2,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
                   {firstAnnouncement?.file_path ? (
-                    <Box sx={{ position: "relative", height: { xs: 180, md: 230 }, borderRadius: "8px", overflow: "hidden", cursor: "pointer" }} onClick={() => openLightbox(announcements.indexOf(firstAnnouncement))}>
-                      <Box component="img" src={`${API_BASE_URL}/uploads/Announcement/${firstAnnouncement.file_path}`} alt={firstAnnouncement.title} sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <Box
+                      sx={{
+                        flex: 1,
+                        borderRadius: "14px",
+                        overflow: "hidden",
+                        position: "relative",
+                        cursor: "pointer",
+                        border: `2px solid ${borderColor}`,
+                        background: "#fff",
+                        transition: "all 0.3s ease",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          boxShadow: 4,
+                        },
+                      }}
+                      onClick={() =>
+                        openLightbox(announcements.indexOf(firstAnnouncement))
+                      }
+                    >
+                      {/* IMAGE */}
+                      <Box
+                        component="img"
+                        src={`${API_BASE_URL}/uploads/Announcement/${firstAnnouncement.file_path}`}
+                        alt={firstAnnouncement.title}
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          transition: "transform 0.35s ease",
+                          "&:hover": {
+                            transform: "scale(1.05)",
+                          },
+                        }}
+                      />
+
+                      {/* OVERLAY */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.08))",
+                        }}
+                      />
+
+                      {/* ZOOM ICON */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: 12,
+                          right: 12,
+                          background: "rgba(0,0,0,0.45)",
+                          borderRadius: "50%",
+                          p: 0.9,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backdropFilter: "blur(4px)",
+                        }}
+                      >
+                        <ZoomInIcon
+                          sx={{
+                            color: "#fff",
+                            fontSize: 18,
+                          }}
+                        />
+                      </Box>
+
+                      {/* TITLE + CONTENT OVERLAY */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          p: 2,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontWeight: 800,
+                            fontSize: 20,
+                            lineHeight: 1.2,
+                            mb: 0.5,
+                          }}
+                        >
+                          {firstAnnouncement.title}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            color: "rgba(255,255,255,0.88)",
+                            fontSize: 13,
+                            lineHeight: 1.5,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {firstAnnouncement.content}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            mt: 1,
+                            color: "rgba(255,255,255,0.7)",
+                            fontSize: 11,
+                          }}
+                        >
+                          Expires:{" "}
+                          {new Date(firstAnnouncement.expires_at).toLocaleDateString(
+                            "en-US"
+                          )}
+                        </Typography>
+                      </Box>
                     </Box>
                   ) : (
-                    <Box sx={{ height: 180, borderRadius: "8px", border: `1px dashed ${softBorder}`, display: "grid", placeItems: "center", color: "text.secondary" }}>No active announcements.</Box>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        borderRadius: "12px",
+                        border: `1px dashed ${borderColor}`,
+                        display: "grid",
+                        placeItems: "center",
+                        color: "text.secondary",
+                      }}
+                    >
+                      No active announcements.
+                    </Box>
                   )}
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ py: 1.5 }}>{(announcements.length ? announcements : [0]).slice(0, 6).map((a, index) => <Box key={a.id || index} sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: index === 0 ? maroon : "#d1d1d1" }} />)}</Stack>
-                </Box>
-                <Divider />
-                <Box sx={{ px: 2, py: 1 }}>
-                  {(announcements || []).slice(0, 3).map((a, index) => (
-                    <Stack key={a.id || index} direction="row" spacing={2} alignItems="center" sx={{ py: 1.5, borderBottom: index < Math.min(announcements.length, 3) - 1 ? `1px solid ${softBorder}` : "none" }}>
-                      <Box sx={{ ...iconBoxSx, borderRadius: "50%" }}>{index === 0 ? <PersonIcon /> : <SchoolIcon />}</Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{a.title}</Typography>
-                        <Typography sx={{ color: "text.secondary", fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.content}</Typography>
-                        {a.expires_at && <Typography sx={{ color: maroon, fontSize: 12, mt: 0.5 }}>{new Date(a.expires_at).toLocaleDateString("en-US")}</Typography>}
-                      </Box>
-                      <ArrowForwardIosIcon sx={{ color: "text.secondary", fontSize: 16 }} />
-                    </Stack>
-                  ))}
+
+                  {/* INDICATORS */}
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="center"
+                    sx={{ pt: 1.5 }}
+                  >
+                    {(announcements.length ? announcements : [0])
+                      .slice(0, 6)
+                      .map((a, index) => (
+                        <Box
+                          key={a.id || index}
+                          sx={{
+                            width: index === 0 ? 22 : 8,
+                            height: 8,
+                            borderRadius: "999px",
+                            bgcolor:
+                              index === 0
+                                ? settings?.header_color || maroon
+                                : "#d1d1d1",
+                            transition: "all 0.3s ease",
+                          }}
+                        />
+                      ))}
+                  </Stack>
                 </Box>
               </CardContent>
             </Card>

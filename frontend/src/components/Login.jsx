@@ -10,15 +10,457 @@ import {
   Person as PersonIcon,
   ArrowDropDown as ArrowDropDownIcon,
 } from "@mui/icons-material";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ZoomOutIcon from "@mui/icons-material/ZoomOut";
+import CloseIcon from "@mui/icons-material/Close";
+import CampaignIcon from "@mui/icons-material/Campaign";
 import "../styles/Container.css";
 import Logo from "../assets/Logo.png";
 import { SettingsContext } from "../App";
 import API_BASE_URL from "../apiConfig";
 import AnnouncementSlider from "../components/AnnouncementSlider";
 import { Link as RouterLink } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
+/* ─── Helper: detect mobile ─── */
+const useIsMobile = (bp = 768) => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= bp : false
+  );
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= bp);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [bp]);
+  return isMobile;
+};
+
+/* ─── Fullscreen Announcement Viewer Modal ─── */
+const AnnouncementViewerModal = ({ slides, startIndex, onClose }) => {
+  const [index, setIndex] = useState(startIndex || 0);
+  const [scale, setScale] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const current = slides[index];
+
+  const goNext = () => { setIndex((prev) => (prev + 1) % slides.length); setScale(1); };
+  const goPrev = () => { setIndex((prev) => (prev - 1 + slides.length) % slides.length); setScale(1); };
+
+  const handleDragEnd = (_, info) => {
+    if (scale > 1) return; // disable swipe when zoomed
+    if (Math.abs(info.offset.x) < Math.abs(info.offset.y)) { setIsDragging(false); return; }
+    if (info.offset.x < -60) goNext();
+    else if (info.offset.x > 60) goPrev();
+    setIsDragging(false);
+  };
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  if (!current?.file_path) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 99999,
+        background: "rgba(0,0,0,0.96)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* ── Top Bar ── */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 16px",
+        background: "rgba(0,0,0,0.7)",
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <CampaignIcon sx={{ color: "#fff", fontSize: 20 }} />
+          <span style={{ color: "#fff", fontWeight: 600, fontSize: "14px", maxWidth: "60vw", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {current.title}
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {/* Zoom In */}
+          <button
+            onClick={() => setScale((s) => Math.min(s + 0.5, 3))}
+            style={{
+              background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+              width: 36, height: 36, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <ZoomInIcon sx={{ fontSize: 20 }} />
+          </button>
+          {/* Zoom Out */}
+          <button
+            onClick={() => setScale((s) => Math.max(s - 0.5, 1))}
+            style={{
+              background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%",
+              width: 36, height: 36, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <ZoomOutIcon sx={{ fontSize: 20 }} />
+          </button>
+          {/* Close */}
+          <button
+            onClick={onClose}
+            style={{
+              background: "rgba(220,38,38,0.85)", border: "none", borderRadius: "50%",
+              width: 36, height: 36, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 20 }} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Image Area ── */}
+      <div style={{
+        flex: 1,
+        position: "relative",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        {/* Prev */}
+        {slides.length > 1 && (
+          <button
+            onClick={goPrev}
+            style={{
+              position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+              zIndex: 10, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: "50%",
+              width: 40, height: 40, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <ArrowBackIosNewIcon sx={{ fontSize: 18 }} />
+          </button>
+        )}
+
+        {/* Next */}
+        {slides.length > 1 && (
+          <button
+            onClick={goNext}
+            style={{
+              position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+              zIndex: 10, background: "rgba(255,255,255,0.18)", border: "none", borderRadius: "50%",
+              width: 40, height: 40, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <ArrowForwardIosIcon sx={{ fontSize: 18 }} />
+          </button>
+        )}
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current.id}
+            drag={scale <= 1 ? "x" : false}
+            dragDirectionLock
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.03}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEnd}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              touchAction: scale > 1 ? "pinch-zoom" : "pan-y",
+            }}
+          >
+            <img
+              src={`${API_BASE_URL}/uploads/announcement/${current.file_path}`}
+              alt={current.title}
+              draggable={false}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                transform: `scale(${scale})`,
+                transformOrigin: "center center",
+                transition: "transform 0.2s ease",
+                userSelect: "none",
+                borderRadius: scale > 1 ? 0 : "8px",
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* ── Bottom Bar: dots + counter ── */}
+      <div style={{
+        padding: "12px 16px",
+        background: "rgba(0,0,0,0.7)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        gap: 12,
+      }}>
+        {slides.length > 1 && slides.map((_, i) => (
+          <div
+            key={i}
+            onClick={() => { setIndex(i); setScale(1); }}
+            style={{
+              width: i === index ? 20 : 7, height: 7,
+              borderRadius: 4,
+              background: i === index ? "#fff" : "rgba(255,255,255,0.35)",
+              transition: "all 0.3s",
+              cursor: "pointer",
+            }}
+          />
+        ))}
+        {slides.length > 1 && (
+          <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", marginLeft: 4 }}>
+            {index + 1} / {slides.length}
+          </span>
+        )}
+      </div>
+
+      {/* Zoom hint */}
+      {scale > 1 && (
+        <div style={{
+          position: "absolute",
+          bottom: 70,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(0,0,0,0.6)",
+          color: "#fff",
+          fontSize: "11px",
+          padding: "4px 10px",
+          borderRadius: "20px",
+          pointerEvents: "none",
+        }}>
+          {Math.round(scale * 100)}% — tap − to zoom out
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Inline mobile announcement banner ─── */
+const MobileAnnouncementBanner = ({ slides }) => {
+  const [openViewer, setOpenViewer] = useState(false);
+  const [viewerStartIndex, setViewerStartIndex] = useState(0);
+  const [index, setIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [bannerVisible, setBannerVisible] = useState(true);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const t = setTimeout(() => setIndex((prev) => (prev + 1) % slides.length), 4500);
+    return () => clearTimeout(t);
+  }, [index, slides.length]);
+
+  if (!slides.length) return null;
+  const current = slides[index];
+  if (!current?.file_path) return null;
+
+  const goNext = () => setIndex((prev) => (prev + 1) % slides.length);
+  const goPrev = () => setIndex((prev) => (prev - 1 + slides.length) % slides.length);
+
+  const handleDragEnd = (_, info) => {
+    if (Math.abs(info.offset.x) < Math.abs(info.offset.y)) { setIsDragging(false); return; }
+    if (info.offset.x < -60) goNext();
+    else if (info.offset.x > 60) goPrev();
+    setIsDragging(false);
+  };
+
+  const handleOpenViewer = () => {
+    setViewerStartIndex(index);
+    setOpenViewer(true);
+  };
+
+  return (
+    <>
+      {/* ── Fullscreen Viewer ── */}
+      {openViewer && (
+        <AnnouncementViewerModal
+          slides={slides}
+          startIndex={viewerStartIndex}
+          onClose={() => setOpenViewer(false)}
+        />
+      )}
+
+      {/* ── Banner Toggle Button (when hidden) ── */}
+      {!bannerVisible && (
+        <button
+          onClick={() => setBannerVisible(true)}
+          style={{
+            width: "100%",
+            marginBottom: "14px",
+            padding: "10px",
+            background: "rgba(0,0,0,0.08)",
+            border: "1.5px dashed rgba(0,0,0,0.25)",
+            borderRadius: "10px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            color: "rgba(0,0,0,0.55)",
+            fontSize: "13px",
+            fontWeight: 500,
+          }}
+        >
+          <CampaignIcon sx={{ fontSize: 16 }} />
+          Show Announcements
+        </button>
+      )}
+
+      {/* ── Banner ── */}
+      {bannerVisible && (
+        <div style={{
+          width: "100%",
+          borderRadius: "14px",
+          overflow: "hidden",
+          position: "relative",
+          background: "#000",
+          aspectRatio: "16 / 9",
+          marginBottom: "16px",
+          boxShadow: "0 4px 18px rgba(0,0,0,0.25)",
+        }}>
+          {/* Close/Hide Banner */}
+          <button
+            onClick={() => setBannerVisible(false)}
+            style={{
+              position: "absolute", top: 8, right: 8,
+              zIndex: 20, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%",
+              width: 28, height: 28, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 14 }} />
+          </button>
+
+          {/* Zoom / Fullscreen Button */}
+          <button
+            onClick={handleOpenViewer}
+            style={{
+              position: "absolute", top: 8, left: 8,
+              zIndex: 20, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "20px",
+              padding: "4px 10px", color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 4,
+              fontSize: "11px", fontWeight: 600,
+            }}
+          >
+            <ZoomInIcon sx={{ fontSize: 14 }} />
+            View
+          </button>
+
+          {/* Prev */}
+          <button
+            onClick={goPrev}
+            style={{
+              position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+              zIndex: 10, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%",
+              width: 34, height: 34, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <ArrowBackIosNewIcon sx={{ fontSize: 16 }} />
+          </button>
+
+          {/* Next */}
+          <button
+            onClick={goNext}
+            style={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              zIndex: 10, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%",
+              width: 34, height: 34, color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <ArrowForwardIosIcon sx={{ fontSize: 16 }} />
+          </button>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current.id}
+              drag="x"
+              dragDirectionLock
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.03}
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={handleDragEnd}
+              initial={{ x: 120, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -120, opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              style={{ width: "100%", height: "100%", position: "relative", touchAction: "pan-y" }}
+            >
+              <img
+                src={`${API_BASE_URL}/uploads/announcement/${current.file_path}`}
+                alt={current.title}
+                onClick={handleOpenViewer}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  userSelect: "none",
+                  display: "block",
+                  cursor: "zoom-in",
+                }}
+                draggable={false}
+              />
+              <div style={{
+                position: "absolute", bottom: 0, width: "100%",
+                padding: "0.7rem 0.9rem",
+                background: "linear-gradient(transparent, rgba(0,0,0,0.72))",
+                color: "#fff",
+              }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: "0.82rem" }}>{current.title}</p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Dots */}
+          {slides.length > 1 && (
+            <div style={{
+              position: "absolute", bottom: 6, right: 10,
+              display: "flex", gap: 5, zIndex: 10,
+            }}>
+              {slides.map((_, i) => (
+                <div key={i} onClick={() => setIndex(i)} style={{
+                  width: i === index ? 16 : 6, height: 6,
+                  borderRadius: 3, background: i === index ? "#fff" : "rgba(255,255,255,0.45)",
+                  transition: "all 0.3s", cursor: "pointer",
+                }} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
+   LOGIN PAGE
+══════════════════════════════════════════════════════════════ */
 const Login = ({ setIsAuthenticated }) => {
   const settings = useContext(SettingsContext);
+  const isMobile = useIsMobile();
 
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
@@ -30,21 +472,17 @@ const Login = ({ setIsAuthenticated }) => {
       if (settings.title_color) setTitleColor(settings.title_color);
       if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
       if (settings.border_color) setBorderColor(settings.border_color);
-      if (settings.main_button_color)
-        setMainButtonColor(settings.main_button_color);
+      if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
     }
   }, [settings]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [snack, setSnack] = useState({
-    open: false,
-    message: "",
-    severity: "info",
-  });
+  const [snack, setSnack] = useState({ open: false, message: "", severity: "info" });
   const [currentYear, setCurrentYear] = useState("");
   const [loginType, setLoginType] = useState("applicant");
+  const [mobileSlides, setMobileSlides] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,22 +490,22 @@ const Login = ({ setIsAuthenticated }) => {
     setCurrentYear(new Date(now).getFullYear());
   }, []);
 
+  // Fetch slides for mobile banner
+  useEffect(() => {
+    if (!isMobile) return;
+    axios
+      .get(`${API_BASE_URL}/api/announcements`)
+      .then((res) => { if (Array.isArray(res.data.data)) setMobileSlides(res.data.data); })
+      .catch(() => {});
+  }, [isMobile]);
+
   const calculateAge = (birthDate) => {
     if (!birthDate) return "";
-
     const today = new Date();
     const birth = new Date(birthDate);
-
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birth.getDate())
-    ) {
-      age--;
-    }
-
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
     return age;
   };
 
@@ -75,11 +513,7 @@ const Login = ({ setIsAuthenticated }) => {
 
   const handleLogin = async () => {
     if (!isFormValid()) {
-      setSnack({
-        open: true,
-        message: "Please fill in all required fields",
-        severity: "warning",
-      });
+      setSnack({ open: true, message: "Please fill in all required fields", severity: "warning" });
       return;
     }
     try {
@@ -95,11 +529,7 @@ const Login = ({ setIsAuthenticated }) => {
       );
 
       if (!response.data.success) {
-        setSnack({
-          open: true,
-          message: response.data.message,
-          severity: "error",
-        });
+        setSnack({ open: true, message: response.data.message, severity: "error" });
         return;
       }
 
@@ -116,26 +546,17 @@ const Login = ({ setIsAuthenticated }) => {
       localStorage.setItem("middle_name", response.data.middle_name || "");
       const birthDate = response.data.birthOfDate || "";
       const age = calculateAge(birthDate);
-
       localStorage.setItem("birthOfDate", birthDate);
       localStorage.setItem("age", age);
       localStorage.setItem("academicProgram", response.academicProgram ?? "");
       localStorage.setItem("applyingAs", response.applyingAs ?? "");
       localStorage.setItem("campus", response.campus ?? "");
-      localStorage.setItem("applicantEmail", response.data.email);
 
       setIsAuthenticated(true);
-      setSnack({
-        open: true,
-        message: "Login Successfully",
-        severity: "success",
-      });
+      setSnack({ open: true, message: "Login Successfully", severity: "success" });
 
-      if (loginType === "applicant") {
-        navigate("/applicant_dashboard");
-      } else {
-        navigate("/dashboard");
-      }
+      if (loginType === "applicant") navigate("/applicant_dashboard");
+      else navigate("/dashboard");
     } catch (error) {
       setSnack({
         open: true,
@@ -148,17 +569,8 @@ const Login = ({ setIsAuthenticated }) => {
   const isFormValid = () => {
     let newErrors = {};
     let isValid = true;
-
-    if (!email) {
-      newErrors.email = true;
-      isValid = false;
-    }
-
-    if (!password) {
-      newErrors.password = true;
-      isValid = false;
-    }
-
+    if (!email) { newErrors.email = true; isValid = false; }
+    if (!password) { newErrors.password = true; isValid = false; }
     setErrors(newErrors);
     return isValid;
   };
@@ -171,9 +583,7 @@ const Login = ({ setIsAuthenticated }) => {
   const backgroundImage = settings?.bg_image
     ? `url(${API_BASE_URL}${settings.bg_image})`
     : "linear-gradient(to right, #f5f5f5, #fafafa)";
-  const logoSrc = settings?.logo_url
-    ? `${API_BASE_URL}${settings.logo_url}`
-    : Logo;
+  const logoSrc = settings?.logo_url ? `${API_BASE_URL}${settings.logo_url}` : Logo;
 
   return (
     <Box
@@ -185,8 +595,10 @@ const Login = ({ setIsAuthenticated }) => {
         width: "100%",
         minHeight: "100vh",
         display: "flex",
-        alignItems: "center",
+        alignItems: isMobile ? "flex-start" : "center",
         justifyContent: "center",
+        overflowY: isMobile ? "auto" : "hidden",
+        py: isMobile ? 2 : 0,
       }}
     >
       <Container
@@ -194,21 +606,30 @@ const Login = ({ setIsAuthenticated }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-
+          flexDirection: isMobile ? "column" : "row",
+          padding: isMobile ? "0 0" : undefined,
         }}
         maxWidth={false}
       >
-        <AnnouncementSlider />
+        {/* Desktop: side slider; Mobile: hidden (rendered inside card below) */}
+        {!isMobile && <AnnouncementSlider />}
+
         <div
-          style={{ border: "5px solid black", marginLeft: -100, marginTop: "-130px" }}
+          style={{
+            border: isMobile ? "3px solid black" : "5px solid black",
+            marginLeft: isMobile ? 0 : -100,
+            marginTop: isMobile ? 0 : "-130px",
+            width: isMobile ? "calc(100% - 32px)" : undefined,
+            maxWidth: isMobile ? 480 : undefined,
+          }}
           className="Container"
         >
-          {/* ✅ Header (same as LoginEnrollment) */}
+          {/* ── Header ── */}
           <div
             className="Header"
             style={{
-              backgroundColor: settings?.header_color || "#1976d2", // ✅ default blue
-              padding: "1rem 0",
+              backgroundColor: settings?.header_color || "#1976d2",
+              padding: isMobile ? "12px 10px" : "1rem 0",
               borderBottom: "3px solid black",
             }}
           >
@@ -218,28 +639,28 @@ const Login = ({ setIsAuthenticated }) => {
               </div>
             </div>
             <div className="HeaderBody">
-              <strong
-                style={{
-                  color: "white",
-                }}
-              >
+              <strong style={{ color: "white" }}>
                 {(settings?.company_name || "Company Name")
                   .split(" ")
-                  .reduce((acc, word, index) => {
-                    if (index % 4 === 0 && index !== 0) {
-                      acc.push(<br key={`br-${index}`} />);
-                    }
+                  .reduce((acc, word, i) => {
+                    if (i % 4 === 0 && i !== 0) acc.push(<br key={`br-${i}`} />);
                     acc.push(word + " ");
                     return acc;
                   }, [])}
-
               </strong>
               <p>Student Information System</p>
             </div>
           </div>
 
-          {/* ✅ Body (same layout as LoginEnrollment) */}
+          {/* ── Body ── */}
           <div className="Body">
+
+            {/* Mobile announcement banner (inside the card) */}
+            {isMobile && mobileSlides.length > 0 && (
+              <MobileAnnouncementBanner slides={mobileSlides} />
+            )}
+
+            {/* Login As dropdown */}
             <div className="TextField" style={{ position: "relative" }}>
               <label htmlFor="loginType">Login As</label>
               <select
@@ -248,11 +669,8 @@ const Login = ({ setIsAuthenticated }) => {
                 value={loginType}
                 onChange={(e) => {
                   setLoginType(e.target.value);
-                  if (e.target.value === "applicant") {
-                    navigate("/login_applicant");
-                  } else {
-                    navigate("/login");
-                  }
+                  if (e.target.value === "applicant") navigate("/login_applicant");
+                  else navigate("/login");
                 }}
                 style={{
                   width: "100%",
@@ -269,32 +687,11 @@ const Login = ({ setIsAuthenticated }) => {
                   cursor: "pointer",
                 }}
               >
-                <option sx={{ border: "2px solid black" }} value="user">
-                  Student / Faculty / Registrar
-                </option>
-                <option sx={{ border: "2px solid black" }} value="applicant">
-                  Applicant
-                </option>
+                <option value="user">Student / Faculty / Registrar</option>
+                <option value="applicant">Applicant</option>
               </select>
-
-              <PersonIcon
-                style={{
-                  position: "absolute",
-                  top: "2.75rem",
-                  left: "0.7rem",
-                  color: "rgba(0,0,0,0.4)",
-                }}
-              />
-              <ArrowDropDownIcon
-                style={{
-                  position: "absolute",
-                  top: "2.75rem",
-                  right: "0.7rem",
-                  fontSize: "30px", // 👈 BIGGER icon
-                  color: "black",
-                  pointerEvents: "none",
-                }}
-              />
+              <PersonIcon style={{ position: "absolute", top: "2.75rem", left: "0.7rem", color: "rgba(0,0,0,0.4)" }} />
+              <ArrowDropDownIcon style={{ position: "absolute", top: "2.75rem", right: "0.7rem", fontSize: "30px", color: "black", pointerEvents: "none" }} />
             </div>
 
             {/* Email */}
@@ -312,24 +709,12 @@ const Login = ({ setIsAuthenticated }) => {
                 style={{
                   paddingLeft: "2.5rem",
                   height: "55px",
-                  border: errors.password ? "2px solid red" : "2px solid black",
+                  border: errors.email ? "2px solid red" : "2px solid black",
                   borderRadius: "10px",
                 }}
               />
-              {errors.email && (
-                <span style={{ color: "red", fontSize: "12px" }}>
-                  Email is required
-                </span>
-              )}
-              <EmailIcon
-                style={{
-                  position: "absolute",
-                  top: "2.75rem",
-                  left: "0.7rem",
-                  color: "rgba(0,0,0,0.4)",
-                }}
-              />
-
+              {errors.email && <span style={{ color: "red", fontSize: "12px" }}>Email is required</span>}
+              <EmailIcon style={{ position: "absolute", top: "2.75rem", left: "0.7rem", color: "rgba(0,0,0,0.4)" }} />
             </div>
 
             {/* Password */}
@@ -351,39 +736,21 @@ const Login = ({ setIsAuthenticated }) => {
                   borderRadius: "10px",
                 }}
               />
-              {errors.password && (
-                <span style={{ color: "red", fontSize: "12px" }}>
-                  Password is required
-                </span>
-              )}
-              <LockIcon
-                style={{
-                  position: "absolute",
-                  top: "2.75rem",
-                  left: "0.7rem",
-                  color: "rgba(0,0,0,0.4)",
-                  fontSize: "26px",
-                }}
-              />
+              {errors.password && <span style={{ color: "red", fontSize: "12px" }}>Password is required</span>}
+              <LockIcon style={{ position: "absolute", top: "2.75rem", left: "0.7rem", color: "rgba(0,0,0,0.4)", fontSize: "26px" }} />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
-                  color: "rgba(0,0,0,0.3)",
-                  outline: "none",
-                  position: "absolute",
-                  top: "2.5rem",
-                  right: "1rem",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
+                  color: "rgba(0,0,0,0.3)", outline: "none",
+                  position: "absolute", top: "2.5rem", right: "1rem",
+                  background: "none", border: "none", cursor: "pointer",
                 }}
               >
-                {showPassword ? (
-                  <Visibility sx={{ fontSize: "26px", color: "rgba(0,0,0,0.4)" }} />
-                ) : (
-                  <VisibilityOff sx={{ fontSize: "26px", color: "rgba(0,0,0,0.4)" }} />
-                )}
+                {showPassword
+                  ? <Visibility sx={{ fontSize: "26px", color: "rgba(0,0,0,0.4)" }} />
+                  : <VisibilityOff sx={{ fontSize: "26px", color: "rgba(0,0,0,0.4)" }} />
+                }
               </button>
             </div>
 
@@ -393,7 +760,7 @@ const Login = ({ setIsAuthenticated }) => {
                 height: "50px",
                 borderRadius: "10px",
                 border: "2px solid black",
-                backgroundColor: mainButtonColor, // ✅ same color (prevents mismatch)
+                backgroundColor: mainButtonColor,
               }}
               className="Button"
               onClick={handleLogin}
@@ -404,27 +771,15 @@ const Login = ({ setIsAuthenticated }) => {
             {/* Forgot Password */}
             <div className="LinkContainer">
               <span>
-                <Link to="/applicant_forgot_password">
-                  Forgot your password
-                </Link>
+                <Link to="/applicant_forgot_password">Forgot your password</Link>
               </span>
             </div>
 
-            <Box
-              sx={{
-                mt: 2,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <Typography variant="body1" color="textSecondary" align="center">
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+              <Typography variant="body1" color="textSecondary" align="center" sx={{ fontSize: isMobile ? "0.82rem" : undefined }}>
                 Welcome! If you are a new applicant or have not yet finalized your registration, you may create an account now.
                 Registering an account enables you to submit your application and access all required information.
               </Typography>
-
-
               <Button
                 component={RouterLink}
                 to="/register"
@@ -436,21 +791,17 @@ const Login = ({ setIsAuthenticated }) => {
                   py: 1.2,
                   borderRadius: "10px",
                   border: "2px solid black",
-
-                  
                   color: "#fff",
-
                   boxShadow: "none",
-
-
+                  width: isMobile ? "100%" : undefined,
                 }}
               >
-                Register Now
+                REGISTER NOW
               </Button>
             </Box>
           </div>
 
-          {/* ✅ Footer (aligned properly) */}
+          {/* ── Footer ── */}
           <div className="Footer">
             <div className="FooterText">
               &copy; {currentYear} {settings?.company_name || "EARIST"} <br />
@@ -468,11 +819,7 @@ const Login = ({ setIsAuthenticated }) => {
         onClose={handleClose}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert
-          severity={snack.severity}
-          onClose={handleClose}
-          sx={{ width: "100%" }}
-        >
+        <Alert severity={snack.severity} onClose={handleClose} sx={{ width: "100%" }}>
           {snack.message}
         </Alert>
       </Snackbar>

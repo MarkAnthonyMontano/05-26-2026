@@ -46,14 +46,14 @@ const CLASS_ROSTER_GLOBAL = "/class_roster";
 /* ─────────────────────────────────────────
    Style builder
 ───────────────────────────────────────── */
-function buildStyles(s = {}, hasDept = true, collapsed = false) {
+function buildStyles(s = {}, hasDept = true, collapsed = false, isMobile = false) {
   const accent = s.main_button_color || "#8b1a1a";
   const border = s.border_color || "#e8e8e8";
-  const titleColor = s.title_color || "#111111";
-  const subColor = s.subtitle_color || "#cccccc";
   const subBtnColor = s.sub_button_color || "#f5f5f5";
-  const headerBg = s.header_color || "#8b1a1a";
-  const W = collapsed ? "75px" : "290px";
+
+  // On mobile: always full width (never collapsed)
+  const effectiveCollapsed = isMobile ? false : collapsed;
+  const W = effectiveCollapsed ? "75px" : "290px";
 
   return `
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
@@ -64,9 +64,65 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
   background:#fff; display:flex; flex-direction:column;
   border-right:1px solid ${border};
   position:fixed; top:64px; bottom:42px; left:0;
-  z-index:100; overflow:hidden;
-  transition:width .34s cubic-bezier(.22,1,.36,1);
-  will-change:width;
+  z-index:${isMobile ? 1300 : 100}; overflow:hidden;
+  transition:width .34s cubic-bezier(.22,1,.36,1), transform .34s cubic-bezier(.22,1,.36,1);
+  will-change:width, transform;
+}
+
+/* Mobile: slide in/out via transform; desktop: always visible */
+/* Mobile: slide in/out via transform; desktop: always visible */
+@media (max-width: 767px) {
+  .sb-root {
+    width: 290px !important;
+    height: 100dvh !important;
+    height: 100vh !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    transform: translateX(-100%);
+    z-index: 1300;
+    box-shadow: 4px 0 24px rgba(0,0,0,.18);
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    position: fixed !important;
+  }
+  .sb-root.mobile-open {
+    transform: translateX(0);
+  }
+  .sb-root .sb-header {
+    flex-shrink: 0 !important;
+    overflow: visible !important;
+  }
+  .sb-root .sb-scroll {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sb-root .sb-footer {
+    flex-shrink: 0 !important;
+    position: relative !important;
+    bottom: auto !important;
+    margin-top: auto !important;
+    border-top: 1px solid #f0f0f0;
+    background: #fff;
+  }
+}
+/* Mobile overlay backdrop */
+.sb-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1299;
+}
+@media (max-width: 767px) {
+  .sb-overlay.visible {
+    display: block;
+  }
 }
 
 /* header */
@@ -74,9 +130,9 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 
 .sb-topbar {
   display:flex; align-items:center;
-  padding:${collapsed ? "13px 0" : "11px 16px"};
-  gap:${collapsed ? "0" : "10px"};
-  justify-content:${collapsed ? "center" : "flex-start"};
+  padding:${effectiveCollapsed ? "13px 0" : "11px 16px"};
+  gap:${effectiveCollapsed ? "0" : "10px"};
+  justify-content:${effectiveCollapsed ? "center" : "flex-start"};
   transition:padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
 }
 .sb-hamburger {
@@ -87,18 +143,18 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 .sb-topbar-label {
   flex:1; color:black; font-size:13.5px; font-weight:500;
   white-space:nowrap; overflow:hidden;
-  max-width:${collapsed ? "0" : "180px"};
-  opacity:${collapsed ? "0" : "1"};
-  transform:translateX(${collapsed ? "-6px" : "0"});
+  max-width:${effectiveCollapsed ? "0" : "180px"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
+  transform:translateX(${effectiveCollapsed ? "-6px" : "0"});
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease;
 }
 
 /* profile inside header */
 .sb-profile {
   display:flex; align-items:center;
-  gap:${collapsed ? "0" : "12px"};
-  padding:${collapsed ? "8px 0 13px" : "8px 16px 16px"};
-  justify-content:${collapsed ? "center" : "flex-start"};
+  gap:${effectiveCollapsed ? "0" : "12px"};
+  padding:${effectiveCollapsed ? "8px 0 13px" : "8px 16px 16px"};
+  justify-content:${effectiveCollapsed ? "center" : "flex-start"};
   transition:padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
 }
 .sb-avatar-wrap { position:relative; flex-shrink:0; }
@@ -110,9 +166,9 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 }
 .sb-profile-info {
   overflow:hidden;
-  max-width:${collapsed ? "0" : "190px"};
-  opacity:${collapsed ? "0" : "1"};
-  transform:translateX(${collapsed ? "-6px" : "0"});
+  max-width:${effectiveCollapsed ? "0" : "190px"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
+  transform:translateX(${effectiveCollapsed ? "-6px" : "0"});
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease;
 }
 .sb-profile-name {
@@ -126,16 +182,17 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 .sb-profile-dept {
   font-size:11px; color:black; margin-top:1px;
   display:${hasDept ? "block" : "none"};
-  opacity:${collapsed ? "0" : "1"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
   transition:opacity .18s ease;
 }
 
 /* scroll */
 .sb-scroll {
   flex:1; overflow-y:auto; overflow-x:hidden;
-  padding:${collapsed ? "6px 6px 0" : "6px 10px 0"};
+  padding:${effectiveCollapsed ? "6px 6px 0" : "6px 10px 0"};
   scrollbar-width:thin; scrollbar-color:${border} transparent;
   transition:padding .34s cubic-bezier(.22,1,.36,1);
+  -webkit-overflow-scrolling: touch;
 }
 .sb-scroll::-webkit-scrollbar { width:4px; }
 .sb-scroll::-webkit-scrollbar-track { background:transparent; }
@@ -144,31 +201,32 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 /* section label */
 .sb-section-label {
   font-size:12px; font-weight:700; text-transform:uppercase;
-  letter-spacing:.07em; color:#000; padding:${collapsed ? "0" : "9px 8px 3px"};
+  letter-spacing:.07em; color:#000; padding:${effectiveCollapsed ? "0" : "9px 8px 3px"};
   white-space:nowrap; overflow:hidden;
-  max-width:${collapsed ? "0" : "220px"};
-  height:${collapsed ? "0" : "auto"};
-  opacity:${collapsed ? "0" : "1"};
-  transform:translateX(${collapsed ? "-6px" : "0"});
+  max-width:${effectiveCollapsed ? "0" : "220px"};
+  height:${effectiveCollapsed ? "0" : "auto"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
+  transform:translateX(${effectiveCollapsed ? "-6px" : "0"});
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease, padding .34s cubic-bezier(.22,1,.36,1);
 }
 
 /* nav item */
 .sb-item {
   display:flex; align-items:center;
-  gap:${collapsed ? "0" : "10px"};
-  padding:${collapsed ? "3px 0" : "8px 10px"};
+  gap:${effectiveCollapsed ? "0" : "10px"};
+  padding:${effectiveCollapsed ? "3px 0" : "8px 10px"};
   border-radius:8px; cursor:pointer;
   color:#111; font-size:13px; font-weight:400;
   transition:background .18s ease, color .18s ease, padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
   text-decoration:none; margin-bottom:2px;
   white-space:nowrap; overflow:hidden; line-height:1.25;
-  justify-content:${collapsed ? "center" : "flex-start"};
+  justify-content:${effectiveCollapsed ? "center" : "flex-start"};
+  min-height: 44px;
 }
 .sb-item .sb-icon {
   display:flex; align-items:center; justify-content:center;
   flex-shrink:0; color:#111;
-  min-width:${collapsed ? "auto" : "22px"};
+  min-width:${effectiveCollapsed ? "auto" : "22px"};
 }
 .sb-item:hover { background:${accent}; color:#fff; }
 .sb-item:hover .sb-icon { color:#fff; }
@@ -176,71 +234,73 @@ function buildStyles(s = {}, hasDept = true, collapsed = false) {
 .sb-item.active .sb-icon { color:#fff !important; }
 .sb-item-label {
   flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
-  max-width:${collapsed ? "0" : "190px"};
-  opacity:${collapsed ? "0" : "1"};
-  transform:translateX(${collapsed ? "-6px" : "0"});
+  max-width:${effectiveCollapsed ? "0" : "190px"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
+  transform:translateX(${effectiveCollapsed ? "-6px" : "0"});
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease;
 }
-.sb-sub-item { padding-left:${collapsed ? "0" : "20px"}; }
+.sb-sub-item { padding-left:${effectiveCollapsed ? "0" : "20px"}; }
 
 /* group button */
 .sb-group-btn {
   display:flex; align-items:center;
-  gap:${collapsed ? "0" : "10px"};
-  width:100%; padding:${collapsed ? "3px 0" : "8px 10px"};
+  gap:${effectiveCollapsed ? "0" : "10px"};
+  width:100%; padding:${effectiveCollapsed ? "3px 0" : "8px 10px"};
   border-radius:8px; border:none; background:transparent; cursor:pointer;
   color:#111; font-size:13px; font-weight:400;
   font-family:'Poppins',sans-serif;
   transition:background .18s ease, padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
   text-align:left; margin-bottom:2px; line-height:1.25;
-  justify-content:${collapsed ? "center" : "flex-start"};
+  justify-content:${effectiveCollapsed ? "center" : "flex-start"};
+  min-height: 44px;
 }
-.sb-group-btn .sb-icon { color:#111; min-width:${collapsed ? "auto" : "22px"}; }
+.sb-group-btn .sb-icon { color:#111; min-width:${effectiveCollapsed ? "auto" : "22px"}; }
 .sb-group-btn:hover { background:${accent}; color:#fff; }
 .sb-group-btn:hover .sb-icon { color:#fff; }
 .sb-group-btn.open { color:${accent}; background:${subBtnColor}; }
 .sb-group-btn.open .sb-icon { color:${accent}; }
 .sb-group-label {
   flex:1; overflow:hidden; white-space:nowrap;
-  max-width:${collapsed ? "0" : "190px"};
-  opacity:${collapsed ? "0" : "1"};
-  transform:translateX(${collapsed ? "-6px" : "0"});
+  max-width:${effectiveCollapsed ? "0" : "190px"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
+  transform:translateX(${effectiveCollapsed ? "-6px" : "0"});
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease;
 }
 .sb-group-chevron {
   flex-shrink:0;
-  max-width:${collapsed ? "0" : "24px"};
-  opacity:${collapsed ? "0" : ".5"};
+  max-width:${effectiveCollapsed ? "0" : "24px"};
+  opacity:${effectiveCollapsed ? "0" : ".5"};
   overflow:hidden;
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease;
 }
 
-.sb-divider { height:1px; background:#f0f0f0; margin:${collapsed ? "2px 0" : "6px 0"}; }
-.sb-scroll .MuiDivider-root { margin:${collapsed ? "2px 0 !important" : "5px 0 !important"}; }
+.sb-divider { height:1px; background:#f0f0f0; margin:${effectiveCollapsed ? "2px 0" : "6px 0"}; }
+.sb-scroll .MuiDivider-root { margin:${effectiveCollapsed ? "2px 0 !important" : "5px 0 !important"}; }
 
 /* footer */
 .sb-footer {
-  padding:${collapsed ? "8px 6px" : "8px 10px"};
+  padding:${effectiveCollapsed ? "8px 6px" : "8px 10px"};
   border-top:1px solid #f0f0f0; flex-shrink:0;
   transition:padding .34s cubic-bezier(.22,1,.36,1);
 }
 .sb-logout {
   display:flex; align-items:center;
-  gap:${collapsed ? "0" : "10px"};
-  padding:${collapsed ? "3px 0" : "8px 10px"};
+  gap:${effectiveCollapsed ? "0" : "10px"};
+  padding:${effectiveCollapsed ? "3px 0" : "8px 10px"};
   border-radius:8px; cursor:pointer;
   font-size:13px; font-weight:500; color:#111;
   transition:background .18s ease, padding .34s cubic-bezier(.22,1,.36,1), gap .34s cubic-bezier(.22,1,.36,1);
-  justify-content:${collapsed ? "center" : "flex-start"};
+  justify-content:${effectiveCollapsed ? "center" : "flex-start"};
+  min-height: 44px;
 }
 .sb-logout:hover { background:${accent}; color:#fff; }
 .sb-logout-icon { color:#111; display:flex; align-items:center; }
 .sb-logout:hover .sb-logout-icon { color:#fff; }
 .sb-logout-label {
   overflow:hidden; white-space:nowrap;
-  max-width:${collapsed ? "0" : "120px"};
-  opacity:${collapsed ? "0" : "1"};
-  transform:translateX(${collapsed ? "-6px" : "0"});
+  max-width:${effectiveCollapsed ? "0" : "120px"};
+  opacity:${effectiveCollapsed ? "0" : "1"};
+  transform:translateX(${effectiveCollapsed ? "-6px" : "0"});
   transition:max-width .3s cubic-bezier(.22,1,.36,1), opacity .18s ease, transform .28s ease;
 }
   `;
@@ -259,19 +319,24 @@ const ICON_CONTAINER_STYLE = {
   transition: "all .2s ease",
 };
 
-function injectStyles(settings, hasDept, collapsed) {
+function injectStyles(settings, hasDept, collapsed, isMobile) {
   let tag = document.getElementById("sb-styles");
   if (!tag) { tag = document.createElement("style"); tag.id = "sb-styles"; document.head.appendChild(tag); }
-  tag.textContent = buildStyles(settings, hasDept, collapsed);
+  tag.textContent = buildStyles(settings, hasDept, collapsed, isMobile);
 }
 
 /* ─────────────────────────────────────────
    Sub-components
 ───────────────────────────────────────── */
-function NavItem({ to, icon: Icon, label, active, onClick, sub = false, collapsed = false }) {
+function NavItem({ to, icon: Icon, label, active, onClick, sub = false, collapsed = false, onNavClick }) {
   const cls = ["sb-item", active ? "active" : "", sub ? "sb-sub-item" : ""]
     .filter(Boolean)
     .join(" ");
+
+  const handleClick = (e) => {
+    if (onClick) onClick(e);
+    if (onNavClick) onNavClick();
+  };
 
   const inner = (
     <>
@@ -288,17 +353,16 @@ function NavItem({ to, icon: Icon, label, active, onClick, sub = false, collapse
           <Icon sx={{ fontSize: SIDEBAR_ICON_SIZE }} />
         </span>
       )}
-
       <span className="sb-item-label">{label}</span>
     </>
   );
 
   const node = onClick ? (
-    <div className={cls} onClick={onClick}>
+    <div className={cls} onClick={handleClick}>
       {inner}
     </div>
   ) : (
-    <Link to={to} className={cls}>
+    <Link to={to} className={cls} onClick={onNavClick}>
       {inner}
     </Link>
   );
@@ -332,9 +396,7 @@ function GroupToggle({ label, icon: Icon, open, onToggle, collapsed = false }) {
           <Icon sx={{ fontSize: SIDEBAR_ICON_SIZE }} />
         </span>
       )}
-
       <span className="sb-group-label">{label}</span>
-
       <span className="sb-group-chevron">
         {open ? (
           <ExpandLess sx={{ fontSize: 18 }} />
@@ -366,6 +428,8 @@ const SideBar = ({
   profileImage,
   setProfileImage,
   onCollapseChange,
+  mobileOpen,
+  onMobileClose,
 }) => {
   const settings = useContext(SettingsContext);
   const navigate = useNavigate();
@@ -374,6 +438,7 @@ const SideBar = ({
   const shortTerm = settings?.short_term || "EARIST";
 
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [role, setRole] = useState("");
   const [userRole, setUserRole] = useState("");
   const [employeeID, setEmployeeID] = useState("");
@@ -385,15 +450,47 @@ const SideBar = ({
   const [globalAccessCount, setGlobalAccessCount] = useState(0);
   const [groupOpen, setGroupOpen] = useState({});
 
+  // Detect mobile on resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile && mobileOpen) {
+        onMobileClose?.();
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [mobileOpen, onMobileClose]);
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (isMobile && mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile, mobileOpen]);
+
   const toggleGroup = (key) => {
-    if (collapsed) { setCollapsed(false); setTimeout(() => setGroupOpen(p => ({ ...p, [key]: true })), 260); }
-    else setGroupOpen(p => ({ ...p, [key]: !p[key] }));
+    if (collapsed && !isMobile) {
+      setCollapsed(false);
+      setTimeout(() => setGroupOpen(p => ({ ...p, [key]: true })), 260);
+    } else {
+      setGroupOpen(p => ({ ...p, [key]: !p[key] }));
+    }
   };
-  const isGroupOpen = (key) => !collapsed && groupOpen[key] === true;
+  const isGroupOpen = (key) => {
+    const effectiveCollapsed = isMobile ? false : collapsed;
+    return !effectiveCollapsed && groupOpen[key] === true;
+  };
   const hasDept = !!(personData?.dprtmnt_code);
 
-  useEffect(() => { injectStyles(settings, hasDept, collapsed); }, [settings, hasDept, collapsed]);
-  useEffect(() => { onCollapseChange?.(collapsed); }, [collapsed, onCollapseChange]);
+  const effectiveCollapsed = isMobile ? false : collapsed;
+
+  useEffect(() => { injectStyles(settings, hasDept, collapsed, isMobile); }, [settings, hasDept, collapsed, isMobile]);
+  useEffect(() => { onCollapseChange?.(isMobile ? false : collapsed); }, [collapsed, isMobile, onCollapseChange]);
 
   /* auth */
   useEffect(() => {
@@ -473,11 +570,11 @@ const SideBar = ({
         setPersonData(faculty);
         return;
       }
-
       const res = await axios.get(`${API_BASE_URL}/api/person_data/${id}/${r}`);
       setPersonData(res.data);
     } catch { }
   };
+
   const fetchUserAccessList = async (eid) => {
     try {
       const { data } = await axios.get(`${API_BASE_URL}/api/page_access/${eid}`);
@@ -487,7 +584,9 @@ const SideBar = ({
 
   const Logout = () => {
     ["token", "email", "role", "person_id", "prof_id", "employee_id"].forEach(k => localStorage.removeItem(k));
-    setIsAuthenticated(false); navigate("/");
+    setIsAuthenticated(false);
+    navigate("/");
+    onMobileClose?.();
   };
 
   const makeUploadHandler = (endpoint, uploadDir) => async (e) => {
@@ -514,6 +613,7 @@ const SideBar = ({
       e.target.value = "";
     }
   };
+
   const uploadHandlers = {
     registrar: makeUploadHandler("/admin/update_registrar_profile", "Admin1by1"),
     applicant: makeUploadHandler("/form/upload-profile-picture", "Applicant1by1"),
@@ -540,6 +640,11 @@ const SideBar = ({
   const showUploadFor = ["registrar", "applicant", "faculty", "student"].includes(role);
   const classRosterEnrollmentLink = CLASS_ROSTER_DEPT;
   const classRosterRegistrarLink = CLASS_ROSTER_GLOBAL;
+
+  // Close sidebar on navigation (mobile)
+  const handleNavClick = () => {
+    if (isMobile) onMobileClose?.();
+  };
 
   /* ── menu definitions ── */
   const admissionMenuGroups = [{
@@ -632,429 +737,29 @@ const SideBar = ({
     ]
   }];
   const systemMenuGroups = [
-    {
-      key: "roomManagement",
-      label: "Room Management",
-      icon: MeetingRoom,
-      items: [
-        {
-          title: "Room Registration",
-          link: "/room_registration",
-          icon: MeetingRoom,
-          page_id: 52,
-        },
-      ],
-    },
-
-    {
-      key: "requirementsManagement",
-      label: "Requirements Management",
-      icon: Assignment,
-      items: [
-        {
-          title: "Requirements Panel",
-          link: "/requirements_form",
-          icon: Assignment,
-          page_id: 51,
-        },
-      ],
-    },
-
-    {
-      key: "profileSettings",
-      label: "Profile & Settings",
-      icon: Settings,
-      items: [
-        {
-          title: `${shortTerm} Profile`,
-          link: "/settings",
-          icon: Settings,
-          page_id: 74,
-        },
-        {
-          title: "Signature Upload",
-          link: "/signature_upload",
-          icon: Settings,
-          page_id: 114,
-        },
-      ],
-    },
-
-
-    {
-      key: "academicConfiguration",
-      label: "Academic Configuration",
-      icon: School,
-      items: [
-
-        {
-          title: "Grade Conversion Management",
-          link: "/grade_conversion_admin",
-          icon: Settings,
-          page_id: 144,
-        },
-        {
-          title: "Change Grading Period",
-          link: "/change_grade_period",
-          icon: ChangeCircle,
-          page_id: 14,
-        },
-        {
-          title: "Student Grade File",
-          link: "/student_grade_file",
-          icon: Grade,
-          page_id: 126,
-        },
-        {
-          title: "Academic Achiever Awardee's",
-          link: "/honors_report",
-          icon: EmojiEvents,
-          page_id: 146,
-        },
-      ],
-    },
-
-
-    {
-      key: "branchAdministration",
-      label: "Branch Administration",
-      icon: AccountTree,
-      items: [
-        {
-          title: "Branch Management",
-          link: "/admin_branches",
-          icon: Settings,
-          page_id: 138,
-        },
-      ],
-    },
-
-    {
-      key: "communicationManagement",
-      label: "Communication",
-      icon: Campaign,
-      items: [
-        {
-          title: "Email Sender",
-          link: "/email_template_manager",
-          icon: Email,
-          page_id: 67,
-        },
-        {
-          title: "Announcement",
-          link: "/announcement",
-          icon: Campaign,
-          page_id: 66,
-        },
-      ],
-    },
-    {
-      key: "slotConfiguration",
-      label: "Slot Configuration",
-      icon: School,
-      items: [
-        {
-          title: "Program Slot Remaining",
-          link: "/program_slot_limit",
-          icon: People,
-          page_id: 110,
-        },
-
-      ],
-    },
-    {
-      key: "sectionManagement",
-      label: "Section Management",
-      icon: Class,
-      items: [
-        {
-          title: "Section Panel Form",
-          link: "/section_panel",
-          icon: Class,
-          page_id: 57,
-        },
-      ],
-    },
-
-    {
-      key: "semesterManagement",
-      label: "Semester Management",
-      icon: Timeline,
-      items: [
-        {
-          title: "Semester Panel Form",
-          link: "/semester_panel",
-          icon: Timeline,
-          page_id: 58,
-        },
-      ],
-    },
-
-    {
-      key: "yearManagement",
-      label: "Year Management",
-      icon: CalendarToday,
-      items: [
-        {
-          title: "Year Level Panel Form",
-          link: "/year_level_panel",
-          icon: Layers,
-          page_id: 63,
-        },
-        {
-          title: "Year Panel Form",
-          link: "/year_panel",
-          icon: CalendarToday,
-          page_id: 64,
-        },
-        {
-          title: "School Year Panel",
-          link: "/school_year_panel",
-          icon: DateRange,
-          page_id: 55,
-        },
-      ],
-    },
-
-    {
-      key: "evaluationManagement",
-      label: "Evaluation Management",
-      icon: Assessment,
-      items: [
-        {
-          title: "Evaluation Management",
-          link: "/evaluation_crud",
-          icon: HelpOutline,
-          page_id: 23,
-        },
-        {
-          title: "TOSF CRUD",
-          link: "/tosf_crud",
-          icon: HelpOutline,
-          page_id: 99,
-        },
-      ],
-    },
-
-    {
-      key: "paymentManagement",
-      label: "Payment Management",
-      icon: Payments,
-      items: [
-        {
-          title: "Payment Exporting Module",
-          link: "/payment_exporting_module",
-          icon: HelpOutline,
-          page_id: 116,
-        },
-        {
-          title: "Receipt Counter Assignment",
-          link: "/assign_receipt_counter",
-          icon: HelpOutline,
-          page_id: 122,
-        },
-        {
-          title: "Matriculation Payment",
-          link: "/matriculation_payment",
-          icon: HelpOutline,
-          page_id: 121,
-        },
-      ],
-    },
-
-    {
-      key: "scholarshipManagement",
-      label: "Scholarship Management",
-      icon: School,
-      items: [
-        {
-          title: "Student Scholarship List",
-          link: "/student_scholarship_list",
-          icon: HelpOutline,
-          page_id: 116,
-        },
-      ],
-    },
-
-    {
-      key: "systemLogs",
-      label: "System Logs",
-      icon: HistoryEdu,
-      items: [
-        {
-          title: "Audit Logs",
-          link: "/audit_logs",
-          icon: HistoryEdu,
-          page_id: 95,
-        },
-      ],
-    },
+    { key: "roomManagement", label: "Room Management", icon: MeetingRoom, items: [{ title: "Room Registration", link: "/room_registration", icon: MeetingRoom, page_id: 52 }] },
+    { key: "requirementsManagement", label: "Requirements Management", icon: Assignment, items: [{ title: "Requirements Panel", link: "/requirements_form", icon: Assignment, page_id: 51 }] },
+    { key: "profileSettings", label: "Profile & Settings", icon: Settings, items: [{ title: `${shortTerm} Profile`, link: "/settings", icon: Settings, page_id: 74 }, { title: "Signature Upload", link: "/signature_upload", icon: Settings, page_id: 114 }] },
+    { key: "academicConfiguration", label: "Academic Configuration", icon: School, items: [{ title: "Grade Conversion Management", link: "/grade_conversion_admin", icon: Settings, page_id: 144 }, { title: "Change Grading Period", link: "/change_grade_period", icon: ChangeCircle, page_id: 14 }, { title: "Student Grade File", link: "/student_grade_file", icon: Grade, page_id: 126 }, { title: "Academic Achiever Awardee's", link: "/honors_report", icon: EmojiEvents, page_id: 146 }] },
+    { key: "branchAdministration", label: "Branch Administration", icon: AccountTree, items: [{ title: "Branch Management", link: "/admin_branches", icon: Settings, page_id: 138 }] },
+    { key: "communicationManagement", label: "Communication", icon: Campaign, items: [{ title: "Email Sender", link: "/email_template_manager", icon: Email, page_id: 67 }, { title: "Announcement", link: "/announcement", icon: Campaign, page_id: 66 }] },
+    { key: "slotConfiguration", label: "Slot Configuration", icon: School, items: [{ title: "Program Slot Remaining", link: "/program_slot_limit", icon: People, page_id: 110 }] },
+    { key: "sectionManagement", label: "Section Management", icon: Class, items: [{ title: "Section Panel Form", link: "/section_panel", icon: Class, page_id: 57 }] },
+    { key: "semesterManagement", label: "Semester Management", icon: Timeline, items: [{ title: "Semester Panel Form", link: "/semester_panel", icon: Timeline, page_id: 58 }] },
+    { key: "yearManagement", label: "Year Management", icon: CalendarToday, items: [{ title: "Year Level Panel Form", link: "/year_level_panel", icon: Layers, page_id: 63 }, { title: "Year Panel Form", link: "/year_panel", icon: CalendarToday, page_id: 64 }, { title: "School Year Panel", link: "/school_year_panel", icon: DateRange, page_id: 55 }] },
+    { key: "evaluationManagement", label: "Evaluation Management", icon: Assessment, items: [{ title: "Evaluation Management", link: "/evaluation_crud", icon: HelpOutline, page_id: 23 }, { title: "TOSF CRUD", link: "/tosf_crud", icon: HelpOutline, page_id: 99 }] },
+    { key: "paymentManagement", label: "Payment Management", icon: Payments, items: [{ title: "Payment Exporting Module", link: "/payment_exporting_module", icon: HelpOutline, page_id: 116 }, { title: "Receipt Counter Assignment", link: "/assign_receipt_counter", icon: HelpOutline, page_id: 122 }, { title: "Matriculation Payment", link: "/matriculation_payment", icon: HelpOutline, page_id: 121 }] },
+    { key: "scholarshipManagement", label: "Scholarship Management", icon: School, items: [{ title: "Student Scholarship List", link: "/student_scholarship_list", icon: HelpOutline, page_id: 116 }] },
+    { key: "systemLogs", label: "System Logs", icon: HistoryEdu, items: [{ title: "Audit Logs", link: "/audit_logs", icon: HistoryEdu, page_id: 95 }] },
   ];
   const accountMenuGroups = [
-    {
-      key: "generalSettings",
-      label: "General Settings",
-      icon: Settings,
-      items: [
-        {
-          title: "Settings",
-          link: "/registrar_reset_password",
-          icon: Settings,
-          page_id: 73,
-        },
-        {
-          title: "Migration Data Panel",
-          link: "/migration_data_panel",
-          icon: CloudUpload,
-          page_id: 114,
-        },
-        {
-          title: "Upload Enrolled Subject",
-          link: "/upload_enrolled_subject",
-          icon: CloudUpload,
-        },
-      ],
-    },
-
-
-
-    {
-      key: "accountCreation",
-      label: "Account Creation",
-      icon: PersonAdd,
-      items: [
-        {
-          title: "Add Faculty Accounts",
-          link: "/register_prof",
-          icon: PersonAdd,
-          page_id: 70,
-        },
-        {
-          title: "Add Registrar Account",
-          link: "/register_registrar",
-          icon: AdminPanelSettings,
-          page_id: 71,
-        },
-        {
-          title: "Create Student Account",
-          link: "/student_accounts",
-          icon: School,
-          page_id: 143,
-        },
-      ],
-    },
-
-    {
-      key: "facultyManagement",
-      label: "Faculty Management",
-      icon: SupervisorAccount,
-      items: [
-        {
-          title: "Professor Education",
-          link: "/superadmin_professor_education",
-          icon: School,
-          page_id: 109,
-        },
-      ],
-    },
-
-    {
-      key: "applicantManagement",
-      label: "Applicant Management",
-      icon: Badge,
-      items: [
-        {
-          title: "Applicant Information",
-          link: "/super_admin_applicant_dashboard1",
-          icon: Info,
-          page_id: 75,
-        },
-        {
-          title: "Applicant Upload Requirements",
-          link: "/applicant_requirements_uploader",
-          icon: Assignment,
-          page_id: 84,
-        },
-      ],
-    },
-
-    {
-      key: "studentManagement",
-      label: "Student Management",
-      icon: School,
-      items: [
-        {
-          title: "Student Information",
-          link: "/super_admin_student_dashboard1",
-          icon: Info,
-          page_id: 86,
-        },
-        {
-          title: "Student Upload Requirements",
-          link: "/student_requirements_uploader",
-          icon: Assignment,
-          page_id: 150,
-        },
-        {
-          title: "Archive",
-          link: "/archived",
-          icon: FolderCopy,
-          page_id: 142,
-        },
-      ],
-    },
-
-    {
-      key: "accessControl",
-      label: "Access Control",
-      icon: Security,
-      items: [
-        {
-          title: "User Page Access",
-          link: "/user_page_access",
-          icon: Security,
-          page_id: 72,
-        },
-        {
-          title: "Page Table",
-          link: "/page_crud",
-          icon: TableChart,
-          page_id: 72,
-        },
-      ],
-    },
-
-    {
-      key: "passwordManagement",
-      label: "Password Management",
-      icon: LockReset,
-      items: [
-        {
-          title: "Applicant Reset Password",
-          link: "/superadmin_applicant_reset_password",
-          icon: People,
-          page_id: 81,
-        },
-        {
-          title: "Student Reset Password",
-          link: "/superadmin_student_reset_password",
-          icon: School,
-          page_id: 91,
-        },
-        {
-          title: "Faculty Reset Password",
-          link: "/superadmin_faculty_reset_password",
-          icon: SupervisorAccount,
-          page_id: 82,
-        },
-        {
-          title: "Registrar Reset Password",
-          link: "/superadmin_registrar_reset_password",
-          icon: AdminPanelSettings,
-          page_id: 83,
-        },
-      ],
-    },
+    { key: "generalSettings", label: "General Settings", icon: Settings, items: [{ title: "Settings", link: "/registrar_reset_password", icon: Settings, page_id: 73 }, { title: "Migration Data Panel", link: "/migration_data_panel", icon: CloudUpload, page_id: 114 }, { title: "Upload Enrolled Subject", link: "/upload_enrolled_subject", icon: CloudUpload }] },
+    { key: "accountCreation", label: "Account Creation", icon: PersonAdd, items: [{ title: "Add Faculty Accounts", link: "/register_prof", icon: PersonAdd, page_id: 70 }, { title: "Add Registrar Account", link: "/register_registrar", icon: AdminPanelSettings, page_id: 71 }, { title: "Create Student Account", link: "/student_accounts", icon: School, page_id: 143 }] },
+    { key: "facultyManagement", label: "Faculty Management", icon: SupervisorAccount, items: [{ title: "Professor Education", link: "/superadmin_professor_education", icon: School, page_id: 109 }] },
+    { key: "applicantManagement", label: "Applicant Management", icon: Badge, items: [{ title: "Applicant Information", link: "/super_admin_applicant_dashboard1", icon: Info, page_id: 75 }, { title: "Applicant Upload Requirements", link: "/applicant_requirements_uploader", icon: Assignment, page_id: 84 }] },
+    { key: "studentManagement", label: "Student Management", icon: School, items: [{ title: "Student Information", link: "/super_admin_student_dashboard1", icon: Info, page_id: 86 }, { title: "Student Upload Requirements", link: "/student_requirements_uploader", icon: Assignment, page_id: 150 }, { title: "Archive", link: "/archived", icon: FolderCopy, page_id: 142 }] },
+    { key: "accessControl", label: "Access Control", icon: Security, items: [{ title: "User Page Access", link: "/user_page_access", icon: Security, page_id: 72 }, { title: "Page Table", link: "/page_crud", icon: TableChart, page_id: 72 }] },
+    { key: "passwordManagement", label: "Password Management", icon: LockReset, items: [{ title: "Applicant Reset Password", link: "/superadmin_applicant_reset_password", icon: People, page_id: 81 }, { title: "Student Reset Password", link: "/superadmin_student_reset_password", icon: School, page_id: 91 }, { title: "Faculty Reset Password", link: "/superadmin_faculty_reset_password", icon: SupervisorAccount, page_id: 82 }, { title: "Registrar Reset Password", link: "/superadmin_registrar_reset_password", icon: AdminPanelSettings, page_id: 83 }] },
   ];
 
   const sectionMenus = {
@@ -1099,7 +804,8 @@ const SideBar = ({
             .filter(si => si.page_id === undefined || userAccessList[si.page_id])
             .map(si => (
               <NavItem key={si.link} to={si.link} icon={si.icon} label={si.title}
-                active={si.activeCheck ? si.activeCheck() : isActive(si.link)} collapsed={collapsed} />
+                active={si.activeCheck ? si.activeCheck() : isActive(si.link)}
+                collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
             ))
         ) : groups ? (
           groups.map(group => {
@@ -1110,18 +816,18 @@ const SideBar = ({
             return (
               <div key={gKey}>
                 <GroupToggle label={group.label} icon={group.icon} open={open}
-                  onToggle={() => toggleGroup(gKey)} collapsed={collapsed} />
-                {open && !collapsed && vis.map(si => (
+                  onToggle={() => toggleGroup(gKey)} collapsed={effectiveCollapsed} />
+                {open && !effectiveCollapsed && vis.map(si => (
                   <NavItem key={si.link} to={si.link} icon={si.icon} label={si.title}
                     active={si.activeCheck ? si.activeCheck() : isActive(si.link)}
-                    sub collapsed={collapsed} />
+                    sub collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
                 ))}
               </div>
             );
           })
         ) : (
           <NavItem to={item.path} icon={item.icon} label={`Open ${item.title}`}
-            active={isActive(item.path)} collapsed={collapsed} />
+            active={isActive(item.path)} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
         )}
         <Divider sx={{ bgcolor: "#f0f0f0", my: "5px" }} />
       </div>
@@ -1130,280 +836,228 @@ const SideBar = ({
 
   /* ── render ── */
   return (
-    <div className="sb-root hidden-print">
+    <>
+      {/* Mobile backdrop overlay */}
+      <div
+        className={`sb-overlay${isMobile && mobileOpen ? " visible" : ""}`}
+        onClick={onMobileClose}
+      />
 
-      {/* ── dark maroon header ── */}
-      <div className="sb-header">
-        <Tooltip
-          title={
-            collapsed
-              ? (`${personData?.fname || ""} ${personData?.lname || ""}`.trim() || role)
-              : ""
-          }
-          placement="right"
-          arrow
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: collapsed ? "column" : "row",
-              alignItems: "center",
-              gap: collapsed ? "10px" : "12px",
-              padding: "10px 12px"
-            }}
+      <div className={`sb-root hidden-print${isMobile && mobileOpen ? " mobile-open" : ""}`}>
+
+        {/* ── header ── */}
+        <div className="sb-header">
+          <Tooltip
+            title={effectiveCollapsed ? (`${personData?.fname || ""} ${personData?.lname || ""}`.trim() || role) : ""}
+            placement="right"
+            arrow
           >
-
-            {/* menu icon */}
-            <button
-              className="sb-hamburger"
-              onClick={() => setCollapsed(c => !c)}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "black"
-              }}
-            >
-              <div
-                style={{
-                  ...ICON_CONTAINER_STYLE,
-                  border: "1.5px solid black",
-                }}
-              >
-                <Menu sx={{ fontSize: SIDEBAR_ICON_SIZE, color: "black" }} />
-              </div>
-            </button>
-
-            {/* avatar */}
             <div
               style={{
-                position: "relative",
                 display: "flex",
-                alignItems: "center"
+                flexDirection: effectiveCollapsed ? "column" : "row",
+                alignItems: "center",
+                gap: effectiveCollapsed ? "10px" : "12px",
+                padding: "10px 12px"
               }}
             >
-              {avatarSrc ? (
-                <Avatar
-                  src={avatarSrc}
-                  sx={{
-                    width: collapsed ? 36 : 44,
-                    height: collapsed ? 36 : 44,
-                    border: "1.5px solid black",
-                    boxShadow: "0 2px 8px rgba(0,0,0,.15)",
-                    transition: "all .25s ease"
-                  }}
-                />
-              ) : (
-                <Avatar
-                  sx={{
-                    width: collapsed ? 36 : 44,
-                    height: collapsed ? 36 : 44,
-                    bgcolor: "rgba(255,255,255,.2)",
-                    fontSize: 15,
-                    border: "1.5px solid black",
-                    boxShadow: "0 2px 8px rgba(0,0,0,.15)",
-                    transition: "all .25s ease"
-                  }}
-                >
-                  {personData?.fname?.[0] || "?"}
-                </Avatar>
-              )}
-
-              {showUploadFor && !collapsed && (
-                <>
-                  <label
-                    htmlFor="sb-upload"
-                    style={{
-                      position: "absolute",
-                      bottom: -2,
-                      right: -2,
-                      width: 18,
-                      border: "black",
-                      height: 18,
-                      borderRadius: "50%",
-                      background: "white",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer"
-                    }}
-                  >
-                    <AddCircleIcon
-                      sx={{
-                        fontSize: 13,
-                        color: accentColor
-                      }}
-                    />
-                  </label>
-
-                  <ProfileUploadInput
-                    id="sb-upload"
-                    onChange={uploadHandlers[role]}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* info */}
-            {!collapsed && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden"
-                }}
-              >
-                <div
+              {/* menu icon — only show on desktop */}
+              {!isMobile && (
+                <button
+                  className="sb-hamburger"
+                  onClick={() => setCollapsed(c => !c)}
+                  title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                   style={{
-                    color: "black",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    lineHeight: 1.25,
-                    wordBreak: "break-word",
-                    overflowWrap: "break-word",
-                    maxWidth: "100%"
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "black"
                   }}
                 >
-                  {personData?.fname
-                    ? `${personData.fname} ${personData.lname}`
-                    : role || "User"}
-                </div>
-
-                <div
-                  style={{
-                    color: "black",
-                    fontSize: 12,
-                    lineHeight: 1.2,
-                    wordBreak: "break-word",
-                    overflowWrap: "break-word",
-                    maxWidth: "100%"
-                  }}
-                >
-                  {role === "registrar"
-                    ? `${accessDescription} · ${personData?.employee_id || ""}`
-                    : role === "student"
-                      ? `Student · ${personData?.student_number || ""}`
-                      : role === "faculty"
-                        ? `Faculty · ${personData?.employee_id || ""}`
-                        : role === "applicant"
-                          ? `Applicant · ${personData?.applicant_number || ""}`
-                          : role
-                            ? role.charAt(0).toUpperCase() + role.slice(1)
-                            : ""}
-                </div>
-
-                {hasDept && (
-                  <div
-                    style={{
-                      color: "black",
-                      fontSize: 11
-                    }}
-                  >
-                    {personData.dprtmnt_code} Department
+                  <div style={{ ...ICON_CONTAINER_STYLE, border: "1.5px solid black" }}>
+                    <Menu sx={{ fontSize: SIDEBAR_ICON_SIZE, color: "black" }} />
                   </div>
+                </button>
+              )}
+
+              {/* avatar */}
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                {avatarSrc ? (
+                  <Avatar
+                    src={avatarSrc}
+                    sx={{
+                      width: effectiveCollapsed ? 36 : 44,
+                      height: effectiveCollapsed ? 36 : 44,
+                      border: "1.5px solid black",
+                      boxShadow: "0 2px 8px rgba(0,0,0,.15)",
+                      transition: "all .25s ease"
+                    }}
+                  />
+                ) : (
+                  <Avatar
+                    sx={{
+                      width: effectiveCollapsed ? 36 : 44,
+                      height: effectiveCollapsed ? 36 : 44,
+                      bgcolor: "rgba(255,255,255,.2)",
+                      fontSize: 15,
+                      border: "1.5px solid black",
+                      boxShadow: "0 2px 8px rgba(0,0,0,.15)",
+                      transition: "all .25s ease"
+                    }}
+                  >
+                    {personData?.fname?.[0] || "?"}
+                  </Avatar>
+                )}
+
+                {showUploadFor && !effectiveCollapsed && (
+                  <>
+                    <label
+                      htmlFor="sb-upload"
+                      style={{
+                        position: "absolute", bottom: -2, right: -2,
+                        width: 18, height: 18, borderRadius: "50%",
+                        background: "white", display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <AddCircleIcon sx={{ fontSize: 13, color: accentColor }} />
+                    </label>
+                    <ProfileUploadInput id="sb-upload" onChange={uploadHandlers[role]} />
+                  </>
                 )}
               </div>
-            )}
 
-          </div>
-        </Tooltip>
+              {/* info */}
+              {!effectiveCollapsed && (
+                <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1 }}>
+                  <div style={{ color: "black", fontWeight: 600, fontSize: 14, lineHeight: 1.25, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}>
+                    {personData?.fname ? `${personData.fname} ${personData.lname}` : role || "User"}
+                  </div>
+                  <div style={{ color: "black", fontSize: 12, lineHeight: 1.2, wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}>
+                    {role === "registrar"
+                      ? `${accessDescription} · ${personData?.employee_id || ""}`
+                      : role === "student" ? `Student · ${personData?.student_number || ""}`
+                        : role === "faculty" ? `Faculty · ${personData?.employee_id || ""}`
+                          : role === "applicant" ? `Applicant · ${personData?.applicant_number || ""}`
+                            : role ? role.charAt(0).toUpperCase() + role.slice(1) : ""}
+                  </div>
+                  {hasDept && (
+                    <div style={{ color: "black", fontSize: 11 }}>
+                      {personData.dprtmnt_code} Department
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mobile close button */}
+              {isMobile && (
+                <button
+                  onClick={onMobileClose}
+                  style={{
+                    marginLeft: "auto", background: "transparent", border: "none",
+                    cursor: "pointer", display: "flex", alignItems: "center", padding: 4
+                  }}
+                  aria-label="Close menu"
+                >
+                  <Menu sx={{ fontSize: 24, color: "black" }} />
+                </button>
+              )}
+            </div>
+          </Tooltip>
+        </div>
+
+        {/* ── scrollable nav ── */}
+        <div className="sb-scroll">
+
+          {/* REGISTRAR */}
+          {role === "registrar" && (
+            <>
+              <div className="sb-section-label">Navigation</div>
+              <NavItem to={registrarDashboard} icon={DashboardIcon} label="Dashboard"
+                active={isActive(registrarDashboard)} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <Divider sx={{ bgcolor: "#f0f0f0", my: "5px" }} />
+              {managementItems.map(renderSection)}
+              <div className="sb-divider" />
+            </>
+          )}
+
+          {/* APPLICANT */}
+          {role === "applicant" && (
+            <>
+              <div className="sb-section-label">Navigation</div>
+              <NavItem to="/applicant_dashboard" icon={DashboardIcon} label="Dashboard"
+                active={isActivePrefix("/applicant_dashboard")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem icon={AssignmentIndIcon} label="Applicant Profile"
+                active={isActivePrefix("/dashboard/")} collapsed={effectiveCollapsed}
+                onClick={() => {
+                  let keys = JSON.parse(localStorage.getItem("dashboardKeys"));
+                  if (!keys) {
+                    const g = () => Math.random().toString(36).substring(2, 10);
+                    keys = { step1: g(), step2: g(), step3: g(), step4: g(), step5: g() };
+                    localStorage.setItem("dashboardKeys", JSON.stringify(keys));
+                  }
+                  if (isMobile) onMobileClose?.();
+                  window.location.href = `/dashboard/${keys.step1}`;
+                }} />
+              <NavItem to="/requirements_uploader" icon={CloudUploadIcon} label="Upload Requirements"
+                active={isActivePrefix("/requirements_uploader")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <div className="sb-section-label">Setting</div>
+              <NavItem to="/applicant_reset_password" icon={LockResetIcon} label="Change Password"
+                active={isActivePrefix("/applicant_reset_password")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+            </>
+          )}
+
+          {/* FACULTY */}
+          {role === "faculty" && (
+            <>
+              <div className="sb-section-label">Navigation</div>
+              <NavItem to="/faculty_dashboard" icon={DashboardIcon} label="Dashboard" active={isActive("/faculty_dashboard")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/faculty_workload" icon={WorkIcon} label="Workload" active={isActive("/faculty_workload")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/faculty_masterlist" icon={ListAltIcon} label="Class List" active={isActive("/faculty_masterlist")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/grading_sheet" icon={AssignmentTurnedInIcon} label="Grading Management" active={isActive("/grading_sheet")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/faculty_evaluation" icon={SchoolIcon} label="Faculty Evaluation" active={isActive("/faculty_evaluation")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <div className="sb-section-label">Setting</div>
+              <NavItem to="/faculty_reset_password" icon={Settings} label="Settings" active={isActive("/faculty_reset_password")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+            </>
+          )}
+
+          {/* STUDENT */}
+          {role === "student" && (
+            <>
+              <div className="sb-section-label">Navigation</div>
+              <NavItem to="/student_dashboard" icon={DashboardIcon} label="Dashboard" active={isActive("/student_dashboard")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_schedule" icon={EventNoteIcon} label="Schedule" active={isActive("/student_schedule")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/grades_page" icon={GradeIcon} label="Grades" active={isActive("/grades_page")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_section_offering" icon={MenuBook} label="Curriculum" active={isActive("/student_section_offering")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_faculty_evaluation" icon={AssignmentTurnedInIcon} label="Faculty Evaluation" active={isActive("/student_faculty_evaluation")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_dashboard1" icon={PersonIcon} label="Student Profile" active={/^\/student_dashboard[1-5]$/.test(loc)} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_online_requirements" icon={FolderCopy} label="Official Student Requirements" active={isActive("/student_online_requirements")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_account_balance" icon={PaymentIcon} label="Student Account Balance" active={isActive("/student_account_balance")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <div className="sb-section-label">Setting</div>
+              <NavItem to="/student_reset_password" icon={Settings} label="Settings" active={isActive("/student_reset_password")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+            </>
+          )}
+
+          <div style={{ height: 12 }} />
+        </div>
+
+        {/* ── footer ── */}
+        <div className="sb-footer">
+          <Tooltip title={effectiveCollapsed ? "Logout" : ""} placement="right" arrow>
+            <div className="sb-logout" onClick={Logout}>
+              <span className="sb-logout-icon" style={{ ...ICON_CONTAINER_STYLE, border: "1.5px solid rgba(0,0,0,.08)" }}>
+                <LogoutOutlined sx={{ fontSize: SIDEBAR_ICON_SIZE }} />
+              </span>
+              <span className="sb-logout-label">Logout</span>
+            </div>
+          </Tooltip>
+        </div>
       </div>
-      {/* ── scrollable nav ── */}
-      <div className="sb-scroll">
-
-        {/* REGISTRAR */}
-        {role === "registrar" && (
-          <>
-            <div className="sb-section-label">Navigation</div>
-            <NavItem to={registrarDashboard} icon={DashboardIcon} label="Dashboard"
-              active={isActive(registrarDashboard)} collapsed={collapsed} />
-            <Divider sx={{ bgcolor: "#f0f0f0", my: "5px" }} />
-            {managementItems.map(renderSection)}
-            <div className="sb-divider" />
-          </>
-        )}
-
-        {/* APPLICANT */}
-        {role === "applicant" && (
-          <>
-            <div className="sb-section-label">Navigation</div>
-            <NavItem to="/applicant_dashboard" icon={DashboardIcon} label="Dashboard"
-              active={isActivePrefix("/applicant_dashboard")} collapsed={collapsed} />
-            <NavItem icon={AssignmentIndIcon} label="Applicant Profile"
-              active={isActivePrefix("/dashboard/")} collapsed={collapsed}
-              onClick={() => {
-                let keys = JSON.parse(localStorage.getItem("dashboardKeys"));
-                if (!keys) {
-                  const g = () => Math.random().toString(36).substring(2, 10);
-                  keys = { step1: g(), step2: g(), step3: g(), step4: g(), step5: g() };
-                  localStorage.setItem("dashboardKeys", JSON.stringify(keys));
-                }
-                window.location.href = `/dashboard/${keys.step1}`;
-              }} />
-            <NavItem to="/requirements_uploader" icon={CloudUploadIcon} label="Upload Requirements"
-              active={isActivePrefix("/requirements_uploader")} collapsed={collapsed} />
-            <div className="sb-section-label">Setting</div>
-            <NavItem to="/applicant_reset_password" icon={LockResetIcon} label="Change Password"
-              active={isActivePrefix("/applicant_reset_password")} collapsed={collapsed} />
-          </>
-        )}
-
-        {/* FACULTY */}
-        {role === "faculty" && (
-          <>
-            <div className="sb-section-label">Navigation</div>
-            <NavItem to="/faculty_dashboard" icon={DashboardIcon} label="Dashboard" active={isActive("/faculty_dashboard")} collapsed={collapsed} />
-            <NavItem to="/faculty_workload" icon={WorkIcon} label="Workload" active={isActive("/faculty_workload")} collapsed={collapsed} />
-            <NavItem to="/faculty_masterlist" icon={ListAltIcon} label="Class List" active={isActive("/faculty_masterlist")} collapsed={collapsed} />
-            <NavItem to="/grading_sheet" icon={AssignmentTurnedInIcon} label="Grading Management" active={isActive("/grading_sheet")} collapsed={collapsed} />
-            <NavItem to="/faculty_evaluation" icon={SchoolIcon} label="Faculty Evaluation" active={isActive("/faculty_evaluation")} collapsed={collapsed} />
-            <div className="sb-section-label">Setting</div>
-            <NavItem to="/faculty_reset_password" icon={Settings} label="Settings" active={isActive("/faculty_reset_password")} collapsed={collapsed} />
-          </>
-        )}
-
-        {/* STUDENT */}
-        {role === "student" && (
-          <>
-            <div className="sb-section-label">Navigation</div>
-            <NavItem to="/student_dashboard" icon={DashboardIcon} label="Dashboard" active={isActive("/student_dashboard")} collapsed={collapsed} />
-            <NavItem to="/student_schedule" icon={EventNoteIcon} label="Schedule" active={isActive("/student_schedule")} collapsed={collapsed} />
-            <NavItem to="/grades_page" icon={GradeIcon} label="Grades" active={isActive("/grades_page")} collapsed={collapsed} />
-            <NavItem to="/student_section_offering" icon={MenuBook} label="Curriculum" active={isActive("/student_section_offering")} collapsed={collapsed} />
-            <NavItem to="/student_faculty_evaluation" icon={AssignmentTurnedInIcon} label="Faculty Evaluation" active={isActive("/student_faculty_evaluation")} collapsed={collapsed} />
-            <NavItem to="/student_dashboard1" icon={PersonIcon} label="Student Profile" active={/^\/student_dashboard[1-5]$/.test(loc)} collapsed={collapsed} />
-            <NavItem to="/student_online_requirements" icon={FolderCopy} label="Official Student Requirements" active={isActive("/student_online_requirements")} collapsed={collapsed} />
-            <NavItem to="/student_account_balance" icon={PaymentIcon} label="Student Account Balance" active={isActive("/student_account_balance")} collapsed={collapsed} />
-            <div className="sb-section-label">Setting</div>
-            <NavItem to="/student_reset_password" icon={Settings} label="Settings" active={isActive("/student_reset_password")} collapsed={collapsed} />
-          </>
-        )}
-
-        <div style={{ height: 12 }} />
-      </div>
-
-      {/* ── footer ── */}
-      <div className="sb-footer">
-        <Tooltip title={collapsed ? "Logout" : ""} placement="right" arrow>
-          <div className="sb-logout" onClick={Logout}>
-            <span
-              className="sb-logout-icon"
-              style={{
-                ...ICON_CONTAINER_STYLE,
-                border: "1.5px solid rgba(0,0,0,.08)",
-              }}
-            >
-              <LogoutOutlined sx={{ fontSize: SIDEBAR_ICON_SIZE }} />
-            </span>
-            <span className="sb-logout-label">Logout</span>
-          </div>
-        </Tooltip>
-      </div>
-    </div>
+    </>
   );
 };
 

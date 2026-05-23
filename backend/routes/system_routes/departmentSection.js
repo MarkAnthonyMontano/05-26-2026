@@ -426,4 +426,60 @@ router.get("/department_section", async (req, res) => {
   }
 });
 
+router.put(
+  "/department_section/:id/status",
+  CanEdit,
+  async (req, res) => {
+    const { id } = req.params;
+    const { dsstat } = req.body;
+
+    if (dsstat !== 0 && dsstat !== 1) {
+      return res.status(400).json({
+        message: "Invalid status value.",
+      });
+    }
+
+    try {
+      const beforeLabel = await getDepartmentSectionLabel(id);
+
+      const [result] = await db3.query(
+        `
+        UPDATE dprtmnt_section_table
+        SET dsstat = ?
+        WHERE id = ?
+        `,
+        [dsstat, id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          message: "Department section not found.",
+        });
+      }
+
+      const { actorId, actorRole } = getAuditActor(req);
+      const roleLabel = formatAuditActorRole(actorRole);
+
+      await insertDepartmentSectionAuditLog({
+        req,
+        action: "DEPARTMENT_SECTION_STATUS_UPDATE",
+        message: `${roleLabel} (${actorId}) changed status of ${beforeLabel} to ${
+          dsstat === 1 ? "Active" : "Inactive"
+        }.`,
+      });
+
+      res.status(200).json({
+        message: "Status updated successfully.",
+      });
+    } catch (err) {
+      console.error("Error updating status:", err);
+
+      res.status(500).json({
+        error: "Internal Server Error",
+        details: err.message,
+      });
+    }
+  }
+);
+
 module.exports = router;

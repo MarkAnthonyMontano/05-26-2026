@@ -8,7 +8,6 @@ import {
   Select,
   MenuItem,
   Radio,
-  RadioGroup,
   TableContainer,
   Table,
   TableHead,
@@ -20,51 +19,52 @@ import {
   Paper,
   Snackbar,
   Alert,
-  TextField,
   Dialog,
   DialogTitle,
   Grid,
   DialogContent,
   DialogActions,
+  useMediaQuery,
+  useTheme,
+  Chip,
+  Collapse,
+  IconButton,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import axios from "axios";
 import API_BASE_URL from "../apiConfig";
 
 const StudentFacultyEvaluation = () => {
   const settings = useContext(SettingsContext);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
   const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-  const [subButtonColor, setSubButtonColor] = useState("#ffffff"); // ✅ NEW
-  const [stepperColor, setStepperColor] = useState("#000000"); // ✅ NEW
+  const [subButtonColor, setSubButtonColor] = useState("#ffffff");
+  const [stepperColor, setStepperColor] = useState("#000000");
 
   const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [shortTerm, setShortTerm] = useState("");
   const [campusAddress, setCampusAddress] = useState("");
 
+  // Collapsible rating criteria on mobile
+  const [criteriaOpen, setCriteriaOpen] = useState(false);
+
   useEffect(() => {
     if (!settings) return;
 
-    // 🎨 Colors
     if (settings.title_color) setTitleColor(settings.title_color);
     if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
     if (settings.border_color) setBorderColor(settings.border_color);
-    if (settings.main_button_color)
-      setMainButtonColor(settings.main_button_color);
-    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color); // ✅ NEW
-    if (settings.stepper_color) setStepperColor(settings.stepper_color); // ✅ NEW
-
-    // 🏫 Logo
-    if (settings.logo_url) {
-      setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
-    } else {
-      setFetchedLogo(EaristLogo);
-    }
-
-    // 🏷️ School Information
+    if (settings.main_button_color) setMainButtonColor(settings.main_button_color);
+    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color);
+    if (settings.stepper_color) setStepperColor(settings.stepper_color);
+    if (settings.logo_url) setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
     if (settings.company_name) setCompanyName(settings.company_name);
     if (settings.short_term) setShortTerm(settings.short_term);
     if (settings.campus_address) setCampusAddress(settings.campus_address);
@@ -83,23 +83,9 @@ const StudentFacultyEvaluation = () => {
   const [answers, setAnswers] = useState({});
   const [studentNumber, setStudentNumber] = useState("");
 
-  useEffect(() => {
-    if (!settings) return;
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-    if (settings.title_color) setTitleColor(settings.title_color);
-    if (settings.subtitle_color) setSubtitleColor(settings.subtitle_color);
-    if (settings.main_button_color)
-      setMainButtonColor(settings.main_button_color);
-    if (settings.sub_button_color) setSubButtonColor(settings.sub_button_color);
-    if (settings.logo_url)
-      setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
-
-    if (settings.company_name) setCompanyName(settings.company_name);
-    if (settings.short_term) setShortTerm(settings.short_term);
-    if (settings.campus_address) setCampusAddress(settings.campus_address);
-  }, [settings]);
-
-  // Check user session
   useEffect(() => {
     const storedUser = localStorage.getItem("email");
     const storedRole = localStorage.getItem("role");
@@ -123,9 +109,7 @@ const StudentFacultyEvaluation = () => {
 
   const fetchQuestions = async () => {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/get_questions_for_evaluation`,
-      );
+      const response = await axios.get(`${API_BASE_URL}/get_questions_for_evaluation`);
       setQuestions(response.data);
     } catch {
       showSnackbar("Failed to fetch questions", "error");
@@ -143,8 +127,6 @@ const StudentFacultyEvaluation = () => {
   };
 
   const handleSelectedCourse = (event) => setSelectedCourse(event.target.value);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const handleAnswerChange = (question_id, value) =>
     setAnswers((prev) => ({ ...prev, [question_id]: value }));
 
@@ -186,9 +168,7 @@ const StudentFacultyEvaluation = () => {
 
   const groupedQuestions = questions.reduce((groups, question) => {
     const { category } = question;
-    if (!groups[category]) {
-      groups[category] = [];
-    }
+    if (!groups[category]) groups[category] = [];
     groups[category].push(question);
     return groups;
   }, {});
@@ -207,6 +187,93 @@ const StudentFacultyEvaluation = () => {
     }
   });
 
+  const ratingCriteria = [
+    { scale: 5, label: "Always manifested", desc: "Evident in nearly all relevant situations (91–100%)." },
+    { scale: 4, label: "Often manifested", desc: "Evident most of the time (61–90%)." },
+    { scale: 3, label: "Sometimes manifested", desc: "Evident about half the time (31–60%)." },
+    { scale: 2, label: "Seldom manifested", desc: "Rarely evident (11–30%)." },
+    { scale: 1, label: "Never manifested", desc: "Almost never evident (0–10%)." },
+  ];
+
+  // Mobile: render radio choices as a vertical list with scale badges
+  const renderMobileChoices = (q) => {
+    const choices = [
+      q.first_choice, q.second_choice, q.third_choice,
+      q.fourth_choice, q.fifth_choice,
+    ].filter(Boolean);
+
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+        {choices.map((choice, index) => {
+          const isSelected = answers[q.question_id] === choice;
+          return (
+            <Box
+              key={index}
+              onClick={() => handleAnswerChange(q.question_id, choice)}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                p: 1.2,
+                borderRadius: "8px",
+                border: isSelected
+                  ? `2px solid ${mainButtonColor}`
+                  : `1px solid ${borderColor}`,
+                backgroundColor: isSelected ? `${mainButtonColor}15` : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Radio
+                size="small"
+                checked={isSelected}
+                onChange={() => handleAnswerChange(q.question_id, choice)}
+                sx={{ p: 0 }}
+              />
+              <Typography sx={{ fontSize: "14px", flex: 1 }}>{choice}</Typography>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
+  // Desktop: original equal-width grid choices
+  const renderDesktopChoices = (q) => {
+    const choices = [
+      q.first_choice, q.second_choice, q.third_choice,
+      q.fourth_choice, q.fifth_choice,
+    ].filter(Boolean);
+
+    return (
+      <Grid container spacing={1}>
+        {choices.map((choice, index) => (
+          <Grid item xs={12 / choices.length} key={index}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 0.5,
+                borderRadius: 1,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <FormControlLabel
+                sx={{ m: 0 }}
+                control={<Radio size="small" />}
+                value={choice}
+                checked={answers[q.question_id] === choice}
+                onChange={() => handleAnswerChange(q.question_id, choice)}
+                label={<Typography sx={{ fontSize: 14 }}>{choice}</Typography>}
+              />
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
   return (
     <Box
       sx={{
@@ -215,7 +282,7 @@ const StudentFacultyEvaluation = () => {
         paddingRight: 1,
         backgroundColor: "transparent",
         mt: 1,
-        padding: 2,
+        padding: { xs: 1, sm: 2 },
       }}
     >
       {/* Header */}
@@ -233,7 +300,7 @@ const StudentFacultyEvaluation = () => {
           sx={{
             fontWeight: "bold",
             color: titleColor,
-            fontSize: "36px",
+            fontSize: { xs: "20px", sm: "28px", md: "36px" },
           }}
         >
           FACULTY EVALUATION FORM
@@ -242,27 +309,24 @@ const StudentFacultyEvaluation = () => {
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
       <br />
 
-      {/* Choose Course Panel */}
+      {/* Choose Course + Rating Criteria panels */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
+
         {/* CHOOSE COURSE PANEL */}
         <Grid item xs={12} md={6}>
           <Paper
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               borderRadius: 3,
               border: `1px solid ${borderColor}`,
               boxShadow: 1,
               height: "100%",
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 700, color: titleColor, mb: 2 }}
-            >
+            <Typography variant="h6" sx={{ fontWeight: 700, color: titleColor, mb: 2, fontSize: { xs: "15px", sm: "18px" } }}>
               CHOOSE COURSE
             </Typography>
 
-            {/* Select Course */}
             <Box sx={{ mb: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Select Course</InputLabel>
@@ -280,54 +344,43 @@ const StudentFacultyEvaluation = () => {
               </FormControl>
             </Box>
 
-            {/* INFORMATION DISPLAY */}
             {selectedProfessor && (
               <Box sx={{ mt: 1 }}>
                 {[
                   {
                     label: "Name of Faculty being Evaluated",
-                    value:
-                      `${selectedProfessor.fname || ""} ${selectedProfessor.mname || ""} ${selectedProfessor.lname || ""}`.trim(),
+                    value: `${selectedProfessor.fname || ""} ${selectedProfessor.mname || ""} ${selectedProfessor.lname || ""}`.trim(),
                   },
-                  {
-                    label: "College/Department",
-                    value: selectedProfessor.department || "",
-                  },
-                  {
-                    label: "Course Code",
-                    value: selectedProfessor.course_code || "",
-                  },
+                  { label: "College/Department", value: selectedProfessor.department || "" },
+                  { label: "Course Code", value: selectedProfessor.course_code || "" },
                   {
                     label: "Program Code",
-                    value:
-                      `${selectedProfessor.curriculum_year}-${selectedProfessor.program_code}` ||
-                      "",
+                    value: `${selectedProfessor.curriculum_year}-${selectedProfessor.program_code}` || "",
                   },
                   {
                     label: "Semester or Term/Academic Year",
-                    value:
-                      `${selectedProfessor.current_year} - ${selectedProfessor.next_year}, ${selectedProfessor.semester_description}` ||
-                      "",
+                    value: `${selectedProfessor.current_year} - ${selectedProfessor.next_year}, ${selectedProfessor.semester_description}` || "",
                   },
                 ].map((row, index) => (
-                  <Grid container key={index} sx={{ mb: 1.2 }}>
-                    {/* LABEL */}
-                    <Grid item xs={7}>
-                      <Typography sx={{ fontSize: 14 }}>{row.label}</Typography>
+                  // On mobile: stacked label + value; on desktop: side-by-side grid
+                  isMobile ? (
+                    <Box key={index} sx={{ mb: 1.2, pb: 1, borderBottom: "1px solid #f0f0f0" }}>
+                      <Typography sx={{ fontSize: "12px", color: subtitleColor }}>{row.label}</Typography>
+                      <Typography sx={{ fontSize: "14px", fontWeight: 600 }}>{row.value}</Typography>
+                    </Box>
+                  ) : (
+                    <Grid container key={index} sx={{ mb: 1.2 }}>
+                      <Grid item xs={7}>
+                        <Typography sx={{ fontSize: 14 }}>{row.label}</Typography>
+                      </Grid>
+                      <Grid item xs={1}>
+                        <Typography sx={{ fontSize: 14 }}>:</Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{row.value}</Typography>
+                      </Grid>
                     </Grid>
-
-                    {/* COLON */}
-                    <Grid item xs={1}>
-                      <Typography sx={{ fontSize: 14 }}>:</Typography>
-                    </Grid>
-
-                    {/* VALUE */}
-                    <Grid item xs={4}>
-                      <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                        {row.value}
-                      </Typography>
-                    </Grid>
-                  </Grid>
+                  )
                 ))}
               </Box>
             )}
@@ -338,118 +391,102 @@ const StudentFacultyEvaluation = () => {
         <Grid item xs={12} md={6}>
           <Paper
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               borderRadius: 3,
               border: `1px solid ${borderColor}`,
               boxShadow: 1,
-              height: "100%", // 🔥 Same height as left card
+              height: "100%",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 700, color: titleColor, mb: 2 }}
+            {/* On mobile: collapsible header */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: criteriaOpen || !isMobile ? 2 : 0,
+                cursor: isMobile ? "pointer" : "default",
+              }}
+              onClick={() => isMobile && setCriteriaOpen((prev) => !prev)}
             >
-              Rating Criteria
-            </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: titleColor, fontSize: { xs: "15px", sm: "18px" } }}>
+                Rating Criteria
+              </Typography>
+              {isMobile && (
+                <IconButton size="small">
+                  {criteriaOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              )}
+            </Box>
 
-            <TableContainer
-              component={Paper}
-              sx={{ boxShadow: "none", borderRadius: 2, flexGrow: 1 }}
-            >
-              <Table size="small">
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      backgroundColor: settings?.header_color || "#1976d2",
-                      color: "white",
-                      border: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    <TableCell
+            <Collapse in={!isMobile || criteriaOpen}>
+              {/* Mobile: compact badge cards instead of a 3-column table */}
+              {isMobile ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {ratingCriteria.map((r) => (
+                    <Box
+                      key={r.scale}
                       sx={{
-                        fontWeight: 700,
-                        color: "white",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 1.5,
+                        p: 1.2,
+                        borderRadius: "8px",
                         border: `1px solid ${borderColor}`,
+                        backgroundColor: "#fafafa",
                       }}
                     >
-                      Scale
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        color: "white",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                    >
-                      Qualitative Description
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        color: "white",
-                        border: `1px solid ${borderColor}`,
-                      }}
-                    >
-                      Operational Definition
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  <TableRow sx={{ border: `1px solid ${borderColor}` }}>
-                    <TableCell sx={{ fontWeight: 600, border: `1px solid ${borderColor}` }}>5</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Always manifested
-                    </TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Evident in nearly all relevant situations (91–100%).
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow sx={{ border: `1px solid ${borderColor}` }}>
-                    <TableCell sx={{ border: `1px solid ${borderColor}`, fontWeight: 600 }}>4</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Often manifested
-                    </TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Evident most of the time (61–90%).
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow sx={{ border: `1px solid ${borderColor}` }}>
-                    <TableCell sx={{ fontWeight: 600, border: `1px solid ${borderColor}` }}>3</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Sometimes manifested
-                    </TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Evident about half the time (31–60%).
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow sx={{ border: `1px solid ${borderColor}` }}>
-                    <TableCell sx={{ fontWeight: 600, border: `1px solid ${borderColor}` }}>2</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Seldom manifested
-                    </TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Rarely evident (11–30%).
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow sx={{ border: `1px solid ${borderColor}` }}>
-                    <TableCell sx={{ fontWeight: 600, border: `1px solid ${borderColor}` }}>1</TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Never manifested
-                    </TableCell>
-                    <TableCell sx={{ border: `1px solid ${borderColor}` }}>
-                      Almost never evident (0–10%).
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
+                      <Chip
+                        label={r.scale}
+                        size="small"
+                        sx={{
+                          backgroundColor: settings?.header_color || "#1976d2",
+                          color: "white",
+                          fontWeight: 700,
+                          minWidth: 32,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Box>
+                        <Typography sx={{ fontSize: "13px", fontWeight: 600 }}>{r.label}</Typography>
+                        <Typography sx={{ fontSize: "12px", color: subtitleColor }}>{r.desc}</Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <TableContainer component={Paper} sx={{ boxShadow: "none", borderRadius: 2, flexGrow: 1 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow
+                        sx={{
+                          backgroundColor: settings?.header_color || "#1976d2",
+                          color: "white",
+                          border: `1px solid ${borderColor}`,
+                        }}
+                      >
+                        {["Scale", "Qualitative Description", "Operational Definition"].map((h) => (
+                          <TableCell key={h} sx={{ fontWeight: 700, color: "white", border: `1px solid ${borderColor}` }}>
+                            {h}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {ratingCriteria.map((r) => (
+                        <TableRow key={r.scale} sx={{ border: `1px solid ${borderColor}` }}>
+                          <TableCell sx={{ fontWeight: 600, border: `1px solid ${borderColor}` }}>{r.scale}</TableCell>
+                          <TableCell sx={{ border: `1px solid ${borderColor}` }}>{r.label}</TableCell>
+                          <TableCell sx={{ border: `1px solid ${borderColor}` }}>{r.desc}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Collapse>
           </Paper>
         </Grid>
       </Grid>
@@ -466,7 +503,7 @@ const StudentFacultyEvaluation = () => {
               <Box
                 sx={{
                   background: headerBg,
-                  p: 2,
+                  p: { xs: 1.5, sm: 2 },
                   borderRadius: 2,
                   border: `1px solid ${borderColor}`,
                   mb: 2,
@@ -474,16 +511,19 @@ const StudentFacultyEvaluation = () => {
               >
                 <Typography
                   variant="h6"
-                  sx={{ fontWeight: 700, fontSize: "40px", color: titleColor }}
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "20px", sm: "30px", md: "40px" },
+                    color: titleColor,
+                  }}
                 >
                   {items[0].title}
                 </Typography>
-
                 <Typography
                   variant="body2"
                   sx={{
                     fontStyle: "italic",
-                    fontSize: "15px",
+                    fontSize: { xs: "13px", sm: "15px" },
                     color: subtitleColor,
                   }}
                 >
@@ -496,7 +536,7 @@ const StudentFacultyEvaluation = () => {
                 <Paper
                   key={q.question_id}
                   sx={{
-                    p: 2,
+                    p: { xs: 1.5, sm: 2 },
                     mb: 2,
                     borderRadius: 2,
                     border: `1px solid ${borderColor}`,
@@ -505,58 +545,21 @@ const StudentFacultyEvaluation = () => {
                 >
                   <Typography
                     variant="subtitle1"
-                    sx={{ fontWeight: 700, mb: 1 }}
+                    sx={{ fontWeight: 700, mb: 1, fontSize: { xs: "14px", sm: "16px" } }}
                   >
                     {q.question_description}
                   </Typography>
 
-                  {/* Choices = Equal Width */}
-                  <Grid container spacing={1}>
-                    {[
-                      q.first_choice,
-                      q.second_choice,
-                      q.third_choice,
-                      q.fourth_choice,
-                      q.fifth_choice,
-                    ]
-                      .filter(Boolean)
-                      .map((choice, index, arr) => (
-                        <Grid item xs={12 / arr.length} key={index}>
-                          <Paper
-                            variant="outlined"
-                            sx={{
-                              p: 0.5,
-                              borderRadius: 1,
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                            }}
-                          >
-                            <FormControlLabel
-                              sx={{ m: 0 }}
-                              control={<Radio size="small" />}
-                              value={choice}
-                              checked={answers[q.question_id] === choice}
-                              onChange={() =>
-                                handleAnswerChange(q.question_id, choice)
-                              }
-                              label={
-                                <Typography sx={{ fontSize: 14 }}>
-                                  {choice}
-                                </Typography>
-                              }
-                            />
-                          </Paper>
-                        </Grid>
-                      ))}
-                  </Grid>
+                  {isMobile
+                    ? renderMobileChoices(q)
+                    : renderDesktopChoices(q)}
                 </Paper>
               ))}
             </Box>
           );
         })}
 
-      {/* Buttons Centered */}
+      {/* Action Buttons */}
       {selectedProfessor && (
         <Box
           sx={{
@@ -565,11 +568,14 @@ const StudentFacultyEvaluation = () => {
             gap: 2,
             mt: 3,
             mb: 10,
+            flexDirection: { xs: "column", sm: "row" },
+            px: { xs: 1, sm: 0 },
           }}
         >
           <Button
             variant="outlined"
             color="error"
+            fullWidth={isMobile}
             onClick={() => setResetDialogOpen(true)}
           >
             Reset Answers
@@ -577,6 +583,7 @@ const StudentFacultyEvaluation = () => {
 
           <Button
             variant="contained"
+            fullWidth={isMobile}
             sx={{ bgcolor: "#1976d2", "&:hover": { bgcolor: "#155fa0" } }}
             onClick={() => setSaveDialogOpen(true)}
           >
@@ -585,22 +592,24 @@ const StudentFacultyEvaluation = () => {
         </Box>
       )}
 
-      {/* DIALOGS + SNACKBAR (unchanged) */}
       {/* RESET DIALOG */}
-      <Dialog open={resetDialogOpen} onClose={() => setResetDialogOpen(false)}>
+      <Dialog
+        open={resetDialogOpen}
+        onClose={() => setResetDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Reset Your Answers</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to clear all answers? This cannot be undone.
-          </Typography>
+          <Typography>Are you sure you want to clear all answers? This cannot be undone.</Typography>
         </DialogContent>
-        <DialogActions>
-          <Button
-            color="error"
-            variant="outlined"
-            onClick={() => setResetDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ flexDirection: { xs: "column-reverse", sm: "row" }, gap: { xs: 1, sm: 0 }, px: 2, pb: 2 }}>
+          <Button color="error" variant="outlined" fullWidth={isMobile} onClick={() => setResetDialogOpen(false)}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
+            fullWidth={isMobile}
             onClick={() => {
               setAnswers({});
               setResetDialogOpen(false);
@@ -612,24 +621,23 @@ const StudentFacultyEvaluation = () => {
       </Dialog>
 
       {/* SAVE DIALOG */}
-      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)}>
+      <Dialog
+        open={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Submit Evaluation</DialogTitle>
         <DialogContent>
-          <Typography>
-            Do you want to submit your evaluation? Make sure everything is
-            answered.
-          </Typography>
+          <Typography>Do you want to submit your evaluation? Make sure everything is answered.</Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ flexDirection: { xs: "column-reverse", sm: "row" }, gap: { xs: 1, sm: 0 }, px: 2, pb: 2 }}>
+          <Button variant="contained" color="error" fullWidth={isMobile} onClick={() => setSaveDialogOpen(false)}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
-            color="error"
-
-
-
-            onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
+            fullWidth={isMobile}
             onClick={() => {
               setSaveDialogOpen(false);
               SaveEvaluation();
