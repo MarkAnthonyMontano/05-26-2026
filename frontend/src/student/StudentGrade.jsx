@@ -82,6 +82,34 @@ const sortTerms = (terms) =>
 
 const formatYearLabel = (year) => yearLabelMap[year] || year;
 
+const isMigratedGrade = (subject) => Number(subject?.is_migrated) === 1 || subject?.is_migrated === true;
+const isEvaluatedGrade = (subject) => Number(subject?.fe_status) === 1;
+
+const getAcademicTermKey = (subject) =>
+  `${subject?.active_school_year_id || subject?.year_description || "N/A"}-${subject?.semester_id || subject?.semester_description || "N/A"}`;
+
+const getTermSortValue = (subject) => {
+  const schoolYear = Number(subject?.year_description) || 0;
+  const semester = Number(subject?.semester_id) || semesterOrder[subject?.semester_description] || 0;
+  const schoolYearId = Number(subject?.active_school_year_id) || 0;
+  return (schoolYear * 10000) + (semester * 100) + schoolYearId;
+};
+
+const getLatestMigratedTermKey = (subjects) => {
+  const latestMigratedSubject = subjects
+    .filter(isMigratedGrade)
+    .sort((a, b) => getTermSortValue(b) - getTermSortValue(a))[0];
+
+  return latestMigratedSubject ? getAcademicTermKey(latestMigratedSubject) : null;
+};
+
+const canShowGrade = (subject, latestMigratedTermKey) => {
+  if (isEvaluatedGrade(subject)) return true;
+  if (!isMigratedGrade(subject)) return false;
+
+  return getAcademicTermKey(subject) !== latestMigratedTermKey;
+};
+
 // ─── Mobile grade card ────────────────────────────────────────────
 const MobileGradeCard = ({ row, index, borderColor, subtitleColor, titleColor }) => (
   <Box sx={{
@@ -204,22 +232,24 @@ const StudentGradingPage = () => {
 
       if (balanceInfo.hasBalance) { setStudentGrade(data.map(hideGradeFields)); return; }
 
+      const latestMigratedTermKey = getLatestMigratedTermKey(data);
       const groupedByTerm = {};
       data.forEach((subj) => {
-        const termKey = `${subj.year_level_description || "N/A"} ${subj.semester_description || "N/A"}`;
+        const termKey = getAcademicTermKey(subj);
         if (!groupedByTerm[termKey]) groupedByTerm[termKey] = [];
         groupedByTerm[termKey].push(subj);
       });
 
       const processedGrades = Object.values(groupedByTerm).flatMap((termSubjects) => {
-        const allReleased = termSubjects.every((s) => s.fe_status === 1 || s.is_migrated);
+        const allReleased = termSubjects.every((s) => canShowGrade(s, latestMigratedTermKey));
         if (!allReleased) {
           return termSubjects.map((s) => ({
             ...s,
-            final_grade:        s.fe_status === 1 || s.is_migrated ? s.final_grade        : null,
-            numeric_grade:      s.fe_status === 1 || s.is_migrated ? s.numeric_grade      : null,
-            descriptive_grade:  s.fe_status === 1 || s.is_migrated ? s.descriptive_grade  : null,
-            en_remarks:         s.fe_status === 1 || s.is_migrated ? s.en_remarks         : null,
+            final_grade:        canShowGrade(s, latestMigratedTermKey) ? s.final_grade        : null,
+            numeric_grade:      canShowGrade(s, latestMigratedTermKey) ? s.numeric_grade      : null,
+            descriptive_grade:  canShowGrade(s, latestMigratedTermKey) ? s.descriptive_grade  : null,
+            en_remarks:         canShowGrade(s, latestMigratedTermKey) ? s.en_remarks         : null,
+            gwa:                canShowGrade(s, latestMigratedTermKey) ? s.gwa                : null,
           }));
         }
         return termSubjects;
@@ -248,7 +278,8 @@ const StudentGradingPage = () => {
   useEffect(() => {
     if (matriculationBalanceInfo.hasBalance) { setMessage(""); return; }
     if (!gradingActive || studentGrade.length === 0) return;
-    const pending = studentGrade.filter((s) => s.fe_status === 0 && !s.is_migrated).length;
+    const latestMigratedTermKey = getLatestMigratedTermKey(studentGrade);
+    const pending = studentGrade.filter((s) => !canShowGrade(s, latestMigratedTermKey)).length;
     if (pending > 0) setMessage(`Grades are available. Please evaluate all your professors. Remaining: ${pending}`);
     else setMessage("");
   }, [gradingActive, matriculationBalanceInfo.hasBalance, studentGrade]);

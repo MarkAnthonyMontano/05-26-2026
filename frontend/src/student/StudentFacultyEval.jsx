@@ -82,6 +82,7 @@ const StudentFacultyEvaluation = () => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [studentNumber, setStudentNumber] = useState("");
+  const [matriculationBalanceInfo, setMatriculationBalanceInfo] = useState({ hasBalance: false, balance: 0 });
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -100,29 +101,80 @@ const StudentFacultyEvaluation = () => {
         window.location.href = "/faculty_dashboard";
       } else {
         fetchCourseData(storedID);
-        fetchQuestions();
       }
     } else {
       window.location.href = "/login";
     }
   }, []);
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = async (schoolYearId) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/get_questions_for_evaluation`);
+      const response = await axios.get(`${API_BASE_URL}/get_questions_for_evaluation`, {
+        params: schoolYearId ? { school_year_id: schoolYearId } : {},
+      });
       setQuestions(response.data);
     } catch {
       showSnackbar("Failed to fetch questions", "error");
     }
   };
 
+  const fetchMatriculationBalance = async (studentNumber) => {
+    if (!studentNumber) return { hasBalance: false, balance: 0 };
+
+    try {
+      const { data } = await axios.post(`${API_BASE_URL}/api/check-student-balance`, {
+        student_number: studentNumber,
+      });
+      const balance = Number(data?.balance || 0);
+
+      return {
+        hasBalance: Boolean(data?.hasBalance) && balance > 0,
+        balance: Number.isFinite(balance) ? balance : 0,
+      };
+    } catch {
+      return { hasBalance: false, balance: 0 };
+    }
+  };
+
+  const fetchStudentNumber = async (personId) => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/api/person/enrollment_data/${personId}`);
+      return data?.student_number || "";
+    } catch {
+      return "";
+    }
+  };
+
   const fetchCourseData = async (id) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/student_course/${id}`);
-      setStudentCourses(res.data);
-      if (res.data.length > 0) setStudentNumber(res.data[0].student_number);
+      const courses = Array.isArray(res.data) ? res.data : [];
+      const currentStudentNumber = courses[0]?.student_number || await fetchStudentNumber(id);
+      const balanceInfo = await fetchMatriculationBalance(currentStudentNumber);
+
+      setStudentNumber(currentStudentNumber);
+      setMatriculationBalanceInfo(balanceInfo);
+
+      if (balanceInfo.hasBalance) {
+        setStudentCourses([]);
+        setSelectedCourse("");
+        showSnackbar("You are not currently fully paid for this current semester. Please settle your matriculation balance before evaluating faculty.", "warning");
+        return;
+      }
+
+      setStudentCourses(courses);
     } catch {
       console.log("No courses found");
+      const currentStudentNumber = await fetchStudentNumber(id);
+      const balanceInfo = await fetchMatriculationBalance(currentStudentNumber);
+
+      setStudentNumber(currentStudentNumber);
+      setMatriculationBalanceInfo(balanceInfo);
+      setStudentCourses([]);
+
+      if (balanceInfo.hasBalance) {
+        showSnackbar("You are not currently fully paid for this current semester. Please settle your matriculation balance before evaluating faculty.", "warning");
+      }
     }
   };
 
@@ -130,9 +182,20 @@ const StudentFacultyEvaluation = () => {
   const handleAnswerChange = (question_id, value) =>
     setAnswers((prev) => ({ ...prev, [question_id]: value }));
 
+  const getCourseEvaluationKey = (course) =>
+    `${course.active_school_year_id}-${course.course_id}-${course.prof_id || "TBA"}`;
+
   const selectedProfessor = studentCourses.find(
-    (prof) => prof.course_id === selectedCourse,
+    (prof) => getCourseEvaluationKey(prof) === selectedCourse,
   );
+
+  useEffect(() => {
+    if (selectedProfessor?.active_school_year_id) {
+      fetchQuestions(selectedProfessor.active_school_year_id);
+    } else {
+      setQuestions([]);
+    }
+  }, [selectedProfessor?.active_school_year_id]);
 
   const showSnackbar = (message, severity = "success") => {
     setSnackbarMessage(message);
@@ -141,6 +204,11 @@ const StudentFacultyEvaluation = () => {
   };
 
   const SaveEvaluation = async () => {
+    if (matriculationBalanceInfo.hasBalance) {
+      showSnackbar("You are not currently fully paid for this current semester. Please settle your matriculation balance before evaluating faculty.", "warning");
+      return;
+    }
+
     if (!selectedProfessor) {
       showSnackbar("Please select a course before submitting.", "warning");
       return;
@@ -194,6 +262,11 @@ const StudentFacultyEvaluation = () => {
     { scale: 2, label: "Seldom manifested", desc: "Rarely evident (11–30%)." },
     { scale: 1, label: "Never manifested", desc: "Almost never evident (0–10%)." },
   ];
+
+  const formattedMatriculationBalance = matriculationBalanceInfo.balance.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   // Mobile: render radio choices as a vertical list with scale badges
   const renderMobileChoices = (q) => {
@@ -309,6 +382,13 @@ const StudentFacultyEvaluation = () => {
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
       <br />
 
+      {matriculationBalanceInfo.hasBalance && (
+        <Alert severity="warning" sx={{ borderRadius: 2, mb: 3 }}>
+          You are not currently fully paid for this current semester. Your remaining matriculation balance is{" "}
+          <b>{formattedMatriculationBalance}</b>. Please settle your balance before evaluating faculty.
+        </Alert>
+      )}
+
       {/* Choose Course + Rating Criteria panels */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
 
@@ -334,9 +414,10 @@ const StudentFacultyEvaluation = () => {
                   value={selectedCourse}
                   onChange={handleSelectedCourse}
                   label="Select Course"
+                  disabled={matriculationBalanceInfo.hasBalance}
                 >
                   {studentCourses.map((c) => (
-                    <MenuItem key={c.course_id} value={c.course_id}>
+                    <MenuItem key={getCourseEvaluationKey(c)} value={getCourseEvaluationKey(c)}>
                       {c.course_code} - {c.course_description}
                     </MenuItem>
                   ))}

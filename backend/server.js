@@ -35,7 +35,6 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.50.39:5173",
   "http://192.168.0.180:5173",
   "http://192.168.1.9:5173",
 ];
@@ -3014,8 +3013,29 @@ app.put("/api/enrollment/person/:person_id", async (req, res) => {
   const sanitizedData = Object.fromEntries(
     Object.entries(updatedData).filter(([key]) => !excludedFields.includes(key))
   );
+  if (typeof sanitizedData.emailAddress === "string") {
+    sanitizedData.emailAddress = sanitizedData.emailAddress.trim().toLowerCase();
+  }
 
   try {
+    if (sanitizedData.emailAddress) {
+      const [duplicateEmail] = await db3.query(
+        `
+        SELECT id
+        FROM user_accounts
+        WHERE LOWER(email) = ?
+          AND person_id <> ?
+          AND role = 'student'
+        LIMIT 1
+        `,
+        [sanitizedData.emailAddress, person_id],
+      );
+
+      if (duplicateEmail.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+    }
+
     const [result] = await db3.query(
       "UPDATE person_table SET ? WHERE person_id = ?",
       [sanitizedData, person_id],
@@ -3025,6 +3045,18 @@ app.put("/api/enrollment/person/:person_id", async (req, res) => {
       return res
         .status(404)
         .json({ message: "Person not found in ENROLLMENT" });
+
+    if (sanitizedData.emailAddress) {
+      await db3.query(
+        `
+        UPDATE user_accounts
+        SET email = ?
+        WHERE person_id = ?
+          AND role = 'student'
+        `,
+        [sanitizedData.emailAddress, person_id],
+      );
+    }
 
     if (getAuditChangeSection(req)) {
       const [targetRows] = await db3.query(

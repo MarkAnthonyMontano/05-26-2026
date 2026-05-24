@@ -540,6 +540,7 @@ router.get("/api/student_course/:id", async (req, res) => {
         LEFT JOIN time_table AS tt
           ON tt.course_id = es.course_id
           AND tt.department_section_id = es.department_section_id
+          AND tt.school_year_id = es.active_school_year_id
         LEFT JOIN prof_table AS pt ON tt.professor_id = pt.prof_id
         INNER JOIN active_school_year_table AS sy ON es.active_school_year_id = sy.id
         LEFT JOIN dprtmnt_curriculum_table AS dct ON es.curriculum_id = dct.curriculum_id
@@ -549,9 +550,26 @@ router.get("/api/student_course/:id", async (req, res) => {
         LEFT JOIN year_table AS cyt ON cct.year_id = cyt.year_id
         LEFT JOIN semester_table AS smt ON sy.semester_id = smt.semester_id
       WHERE pst.person_id = ?
-        AND sy.astatus = 1
         AND es.fe_status = 0
-        AND LOWER(IFNULL(es.remarks, '')) <> 'migrated from old system';
+        AND (
+          (
+            sy.astatus = 1
+            AND LOWER(IFNULL(es.remarks, '')) <> 'migrated from old system'
+          )
+          OR (
+            LOWER(IFNULL(es.remarks, '')) = 'migrated from old system'
+            AND es.active_school_year_id = (
+              SELECT es2.active_school_year_id
+              FROM enrolled_subject AS es2
+                INNER JOIN active_school_year_table AS sy2 ON es2.active_school_year_id = sy2.id
+                INNER JOIN year_table AS yrt2 ON sy2.year_id = yrt2.year_id
+              WHERE es2.student_number = snt.student_number
+                AND LOWER(IFNULL(es2.remarks, '')) = 'migrated from old system'
+              ORDER BY yrt2.year_description DESC, sy2.semester_id DESC, sy2.id DESC
+              LIMIT 1
+            )
+          )
+        );
     `,
       [id],
     );
