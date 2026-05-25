@@ -1,18 +1,12 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { Modal, TextField } from "@mui/material";
+import { Modal } from "@mui/material";
 import {
   Container,
   Box,
-  Typography,
-  Button,
   Snackbar,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/material";
 import {
   Email as EmailIcon,
@@ -23,7 +17,6 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
 } from "@mui/icons-material";
 import "../styles/Container.css";
-import CloseIcon from "@mui/icons-material/Close";
 import Logo from "../assets/Logo.png";
 import { SettingsContext } from "../App";
 import LoadingOverlay from "./LoadingOverlay";
@@ -58,6 +51,28 @@ function getUserDashboard(role, accessList = []) {
   if (role === "registrar") return getRegistrarDashboard(accessSet);
   if (role === "faculty") return "/faculty_dashboard";
   return "/student_dashboard";
+}
+
+/* ─── Per-email localStorage lockout helpers ─── */
+// Key is scoped to the specific email so different users on the same browser
+// never share or inherit each other's lockout countdown.
+function lockoutKey(email) {
+  return `enrollment_lockout_until::${String(email).trim().toLowerCase()}`;
+}
+function getLockoutRemaining(email) {
+  if (!email) return 0;
+  const until = localStorage.getItem(lockoutKey(email));
+  if (!until) return 0;
+  const remaining = Math.ceil((Number(until) - Date.now()) / 1000);
+  return remaining > 0 ? remaining : 0;
+}
+function saveLockout(email, seconds) {
+  if (!email) return;
+  localStorage.setItem(lockoutKey(email), String(Date.now() + seconds * 1000));
+}
+function clearLockout(email) {
+  if (!email) return;
+  localStorage.removeItem(lockoutKey(email));
 }
 
 const LoginEnrollment = ({ setIsAuthenticated }) => {
@@ -101,38 +116,93 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [tempLoginData, setTempLoginData] = useState(null);
   const [resendTimer, setResendTimer] = useState(60);
-  const [lockout, setLockout] = useState(false);
-  const [lockoutTimer, setLockoutTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
   const [loading3, setLoading3] = useState(false);
   const [currentYear, setCurrentYear] = useState("");
   const [loginType, setLoginType] = useState("user");
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const otpInputRef = useRef(null);
+
+  /* ─── Lockout state ─── */
+  const lockTimerRef = useRef(0);
+  const [lockout, setLockout] = useState(false);
+  const [lockoutTimer, setLockoutTimer] = useState(0);
 
   useEffect(() => {
     const now = new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" });
     setCurrentYear(new Date(now).getFullYear());
   }, []);
 
+  /* ── Restore lockout for THIS email when the email field changes ──
+     Once the user types their email we check if that specific email
+     has a stored lockout — this is how per-user reload-persistence works. */
+  useEffect(() => {
+    if (!email) return;
+    const remaining = getLockoutRemaining(email);
+    if (remaining > 0 && !lockout) {
+      lockTimerRef.current = remaining;
+      setLockoutTimer(remaining);
+      setLockout(true);
+    }
+  }, [email]); // intentionally only on email change
+
+  /* ── Countdown tick ── */
+  useEffect(() => {
+    if (!lockout) return;
+    const interval = setInterval(() => {
+      lockTimerRef.current -= 1;
+      setLockoutTimer(lockTimerRef.current);
+      if (lockTimerRef.current <= 0) {
+        clearInterval(interval);
+        clearLockout(email);
+        setLockout(false);
+        lockTimerRef.current = 0;
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockout]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Start lockout for a specific email ── */
+  const startLockout = (emailVal, seconds) => {
+    saveLockout(emailVal, seconds);    // persist to per-email key
+    lockTimerRef.current = seconds;    // seed ref FIRST (avoids stale closure)
+    setLockoutTimer(seconds);
+    setLockout(true);
+  };
+
   const backgroundImage = settings?.bg_image
     ? `url(${API_BASE_URL}${settings.bg_image})`
     : "linear-gradient(to right, #f5f5f5, #fafafa)";
   const logoSrc = settings?.logo_url ? `${API_BASE_URL}${settings.logo_url}` : Logo;
 
-  const [errors, setErrors] = useState({});
-  const [applyingAs, setApplyingAs] = useState("");
-
-  useEffect(() => {
-    setApplyingAs(localStorage.getItem("applyingAs") || "");
-  }, []);
+  const isFormValid = () => {
+    let newErrors = {};
+    let isValid = true;
+    if (!email) { newErrors.email = true; isValid = false; }
+    if (!password) { newErrors.password = true; isValid = false; }
+    setErrors(newErrors);
+    return isValid;
+  };
 
   const handleLogin = async () => {
     if (!isFormValid()) {
       setSnack({ open: true, message: "Please fill in all fields", severity: "warning" });
       return;
     }
+
+    // Re-check localStorage for this specific email in case of reload
+    const stillLocked = getLockoutRemaining(email);
+    if (stillLocked > 0) {
+      if (!lockout) {
+        lockTimerRef.current = stillLocked;
+        setLockoutTimer(stillLocked);
+        setLockout(true);
+      }
+      return;
+    }
+
     try {
       setLoading(true);
       const apiUrl = loginType === "applicant"
@@ -141,23 +211,21 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
 
       const res = await axios.post(apiUrl, { email, password, audit_log_db: "db3" });
 
-      if (res.data.message?.includes("Locked")) {
-        if (!lockout) {
-          setLockout(true);
-          setSnack({ open: true, message: res.data.message, severity: "error" });
-          let timeLeft = 180;
-          setLockoutTimer(timeLeft);
-          const interval = setInterval(() => {
-            timeLeft -= 1;
-            setLockoutTimer(timeLeft);
-            if (timeLeft <= 0) { clearInterval(interval); setLockout(false); setLockoutTimer(0); }
-          }, 1000);
-        }
+      // 2xx but server says locked (guard against old backend behaviour)
+      if (res.data.locked) {
+        const secs = res.data.remainingSeconds ?? 180;
+        setSnack({ open: true, message: res.data.message, severity: "error" });
+        startLockout(email, secs);
         return;
       }
 
-      if (!res.data.success) { setSnack({ open: true, message: res.data.message, severity: "error" }); return; }
+      if (!res.data.success) {
+        setSnack({ open: true, message: res.data.message, severity: "error" });
+        return;
+      }
 
+      // ── Success: clear this user's lockout record ──
+      clearLockout(email);
       setTempLoginData(res.data);
 
       if (loginType === "applicant") {
@@ -195,20 +263,31 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
         setSnack({ open: true, message: "OTP sent to your email", severity: "success" });
         return;
       }
+
     } catch (error) {
-      setSnack({ open: true, message: error.response?.data?.message || "Login failed", severity: "error" });
+      const data = error.response?.data;
+      const message = data?.message || "Login failed";
+
+      const attemptsLeft = data?.remaining;
+      const displayMsg =
+        attemptsLeft != null
+          ? `${message} (${attemptsLeft} attempt${attemptsLeft !== 1 ? "s" : ""} left)`
+          : message;
+
+      setSnack({ open: true, message: displayMsg, severity: "error" });
+
+      // 429 — lock only this specific email
+      if (
+        data?.remainingSeconds ||
+        message.toLowerCase().includes("too many") ||
+        message.toLowerCase().includes("locked")
+      ) {
+        const secs = data?.remainingSeconds ?? 180;
+        startLockout(email, secs);
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  const isFormValid = () => {
-    let newErrors = {};
-    let isValid = true;
-    if (!email) { newErrors.email = true; isValid = false; }
-    if (!password) { newErrors.password = true; isValid = false; }
-    setErrors(newErrors);
-    return isValid;
   };
 
   const verifyOtp = async () => {
@@ -288,36 +367,17 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
         py: isMobile ? 2 : 0,
       }}>
         <Container
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginTop: isMobile ? 0 : "-100px",
-            padding: isMobile ? "0" : undefined,
-          }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: isMobile ? 0 : "-100px", padding: isMobile ? "0" : undefined }}
           maxWidth={false}
         >
           <div
-            style={{
-              border: isMobile ? "3px solid black" : "5px solid black",
-              width: isMobile ? "calc(100% - 32px)" : undefined,
-              maxWidth: isMobile ? 480 : undefined,
-            }}
+            style={{ border: isMobile ? "3px solid black" : "5px solid black", width: isMobile ? "calc(100% - 32px)" : undefined, maxWidth: isMobile ? 480 : undefined }}
             className="Container"
           >
             {/* ── Header ── */}
-            <div
-              className="Header"
-              style={{
-                backgroundColor: settings?.header_color || "#1976d2",
-                padding: isMobile ? "12px 10px" : "1rem 0",
-                borderBottom: "3px solid black",
-              }}
-            >
+            <div className="Header" style={{ backgroundColor: settings?.header_color || "#1976d2", padding: isMobile ? "12px 10px" : "1rem 0", borderBottom: "3px solid black" }}>
               <div className="HeaderTitle">
-                <div className="CircleCon">
-                  <img src={logoSrc} alt="Logo" />
-                </div>
+                <div className="CircleCon"><img src={logoSrc} alt="Logo" /></div>
               </div>
               <div className="HeaderBody">
                 <strong style={{ color: "white" }}>
@@ -333,32 +393,18 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
 
             {/* ── Body ── */}
             <div className="Body">
+
               {/* Login As dropdown */}
               <div className="TextField" style={{ position: "relative" }}>
                 <label htmlFor="loginType">Login As</label>
                 <select
-                  id="loginType"
-                  name="loginType"
-                  value={loginType}
+                  id="loginType" name="loginType" value={loginType}
                   onChange={(e) => {
                     setLoginType(e.target.value);
                     if (e.target.value === "applicant") navigate("/login_applicant");
                     else navigate("/login");
                   }}
-                  style={{
-                    width: "100%",
-                    padding: "0.8rem 2.5rem 0.8rem 2.5rem",
-                    borderRadius: "6px",
-                    border: "2px solid black",
-                    height: "55px",
-                    fontSize: "1rem",
-                    backgroundColor: "white",
-                    outline: "none",
-                    appearance: "none",
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
-                    cursor: "pointer",
-                  }}
+                  style={{ width: "100%", padding: "0.8rem 2.5rem 0.8rem 2.5rem", borderRadius: "6px", border: "2px solid black", height: "55px", fontSize: "1rem", backgroundColor: "white", outline: "none", appearance: "none", WebkitAppearance: "none", MozAppearance: "none", cursor: "pointer" }}
                 >
                   <option value="user">Student / Faculty / Registrar</option>
                   <option value="applicant">Applicant</option>
@@ -368,19 +414,17 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
               </div>
 
               <form onSubmit={(e) => { e.preventDefault(); if (!lockout) handleLogin(); }}>
+
                 {/* Email */}
                 <div className="TextField" style={{ position: "relative" }}>
                   <label htmlFor="email">Email Address</label>
                   <input
                     type="text" id="email" name="email"
                     placeholder="Enter your email address" className="border"
-                    value={email} onChange={(e) => setEmail(e.target.value)}
-                    style={{
-                      paddingLeft: "2.5rem",
-                      height: isMobile ? "48px" : "55px",
-                      border: errors.email ? "2px solid red" : "2px solid black",
-                    }}
-                    autoFocus={!isMobile}  /* avoid keyboard-jumping on mobile */
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={{ paddingLeft: "2.5rem", height: isMobile ? "48px" : "55px", border: errors.email ? "2px solid red" : "2px solid black" }}
+                    autoFocus={!isMobile}
                   />
                   {errors.email && <span style={{ color: "red", fontSize: "12px" }}>Email is required</span>}
                   <EmailIcon style={{ position: "absolute", top: "2.75rem", left: "0.7rem", color: "rgba(0,0,0,0.4)" }} />
@@ -393,11 +437,7 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
                     type={showPassword ? "text" : "password"} id="password" name="password"
                     placeholder="Enter your password" value={password}
                     onChange={(e) => setPassword(e.target.value)} className="border"
-                    style={{
-                      paddingLeft: "2.5rem",
-                      height: isMobile ? "48px" : "55px",
-                      border: errors.password ? "2px solid red" : "2px solid black",
-                    }}
+                    style={{ paddingLeft: "2.5rem", height: isMobile ? "48px" : "55px", border: errors.password ? "2px solid red" : "2px solid black" }}
                   />
                   {errors.password && <span style={{ color: "red", fontSize: "12px" }}>Password is required</span>}
                   <LockIcon style={{ position: "absolute", top: "2.75rem", left: "0.7rem", color: "rgba(0,0,0,0.4)", fontSize: "26px" }} />
@@ -416,7 +456,7 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
                     disabled={lockout || loading}
                     style={{
                       width: "100%",
-                      backgroundColor: lockout ? "gray" : loading ? "#ccc" : mainButtonColor,
+                      backgroundColor: lockout ? "#999" : loading ? "#ccc" : mainButtonColor,
                       border: "2px solid black",
                       color: "white",
                       height: "50px",
@@ -467,12 +507,7 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
             p: isMobile ? 3 : 4,
             border: "1px solid #eee",
           }}>
-            <button onClick={() => setShowOtpModal(false)} style={{
-              position: "absolute", top: "12px", right: "12px",
-              backgroundColor: "black", color: "white", border: "none",
-              borderRadius: "50%", width: "34px", height: "34px",
-              cursor: "pointer", fontSize: "16px", fontWeight: "bold",
-            }}>✕</button>
+            <button onClick={() => setShowOtpModal(false)} style={{ position: "absolute", top: "12px", right: "12px", backgroundColor: "black", color: "white", border: "none", borderRadius: "50%", width: "34px", height: "34px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>✕</button>
 
             <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "8px" }}>Verify your email</h2>
             <p style={{ color: "#666", fontSize: "14px", lineHeight: 1.6, marginBottom: "20px" }}>
@@ -487,12 +522,7 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
                   type="text" inputMode="numeric" maxLength={1} value={digit}
                   onChange={(e) => handleOtpChange(e.target.value, index)}
                   onKeyDown={(e) => handleOtpKeyDown(e, index)}
-                  style={{
-                    width: isMobile ? "42px" : "54px",
-                    height: isMobile ? "50px" : "60px",
-                    fontSize: "22px", fontWeight: 700, textAlign: "center",
-                    borderRadius: "14px", border: "2px solid #ddd", outline: "none",
-                  }}
+                  style={{ width: isMobile ? "42px" : "54px", height: isMobile ? "50px" : "60px", fontSize: "22px", fontWeight: 700, textAlign: "center", borderRadius: "14px", border: "2px solid #ddd", outline: "none" }}
                 />
               ))}
             </Box>
@@ -501,19 +531,11 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
               This email can only be used once for admission verification.
             </p>
 
-            <button onClick={verifyOtp} disabled={loading3} style={{
-              width: "100%", padding: "14px", borderRadius: "12px", border: "none",
-              backgroundColor: mainButtonColor, color: "white", fontWeight: 700, fontSize: "15px",
-              cursor: loading3 ? "not-allowed" : "pointer",
-            }}>
+            <button onClick={verifyOtp} disabled={loading3} style={{ width: "100%", padding: "14px", borderRadius: "12px", border: "none", backgroundColor: mainButtonColor, color: "white", fontWeight: 700, fontSize: "15px", cursor: loading3 ? "not-allowed" : "pointer" }}>
               {loading3 ? "Verifying..." : "Verify & Continue"}
             </button>
 
-            <button onClick={resendOtp} disabled={resendTimer > 0} style={{
-              width: "100%", marginTop: "12px", padding: "12px", borderRadius: "12px",
-              border: "1px solid #ddd", background: "#fff", fontWeight: 600,
-              color: resendTimer > 0 ? "#999" : "#333",
-            }}>
+            <button onClick={resendOtp} disabled={resendTimer > 0} style={{ width: "100%", marginTop: "12px", padding: "12px", borderRadius: "12px", border: "1px solid #ddd", background: "#fff", fontWeight: 600, color: resendTimer > 0 ? "#999" : "#333" }}>
               {resendTimer > 0 ? `Resend code in ${resendTimer}s` : "Resend code"}
             </button>
 

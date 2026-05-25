@@ -210,10 +210,15 @@ const StudentAdmissionServices = lazy(() => import("./student/StudentAdmissionSe
 const StudentBalanceInfo = lazy(() => import("./student/StudentBalanceInfo"));
 const StudentBalanceManagement = lazy(() => import("./student/StudentBalanceManagement"));
 const StudentDashboard1 = lazy(() => import("./student/StudentDashboard1"));
+const StudentDashboard1Mobile = lazy(() => import("./student/StudentDashboard1Mobile"));
 const StudentDashboard2 = lazy(() => import("./student/StudentDashboard2"));
+const StudentDashboard2Mobile = lazy(() => import("./student/StudentDashboard2Mobile"));
 const StudentDashboard3 = lazy(() => import("./student/StudentDashboard3"));
+const StudentDashboard3Mobile = lazy(() => import("./student/StudentDashboard3Mobile"));
 const StudentDashboard4 = lazy(() => import("./student/StudentDashboard4"));
+const StudentDashboard4Mobile = lazy(() => import("./student/StudentDashboard4Mobile"));
 const StudentDashboard5 = lazy(() => import("./student/StudentDashboard5"));
+const StudentDashboard5Mobile = lazy(() => import("./student/StudentDashboard5Mobile"));
 const StudentECATApplicationForm = lazy(() => import("./student/StudentECATApplicationForm"));
 const StudentFacultyEvaluation = lazy(() => import("./student/StudentFacultyEval"));
 const StudentGradingPage = lazy(() => import("./student/StudentGrade"));
@@ -282,6 +287,34 @@ function App() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const StudentDashboard1Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <StudentDashboard1Mobile /> : <StudentDashboard1 />;
+  };
+
+  const StudentDashboard2Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <StudentDashboard2Mobile /> : <StudentDashboard2 />;
+  };
+
+
+  const StudentDashboard3Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <StudentDashboard3Mobile /> : <StudentDashboard3 />;
+  };
+
+    const StudentDashboard4Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <StudentDashboard4Mobile /> : <StudentDashboard4 />;
+  };
+
+    const StudentDashboard5Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <StudentDashboard5Mobile /> : <StudentDashboard5 />;
+  };
+
+
 
   const fetchSettings = async () => {
     try {
@@ -647,11 +680,11 @@ function App() {
                       <Route path="/admin_dashboard3" element={<ProtectedRoute><AdminDashboard3 /></ProtectedRoute>} />
                       <Route path="/admin_dashboard4" element={<ProtectedRoute><AdminDashboard4 /></ProtectedRoute>} />
                       <Route path="/admin_dashboard5" element={<ProtectedRoute><AdminDashboard5 /></ProtectedRoute>} />
-                      <Route path="/student_dashboard1" element={<ProtectedRoute><StudentDashboard1 allowedRoles={"student"} /></ProtectedRoute>} />
-                      <Route path="/student_dashboard2" element={<ProtectedRoute><StudentDashboard2 allowedRoles={"student"} /></ProtectedRoute>} />
-                      <Route path="/student_dashboard3" element={<ProtectedRoute><StudentDashboard3 allowedRoles={"student"} /></ProtectedRoute>} />
-                      <Route path="/student_dashboard4" element={<ProtectedRoute><StudentDashboard4 allowedRoles={"student"} /></ProtectedRoute>} />
-                      <Route path="/student_dashboard5" element={<ProtectedRoute><StudentDashboard5 allowedRoles={"student"} /></ProtectedRoute>} />
+                      <Route path="/student_dashboard1" element={<ProtectedRoute><StudentDashboard1Responsive allowedRoles={"student"} /></ProtectedRoute>} />
+                      <Route path="/student_dashboard2" element={<ProtectedRoute><StudentDashboard2Responsive allowedRoles={"student"} /></ProtectedRoute>} />
+                      <Route path="/student_dashboard3" element={<ProtectedRoute><StudentDashboard3Responsive allowedRoles={"student"} /></ProtectedRoute>} />
+                      <Route path="/student_dashboard4" element={<ProtectedRoute><StudentDashboard4Responsive allowedRoles={"student"} /></ProtectedRoute>} />
+                      <Route path="/student_dashboard5" element={<ProtectedRoute><StudentDashboard5Responsive allowedRoles={"student"} /></ProtectedRoute>} />
                       <Route path="/student_online_requirements" element={<ProtectedRoute><StudentOnlineRequirements allowedRoles={"student"} /></ProtectedRoute>} />
                       <Route path="/registrar_dashboard1" element={<ProtectedRoute><RegistrarDashboard1 /></ProtectedRoute>} />
                       <Route path="/registrar_dashboard2" element={<ProtectedRoute><RegistrarDashboard2 /></ProtectedRoute>} />
@@ -784,4 +817,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;59

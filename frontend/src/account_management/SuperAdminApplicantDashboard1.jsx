@@ -2194,9 +2194,8 @@ const SuperAdminApplicantDashboard1 = () => {
                         </MenuItem>
                         {filteredCurriculum.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            {`(${item.program_code}): ${item.program_description}${
-                              item.major ? ` (${item.major})` : ""
-                            } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
+                            {`(${item.program_code}): ${item.program_description}${item.major ? ` (${item.major})` : ""
+                              } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
                           </MenuItem>
                         ))}
                       </Select>
@@ -3077,7 +3076,7 @@ const SuperAdminApplicantDashboard1 = () => {
                     label="Tribe/Ethnic Group"
                   >
                     <MenuItem value="">
-                      <em>Select Tribe/Ethnic Group</em>
+                      <em>None</em>
                     </MenuItem>
                     <MenuItem value="Agta">Agta</MenuItem>
                     <MenuItem value="Agutaynen">Agutaynen</MenuItem>
@@ -3123,7 +3122,7 @@ const SuperAdminApplicantDashboard1 = () => {
                     <MenuItem value="Bato">Bato</MenuItem>
                     <MenuItem value="Tausug">Tausug</MenuItem>
                     <MenuItem value="Waray">Waray</MenuItem>
-                    <MenuItem value="None">None</MenuItem>
+
                     <MenuItem value="Others">Others</MenuItem>
                   </Select>
                   {errors.tribeEthnicGroup && (
@@ -3209,7 +3208,7 @@ const SuperAdminApplicantDashboard1 = () => {
                     handleChange({
                       target: {
                         name: "emailAddress",
-                        value: finalValuep,
+                        value: finalValue,
                       },
                     });
                   }}

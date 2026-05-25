@@ -822,6 +822,7 @@ router.delete("/permanent-delete-account/:person_id", CanDelete, async (req, res
 
 
 // POST LOGIN (FACULTY, ADMIN, STFF AND STUDENT)
+// POST /auth/login  (Student / Faculty / Registrar)
 router.post("/login", async (req, res) => {
   const { email: loginCredentials, password } = req.body;
   const insertLoginAuditLog = getLoginAuditLogger(req);
@@ -830,31 +831,59 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  const now = Date.now();
-  const record = loginAttempts[loginCredentials] || {
-    count: 0,
-    lockUntil: null,
-  };
+  const MAX_LOGIN_ATTEMPTS = 3;
+  const LOCK_TIME = 3 * 60 * 1000; // 180 seconds
 
+  const loginKey = String(loginCredentials).trim().toLowerCase();
+  const now = Date.now();
+
+  // =========================
+  // INIT LOGIN RECORD (keyed per credential — never bleeds across users)
+  // =========================
+  if (!loginAttempts[loginKey]) {
+    loginAttempts[loginKey] = { count: 0, lockUntil: null };
+  }
+
+  const record = loginAttempts[loginKey];
+
+  // =========================
+  // CHECK IF STILL LOCKED
+  // =========================
   if (record.lockUntil && record.lockUntil > now) {
-    const sec = Math.ceil((record.lockUntil - now) / 1000);
+    const remainingSeconds = Math.ceil((record.lockUntil - now) / 1000);
+
     await insertLoginAuditLog({
-      actorId: loginCredentials,
+      actorId: loginKey,
       role: "unknown",
       outcome: "LOCKED",
-      reason: `Account locked (Attempt ${record.count || 3} out of 3)`,
+      reason: `Account locked. Remaining ${remainingSeconds}s`,
     });
-    return res.json({
+
+    // ── Always send remainingSeconds so the frontend can restore the countdown ──
+    return res.status(429).json({
       success: false,
-      message: `Too many failed attempts. Try again in ${sec}s.`,
+      locked: true,
+      remainingSeconds,
+      message: `Too many failed attempts. Try again in ${remainingSeconds} seconds.`,
     });
   }
 
+  // =========================
+  // AUTO-RESET AFTER LOCK EXPIRES
+  // Gives the user a fresh set of 3 attempts once their lockout time is served.
+  // =========================
+  if (record.lockUntil && record.lockUntil <= now) {
+    loginAttempts[loginKey] = { count: 0, lockUntil: null };
+  }
+
   try {
+    // =========================
+    // FETCH USER (student accounts + faculty)
+    // =========================
     const query = `
       (
-        SELECT 
-          ua.id AS account_id,
+        SELECT
+          ua.id            AS account_id,
           ua.person_id,
           ua.email,
           ua.password,
@@ -862,29 +891,29 @@ router.post("/login", async (req, res) => {
           snt.student_number AS student_number,
           ua.role,
           ua.require_otp,
-          NULL AS profile_image,
-          NULL AS fname,
-          NULL AS mname,
-          NULL AS lname,
-          ua.status AS status,
-          'user' AS source,
+          NULL             AS profile_image,
+          NULL             AS fname,
+          NULL             AS mname,
+          NULL             AS lname,
+          ua.status,
+          'user'           AS source,
           ua.dprtmnt_id,
           dt.dprtmnt_name,
-          ua.program_id AS curriculum_id
+          ua.program_id    AS curriculum_id
         FROM user_accounts AS ua
         LEFT JOIN dprtmnt_table AS dt ON ua.dprtmnt_id = dt.dprtmnt_id
         LEFT JOIN student_numbering_table AS snt ON snt.person_id = ua.person_id
-        WHERE (ua.email = ? OR snt.student_number = ?)
+        WHERE ua.email = ? OR snt.student_number = ?
       )
       UNION ALL
       (
-        SELECT 
-          ua.prof_id AS account_id,
+        SELECT
+          ua.prof_id       AS account_id,
           ua.person_id,
           ua.email,
           ua.password,
           ua.employee_id,
-          NULL AS student_number,
+          NULL             AS student_number,
           ua.role,
           ua.require_otp,
           ua.profile_image,
@@ -892,13 +921,13 @@ router.post("/login", async (req, res) => {
           ua.mname,
           ua.lname,
           ua.status,
-          'prof' AS source,
-          NULL AS dprtmnt_id,
-          NULL AS dprtmnt_name,
-          NULL AS curriculum_id
-       FROM prof_table AS ua
-WHERE (ua.email = ? OR ua.employee_id = ?)
-      );
+          'prof'           AS source,
+          NULL             AS dprtmnt_id,
+          NULL             AS dprtmnt_name,
+          NULL             AS curriculum_id
+        FROM prof_table AS ua
+        WHERE ua.email = ? OR ua.employee_id = ?
+      )
     `;
 
     const [results] = await db3.query(query, [
@@ -908,79 +937,99 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
       loginCredentials, // faculty employee_id
     ]);
 
+    // =========================
+    // USER NOT FOUND
+    // =========================
     if (results.length === 0) {
       record.count++;
-      if (record.count >= 3) {
-        record.lockUntil = now + 3 * 60 * 1000;
-        loginAttempts[loginCredentials] = record;
+
+      if (record.count >= MAX_LOGIN_ATTEMPTS) {
+        record.lockUntil = now + LOCK_TIME;
+        loginAttempts[loginKey] = record;
+
         await insertLoginAuditLog({
-          actorId: loginCredentials,
+          actorId: loginKey,
           role: "unknown",
           outcome: "LOCKED",
-          reason: `Invalid email or student number (Attempt ${record.count} out of 3)`,
+          reason: `Invalid email/student number (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS}) — account locked`,
         });
-        return res.json({
+
+        return res.status(429).json({
           success: false,
-          message: "Too many failed attempts. Locked for 3 minutes.",
+          locked: true,
+          remainingSeconds: Math.ceil(LOCK_TIME / 1000),
+          message: `Too many failed attempts. Account locked for ${Math.ceil(LOCK_TIME / 1000)} seconds.`,
         });
       }
-      loginAttempts[loginCredentials] = record;
+
+      loginAttempts[loginKey] = record;
+
       await insertLoginAuditLog({
-        actorId: loginCredentials,
+        actorId: loginKey,
         role: "unknown",
         outcome: "FAILED",
-        reason: `Invalid Email, Employee ID, or Student number (Attempt ${record.count} out of 3)`,
+        reason: `Invalid email, employee ID, or student number (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS})`,
       });
-      return res.json({
+
+      return res.status(401).json({
         success: false,
-        message: "Invalid Email, Employee ID, or Student number",
+        remaining: MAX_LOGIN_ATTEMPTS - record.count,
+        message: `Invalid Email, Employee ID, or Student number. ${MAX_LOGIN_ATTEMPTS - record.count} attempt(s) remaining.`,
       });
     }
 
     const user = results[0];
     const actorId = user.employee_id || user.student_number || user.person_id || user.email;
 
-    // ======================================
-    // 🔥 FIX: normalize require_otp properly
-    // ======================================
+    // Normalize require_otp
     user.require_otp = Number(user.require_otp) === 1;
 
-    // password check
+    // =========================
+    // PASSWORD CHECK
+    // =========================
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       record.count++;
-      let remaining = 3 - record.count;
 
-      if (record.count >= 3) {
-        record.lockUntil = now + 3 * 60 * 1000;
-        loginAttempts[loginCredentials] = record;
+      if (record.count >= MAX_LOGIN_ATTEMPTS) {
+        record.lockUntil = now + LOCK_TIME;
+        loginAttempts[loginKey] = record;
+
         await insertLoginAuditLog({
           actorId,
           role: user.role,
           outcome: "LOCKED",
-          reason: `Invalid password (Attempt ${record.count} out of 3)`,
+          reason: `Invalid password (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS}) — account locked`,
         });
-        return res.json({
+
+        return res.status(429).json({
           success: false,
-          message: "Too many failed attempts. Locked for 3 minutes.",
+          locked: true,
+          remainingSeconds: Math.ceil(LOCK_TIME / 1000),
+          message: `Too many failed attempts. Account locked for ${Math.ceil(LOCK_TIME / 1000)} seconds.`,
         });
       }
 
-      loginAttempts[loginCredentials] = record;
+      loginAttempts[loginKey] = record;
+
       await insertLoginAuditLog({
         actorId,
         role: user.role,
         outcome: "FAILED",
-        reason: `Invalid password (Attempt ${record.count} out of 3)`,
+        reason: `Invalid password (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS})`,
       });
-      return res.json({
+
+      return res.status(401).json({
         success: false,
-        message: `Invalid Password or Email, You have ${remaining} attempt(s) remaining.`,
-        remaining,
+        remaining: MAX_LOGIN_ATTEMPTS - record.count,
+        message: `Invalid password or email. ${MAX_LOGIN_ATTEMPTS - record.count} attempt(s) remaining.`,
       });
     }
 
-    // status check
+    // =========================
+    // ACCOUNT STATUS CHECK
+    // =========================
     if (user.status === 0) {
       await insertLoginAuditLog({
         actorId,
@@ -988,21 +1037,26 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
         outcome: "FAILED",
         reason: "Inactive account",
       });
+
       return res.json({
         success: false,
         message: "The user didn't exist or account is inactive",
       });
     }
 
+    // =========================
+    // PAGE ACCESS
+    // =========================
     const [rows] = await db3.query(
       "SELECT * FROM page_access WHERE user_id = ?",
-      [user.employee_id],
+      [user.employee_id]
     );
-
     const accessList = rows.map((r) => Number(r.page_id));
     const failureCount = record.count || 0;
 
+    // =========================
     // JWT
+    // =========================
     const token = webtoken.sign(
       {
         person_id: user.person_id,
@@ -1015,12 +1069,12 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
         accessList,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" },
+      { expiresIn: "24h" }
     );
 
-    // ======================================
-    // 🔥 FINAL FIX: correct OTP condition
-    // ======================================
+    // =========================
+    // OTP REQUIRED
+    // =========================
     if (user.require_otp === true) {
       const otp = generateOTP();
 
@@ -1028,18 +1082,19 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
         otp,
         expiresAt: now + 5 * 60 * 1000,
         cooldownUntil: now + 5 * 60 * 1000,
+        authFailureCount: failureCount,
+        auditContext: {
+          actorId,
+          role: user.role,
+          auditLogger: insertLoginAuditLog,
+        },
       };
-      otpStore[user.email].authFailureCount = failureCount;
-      otpStore[user.email].auditContext = {
-        actorId,
-        role: user.role,
-        auditLogger: insertLoginAuditLog,
-      };
-      delete loginAttempts[loginCredentials];
+
+      delete loginAttempts[loginKey];
 
       try {
         const [companyResult] = await db.query(
-          "SELECT short_term FROM company_settings WHERE id = 1",
+          "SELECT short_term FROM company_settings WHERE id = 1"
         );
         const shortTerm = companyResult?.[0]?.short_term || "School";
 
@@ -1047,10 +1102,7 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
           host: "smtp.gmail.com",
           port: 465,
           secure: true,
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-          },
+          auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
         });
 
         await transporter.sendMail({
@@ -1062,13 +1114,6 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
       } catch (err) {
         console.error("OTP Email Error:", err.message);
       }
-
-      const [rows] = await db3.query(
-        "SELECT * FROM page_access WHERE user_id = ?",
-        [user.employee_id],
-      );
-
-      const accessList = rows.map((r) => Number(r.page_id));
 
       return res.json({
         success: true,
@@ -1086,16 +1131,13 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
       });
     }
 
-    // NO OTP REQUIRED
-    const successOutcome =
-      failureCount >= 2 ? "SUCCESS_AFTER_FAILURES" : "SUCCESS";
-    await insertLoginAuditLog({
-      actorId,
-      role: user.role,
+    // =========================
+    // SUCCESS — no OTP needed
+    // =========================
+    const successOutcome = failureCount >= 2 ? "SUCCESS_AFTER_FAILURES" : "SUCCESS";
+    await insertLoginAuditLog({ actorId, role: user.role, outcome: successOutcome });
+    delete loginAttempts[loginKey];
 
-      outcome: successOutcome,
-    });
-    delete loginAttempts[loginCredentials];
     return res.json({
       success: true,
       requireOtp: false,
@@ -1116,36 +1158,73 @@ WHERE (ua.email = ? OR ua.employee_id = ?)
   }
 });
 
-// POST LOGIN (APPLICANT ONLY)
+// POST LOGIN (APPLICANT ONLY
 router.post("/login_applicant", async (req, res) => {
   const { email, password } = req.body;
   const insertLoginAuditLog = getLoginAuditLogger(req);
 
   if (!email || !password) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required",
+    });
   }
+
+  // =========================
+  // LOGIN SETTINGS
+  // =========================
+  const MAX_LOGIN_ATTEMPTS = 3;
+  const LOCK_TIME = 180 * 1000; // 180 seconds
+
   const loginCredential = email.trim();
   const loginKey = loginCredential.toLowerCase();
   const now = Date.now();
-  const record = loginAttempts[loginKey] || { count: 0, lockUntil: null };
 
+  // =========================
+  // INIT LOGIN RECORD (per email — never bleeds across users)
+  // =========================
+  if (!loginAttempts[loginKey]) {
+    loginAttempts[loginKey] = {
+      count: 0,
+      lockUntil: null,
+    };
+  }
+
+  const record = loginAttempts[loginKey];
+
+  // =========================
+  // CHECK IF STILL LOCKED
+  // =========================
   if (record.lockUntil && record.lockUntil > now) {
-    const sec = Math.ceil((record.lockUntil - now) / 1000);
+    const remainingSeconds = Math.ceil((record.lockUntil - now) / 1000);
+
     await insertLoginAuditLog({
       actorId: loginKey,
       role: "applicant",
-
       outcome: "LOCKED",
-      reason: `Account locked (Attempt ${record.count || 3} out of 3)`,
+      reason: `Account locked. Remaining ${remainingSeconds}s`,
     });
-    return res.json({
+
+    return res.status(429).json({
       success: false,
-      message: `Too many failed attempts. Try again in ${sec}s.`,
+      locked: true,
+      remainingSeconds,
+      message: `Too many failed attempts. Try again in ${remainingSeconds} seconds.`,
     });
   }
 
+  // =========================
+  // AUTO-RESET AFTER LOCK EXPIRES
+  // Reset count to 0 so the user gets a fresh 3 attempts after serving their lockout.
+  // =========================
+  if (record.lockUntil && record.lockUntil <= now) {
+    loginAttempts[loginKey] = { count: 0, lockUntil: null };
+  }
+
   try {
-    // ✅ Fetch user
+    // =========================
+    // FETCH USER
+    // =========================
     const query = `
       SELECT ua.*, pt.*, ant.applicant_number AS existing_applicant_number
       FROM user_accounts AS ua
@@ -1156,76 +1235,106 @@ router.post("/login_applicant", async (req, res) => {
 
     const [results] = await db.query(query, [loginCredential, loginCredential]);
 
+    // =========================
+    // USER NOT FOUND
+    // =========================
     if (results.length === 0) {
       record.count++;
-      if (record.count >= 3) {
-        record.lockUntil = now + 3 * 60 * 1000;
+
+      if (record.count >= MAX_LOGIN_ATTEMPTS) {
+        // Lock NOW — they've exhausted all attempts
+        record.lockUntil = now + LOCK_TIME;
         loginAttempts[loginKey] = record;
+
         await insertLoginAuditLog({
           actorId: loginKey,
           role: "applicant",
-
           outcome: "LOCKED",
-          reason: `Invalid email or password (Attempt ${record.count} out of 3)`,
+          reason: `Invalid email or password (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS}) — account locked`,
         });
-        return res.json({
+
+        return res.status(429).json({
           success: false,
-          message: "Too many failed attempts. Locked for 3 minutes.",
+          locked: true,
+          remainingSeconds: Math.ceil(LOCK_TIME / 1000),
+          message: `Too many failed attempts. Account locked for ${Math.ceil(LOCK_TIME / 1000)} seconds.`,
         });
       }
+
       loginAttempts[loginKey] = record;
+
       await insertLoginAuditLog({
         actorId: loginKey,
         role: "applicant",
-
         outcome: "FAILED",
-        reason: `Invalid email or password (Attempt ${record.count} out of 3)`,
+        reason: `Invalid email or password (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS})`,
       });
-      return res.status(400).json({ message: "Invalid email or password" });
+
+      return res.status(401).json({
+        success: false,
+        remaining: MAX_LOGIN_ATTEMPTS - record.count,
+        message: `Invalid email or password. ${MAX_LOGIN_ATTEMPTS - record.count} attempt(s) remaining.`,
+      });
     }
 
     const user = results[0];
-    const existingApplicantNumber = await getApplicantNumberByPersonId(
-      user.person_id,
-    );
+    const existingApplicantNumber = await getApplicantNumberByPersonId(user.person_id);
     const applicantActor = existingApplicantNumber || loginKey;
+
+    // =========================
+    // PASSWORD CHECK
+    // =========================
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       record.count++;
-      if (record.count >= 3) {
-        record.lockUntil = now + 3 * 60 * 1000;
+
+      if (record.count >= MAX_LOGIN_ATTEMPTS) {
+        record.lockUntil = now + LOCK_TIME;
         loginAttempts[loginKey] = record;
+
         await insertLoginAuditLog({
           actorId: applicantActor,
           role: "applicant",
-
           outcome: "LOCKED",
-          reason: `Invalid password (Attempt ${record.count} out of 3)`,
+          reason: `Invalid password (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS}) — account locked`,
         });
-        return res.json({
+
+        return res.status(429).json({
           success: false,
-          message: "Too many failed attempts. Locked for 3 minutes.",
+          locked: true,
+          remainingSeconds: Math.ceil(LOCK_TIME / 1000),
+          message: `Too many failed attempts. Account locked for ${Math.ceil(LOCK_TIME / 1000)} seconds.`,
         });
       }
+
       loginAttempts[loginKey] = record;
+
       await insertLoginAuditLog({
         actorId: applicantActor,
         role: "applicant",
-
         outcome: "FAILED",
-        reason: `Invalid password (Attempt ${record.count} out of 3)`,
+        reason: `Invalid password (Attempt ${record.count}/${MAX_LOGIN_ATTEMPTS})`,
       });
-      return res.json({ success: false, message: "Invalid Password or Email" });
+
+      return res.status(401).json({
+        success: false,
+        remaining: MAX_LOGIN_ATTEMPTS - record.count,
+        message: `Invalid password. ${MAX_LOGIN_ATTEMPTS - record.count} attempt(s) remaining.`,
+      });
     }
+
+    // =========================
+    // ACCOUNT STATUS CHECK
+    // =========================
     if (user.status === 0) {
       await insertLoginAuditLog({
         actorId: applicantActor,
         role: "applicant",
-
         outcome: "FAILED",
         reason: "Inactive account",
       });
+
       return res.json({
         success: false,
         message: "The user didn't exist or is inactive",
@@ -1234,16 +1343,17 @@ router.post("/login_applicant", async (req, res) => {
 
     const person_id = user.person_id;
 
-    // ✅ Check if applicant_number already exists
+    // =========================
+    // CHECK / CREATE APPLICANT NUMBER
+    // =========================
     const [existing] = await db.query(
-      "SELECT applicant_number, qr_code FROM applicant_numbering_table WHERE person_id = ?",
-      [person_id],
+      `SELECT applicant_number, qr_code FROM applicant_numbering_table WHERE person_id = ?`,
+      [person_id]
     );
 
     let applicantNumber, qrFilename;
 
     if (existing.length === 0) {
-      // ✅ No applicant_number yet → create one
       const [activeYear] = await db3.query(`
         SELECT yt.year_description, st.semester_description, st.semester_code
         FROM active_school_year_table AS sy
@@ -1254,26 +1364,24 @@ router.post("/login_applicant", async (req, res) => {
       `);
 
       if (activeYear.length === 0) {
-        return res.status(500).json({ message: "No active school year found" });
+        return res.status(500).json({ success: false, message: "No active school year found" });
       }
 
       const year = String(activeYear[0].year_description).split("-")[0];
       const semCode = activeYear[0].semester_code;
 
       const [countRes] = await db.query(
-        "SELECT counter, query FROM applicant_counter WHERE id = 1",
+        "SELECT counter, query FROM applicant_counter WHERE id = 1"
       );
 
       const padded = String(countRes[0].query).padStart(5, "0");
-      const applicantNumber = `${year}${semCode}${padded}`;
+      applicantNumber = `${year}${semCode}${padded}`;
 
-      // Insert applicant_number
       await db.query(
-        "INSERT INTO applicant_numbering_table (applicant_number, person_id) VALUES (?, ?)",
-        [applicantNumber, person_id],
+        `INSERT INTO applicant_numbering_table (applicant_number, person_id) VALUES (?, ?)`,
+        [applicantNumber, person_id]
       );
 
-      // Generate QR code
       const qrData = `${process.env.DB_HOST_LOCAL}:5173/examination_profile/${applicantNumber}`;
       qrFilename = `${applicantNumber}_qrcode.png`;
       const qrPath = path.join(__dirname, "uploads", qrFilename);
@@ -1283,43 +1391,42 @@ router.post("/login_applicant", async (req, res) => {
         width: 300,
       });
 
-      // Save QR in DB
       await db.query(
-        "UPDATE applicant_numbering_table SET qr_code = ? WHERE applicant_number = ?",
-        [qrFilename, applicantNumber],
+        `UPDATE applicant_numbering_table SET qr_code = ? WHERE applicant_number = ?`,
+        [qrFilename, applicantNumber]
       );
 
       const nextQuery = countRes[0].query + 1;
       await db.query(
-        "UPDATE applicant_counter SET counter = ?, query = ? WHERE id = 1", [countRes[0].query, nextQuery]
-      )
+        `UPDATE applicant_counter SET counter = ?, query = ? WHERE id = 1`,
+        [countRes[0].query, nextQuery]
+      );
     } else {
-      // ✅ Already has applicant_number + QR
       applicantNumber = existing[0].applicant_number;
       qrFilename = existing[0].qr_code;
     }
 
-    // ✅ Generate JWT token
+    // =========================
+    // SUCCESS — clear this user's attempt record
+    // =========================
+    delete loginAttempts[loginKey];
+
     const token = webtoken.sign(
       { person_id: user.person_id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" },
+      { expiresIn: "1h" }
     );
 
-    const successOutcome =
-      record.count >= 2 ? "SUCCESS_AFTER_FAILURES" : "SUCCESS";
     await insertLoginAuditLog({
       actorId: applicantNumber,
       role: user.role,
-
-      outcome: successOutcome,
+      outcome: "SUCCESS",
     });
-    delete loginAttempts[loginKey];
 
-    res.json({
+    return res.json({
+      success: true,
       message: "Login successful",
       token,
-      success: true,
       email: user.email,
       registered_email: user.emailAddress,
       first_name: user.first_name,
@@ -1336,10 +1443,9 @@ router.post("/login_applicant", async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ message: "Server error during login" });
+    return res.status(500).json({ success: false, message: "Server error during login" });
   }
 });
-
 // POST VERIFY OTP
 router.post("/verify-otp", async (req, res) => {
   const { email, otp } = req.body;

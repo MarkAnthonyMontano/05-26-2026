@@ -2701,7 +2701,7 @@ const AdminDashboard1 = () => {
                     label="Tribe/Ethnic Group"
                   >
                     <MenuItem value="">
-                      <em>Select Tribe/Ethnic Group</em>
+                      <em>None</em>
                     </MenuItem>
                     <MenuItem value="Agta">Agta</MenuItem>
                     <MenuItem value="Agutaynen">Agutaynen</MenuItem>
@@ -2747,7 +2747,7 @@ const AdminDashboard1 = () => {
                     <MenuItem value="Bato">Bato</MenuItem>
                     <MenuItem value="Tausug">Tausug</MenuItem>
                     <MenuItem value="Waray">Waray</MenuItem>
-                    <MenuItem value="None">None</MenuItem>
+
                     <MenuItem value="Others">Others</MenuItem>
                   </Select>
                   {errors.tribeEthnicGroup && (

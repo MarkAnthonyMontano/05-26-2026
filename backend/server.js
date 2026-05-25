@@ -35,7 +35,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://192.168.50.211:5173",
   "http://136.239.248.62:5173",
-  "http://192.168.0.180:5173",
+  "http://192.168.50.54:5173",
   "http://192.168.1.9:5173",
 ];
 
@@ -3695,6 +3695,13 @@ app.post("/api/generate-cor-pdf", async (req, res) => {
 
     const page = await browser.newPage();
 
+    // Set viewport to match exactly 8.5in wide at 96dpi (816px) with extra height
+    await page.setViewport({
+      width: 816,
+      height: 1200,
+      deviceScaleFactor: 2,
+    });
+
     page.on("console", (msg) => {
       console.log("PAGE LOG:", msg.text());
     });
@@ -3720,18 +3727,137 @@ app.post("/api/generate-cor-pdf", async (req, res) => {
       }
     });
 
-    await page.setContent(html, {
+    // Wrap the received HTML fragment with proper page-level styles
+    const wrappedHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: Arial, sans-serif;
+      /* 96 px/in × 8.5 in = 816 px  →  set page width to 8in content = 768px */
+      width: 816px;
+    }
+
+    /* ── Page setup for @print ── */
+    @page {
+      size: A4 portrait;
+      margin: 6mm 10mm 6mm 10mm;
+    }
+
+    @media print {
+      html, body {
+        width: 100%;
+      }
+      button { display: none !important; }
+      .certificate-watermark {
+        color: rgba(0, 0, 0, 0.15) !important;
+      }
+    }
+
+    /* ── Ensure the certificate tables stay at 8in ── */
+    .certificate-wrapper {
+      position: relative;
+      width: 8in;
+      margin: 0 auto;
+      background: #ffffff;
+    }
+
+    .certificate-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 7rem;
+      font-weight: 900;
+      color: rgba(0, 0, 0, 0.08);
+      text-transform: uppercase;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      z-index: 9999;
+    }
+
+    /* ── Table normalization ── */
+    table {
+      border-collapse: collapse;
+    }
+
+    /* ── Input → plain text in PDF ── */
+    input[type="text"],
+    input[readonly] {
+      -webkit-appearance: none;
+      appearance: none;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0;
+    }
+
+    /* ── Keep background colors when printing ── */
+    [style*="background-color"],
+    [style*="backgroundColor"] {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Gray header rows ── */
+    td[style*="background-color: gray"],
+    td[style*="backgroundColor: gray"],
+    td[style*="background: gray"] {
+      background-color: #808080 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Hide MUI Container padding that pushes layout ── */
+    .MuiContainer-root {
+      padding: 0 !important;
+      min-height: unset !important;
+      display: block !important;
+    }
+
+    .flex-container,
+    .section {
+      display: block !important;
+      width: 100% !important;
+    }
+
+    img {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  ${html}
+</body>
+</html>
+    `.trim();
+
+    await page.setContent(wrappedHtml, {
       waitUntil: "networkidle0",
       timeout: 60000,
     });
 
+    // Wait for all images to finish loading
     await page.evaluate(async () => {
       const images = Array.from(document.images);
-
       await Promise.all(
         images.map((img) => {
           if (img.complete) return Promise.resolve();
-
           return new Promise((resolve) => {
             img.onload = resolve;
             img.onerror = resolve;
@@ -3740,15 +3866,19 @@ app.post("/api/generate-cor-pdf", async (req, res) => {
       );
     });
 
+    // Let the layout settle after images load
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      preferCSSPageSize: true,
-      scale: 0.9,
+      preferCSSPageSize: false,   // let Puppeteer control the page size
+      scale: 1,                   // no scaling — we sized the viewport correctly
       margin: {
-        right: "10mm",
-
+        top: "6mm",
+        bottom: "6mm",
         left: "10mm",
+        right: "10mm",
       },
     });
 
@@ -3771,14 +3901,13 @@ app.post("/api/generate-cor-pdf", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=certificate.pdf",
+      `attachment; filename=certificate-of-registration-${student_number || "student"}.pdf`,
     );
     res.setHeader("Content-Length", pdfBuffer.length);
 
     return res.end(pdfBuffer);
   } catch (err) {
     console.error("PDF ERROR:", err);
-
     return res.status(500).json({
       message: "PDF generation failed",
       error: err.message,

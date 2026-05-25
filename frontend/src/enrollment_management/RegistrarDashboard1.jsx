@@ -123,41 +123,41 @@ const RegistrarDashboard1 = () => {
   };
 
   const stepsData = [
-   {
-        label: "Applicant List",
-        to: "/applicant_list",
-        icon: <SchoolIcon fontSize="large" />,
-      },
-      {
-        label: "Applicant Form",
-        to: "/registrar_dashboard1",
-        icon: <PersonIcon fontSize="large" />,
-      },
-      {
-        label: "Student Requirements",
-        to: "/registrar_requirements",
-        icon: <AssignmentIcon fontSize="large" />,
-      },
-        {
-        label: "Entrance Examination Score",
-        to: "/entrance_examination_score",
-        icon: <ScoreIcon fontSize="large" />,
-      },
-      {
-        label: "Qualifying / Interview Schedule Management",
-        to: "/assign_schedule_applicants_qualifying_interview",
-        icon: <ScheduleIcon fontSize="large" />,
-      },
-      {
-        label: "Qualifying / Interview Exam Score",
-        to: "/qualifying_interview_exam_scores",
-        icon: <ScoreIcon fontSize="large" />,
-      },
-      {
-        label: "Student Numbering",
-        to: "/student_numbering_per_college",
-        icon: <DashboardIcon fontSize="large" />,
-      },
+    {
+      label: "Applicant List",
+      to: "/applicant_list",
+      icon: <SchoolIcon fontSize="large" />,
+    },
+    {
+      label: "Applicant Form",
+      to: "/registrar_dashboard1",
+      icon: <PersonIcon fontSize="large" />,
+    },
+    {
+      label: "Student Requirements",
+      to: "/registrar_requirements",
+      icon: <AssignmentIcon fontSize="large" />,
+    },
+    {
+      label: "Entrance Examination Score",
+      to: "/entrance_examination_score",
+      icon: <ScoreIcon fontSize="large" />,
+    },
+    {
+      label: "Qualifying / Interview Schedule Management",
+      to: "/assign_schedule_applicants_qualifying_interview",
+      icon: <ScheduleIcon fontSize="large" />,
+    },
+    {
+      label: "Qualifying / Interview Exam Score",
+      to: "/qualifying_interview_exam_scores",
+      icon: <ScoreIcon fontSize="large" />,
+    },
+    {
+      label: "Student Numbering",
+      to: "/student_numbering_per_college",
+      icon: <DashboardIcon fontSize="large" />,
+    },
   ];
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -454,32 +454,32 @@ const RegistrarDashboard1 = () => {
 
   const steps = person.person_id
     ? [
-        {
-          label: "Personal Information",
-          icon: <PersonIcon />,
-          path: `/registrar_dashboard1?person_id=${userID}`,
-        },
-        {
-          label: "Family Background",
-          icon: <FamilyRestroomIcon />,
-          path: `/registrar_dashboard2?person_id=${userID}`,
-        },
-        {
-          label: "Educational Attainment",
-          icon: <SchoolIcon />,
-          path: `/registrar_dashboard3?person_id=${userID}`,
-        },
-        {
-          label: "Health Medical Records",
-          icon: <HealthAndSafetyIcon />,
-          path: `/registrar_dashboard4?person_id=${userID}`,
-        },
-        {
-          label: "Other Information",
-          icon: <InfoIcon />,
-          path: `/registrar_dashboard5?person_id=${userID}`,
-        },
-      ]
+      {
+        label: "Personal Information",
+        icon: <PersonIcon />,
+        path: `/registrar_dashboard1?person_id=${userID}`,
+      },
+      {
+        label: "Family Background",
+        icon: <FamilyRestroomIcon />,
+        path: `/registrar_dashboard2?person_id=${userID}`,
+      },
+      {
+        label: "Educational Attainment",
+        icon: <SchoolIcon />,
+        path: `/registrar_dashboard3?person_id=${userID}`,
+      },
+      {
+        label: "Health Medical Records",
+        icon: <HealthAndSafetyIcon />,
+        path: `/registrar_dashboard4?person_id=${userID}`,
+      },
+      {
+        label: "Other Information",
+        icon: <InfoIcon />,
+        path: `/registrar_dashboard5?person_id=${userID}`,
+      },
+    ]
     : [];
 
   const [activeStep, setActiveStep] = useState(0);
@@ -2312,9 +2312,8 @@ const RegistrarDashboard1 = () => {
                         )}
                         {filteredCurriculum.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            {`(${item.program_code}): ${item.program_description}${
-                              item.major ? ` (${item.major})` : ""
-                            } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
+                            {`(${item.program_code}): ${item.program_description}${item.major ? ` (${item.major})` : ""
+                              } (${item.current_year}-${item.next_year}) (${getBranchLabel(item.components)})`}
                           </MenuItem>
                         ))}
                       </Select>
@@ -3220,7 +3219,7 @@ const RegistrarDashboard1 = () => {
                     label="Tribe/Ethnic Group"
                   >
                     <MenuItem value="">
-                      <em>Select Tribe/Ethnic Group</em>
+                      <em>None</em>
                     </MenuItem>
                     <MenuItem value="Agta">Agta</MenuItem>
                     <MenuItem value="Agutaynen">Agutaynen</MenuItem>
@@ -3266,7 +3265,7 @@ const RegistrarDashboard1 = () => {
                     <MenuItem value="Bato">Bato</MenuItem>
                     <MenuItem value="Tausug">Tausug</MenuItem>
                     <MenuItem value="Waray">Waray</MenuItem>
-                    <MenuItem value="None">None</MenuItem>
+
                     <MenuItem value="Others">Others</MenuItem>
                   </Select>
                   {errors.tribeEthnicGroup && (
