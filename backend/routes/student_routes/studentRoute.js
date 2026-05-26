@@ -1691,9 +1691,9 @@ router.delete("/api/student-upload/:uploadId", async (req, res) => {
   const { uploadId } = req.params;
 
   try {
-    // 1. Get file info
+    // 1. Get file info + person_id
     const [rows] = await db3.query(
-      "SELECT file_path FROM requirement_uploads WHERE upload_id = ?",
+      "SELECT file_path, person_id FROM requirement_uploads WHERE upload_id = ?",
       [uploadId]
     );
 
@@ -1701,7 +1701,7 @@ router.delete("/api/student-upload/:uploadId", async (req, res) => {
       return res.status(404).json({ message: "File not found" });
     }
 
-    const filePath = rows[0].file_path;
+    const { filePath, person_id } = rows[0]; // ✅ also grab person_id
 
     // 2. Correct folder (StudentOnlineDocuments)
     const fullPath = path.join(
@@ -1710,7 +1710,7 @@ router.delete("/api/student-upload/:uploadId", async (req, res) => {
       "..",
       "uploads",
       "StudentOnlineDocuments",
-      filePath
+      rows[0].file_path
     );
 
     // 3. Delete file
@@ -1728,6 +1728,12 @@ router.delete("/api/student-upload/:uploadId", async (req, res) => {
       [uploadId]
     );
 
+    // ✅ 5. Reset requirements status so modal can re-trigger
+    await db3.query(
+      "UPDATE person_status_table SET requirements = 0 WHERE person_id = ?",
+      [rows[0].person_id]
+    );
+
     res.status(200).json({
       success: true,
       message: "Student file deleted successfully",
@@ -1735,7 +1741,6 @@ router.delete("/api/student-upload/:uploadId", async (req, res) => {
 
   } catch (err) {
     console.error("Student delete error:", err);
-
     res.status(500).json({
       success: false,
       message: "Delete failed",

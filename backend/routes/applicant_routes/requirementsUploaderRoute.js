@@ -273,7 +273,6 @@ router.delete("/uploads/:id", async (req, res) => {
       return res.status(403).json({ error: "Unauthorized or file not found" });
     }
 
-    // ✅ FIX HERE
     const filePath = results[0].file_path;
 
     const fullPath = path.join(
@@ -298,12 +297,17 @@ router.delete("/uploads/:id", async (req, res) => {
       [id]
     );
 
+    // ✅ Reset requirements status back to 0 so the modal can re-trigger
+    await db.query(
+      "UPDATE person_status_table SET requirements = 0 WHERE person_id = ?",
+      [person_id]
+    );
+
     res.json({ message: "Requirement deleted successfully" });
   } catch (err) {
     console.error("Delete error:", err);
     res.status(500).json({ error: "Failed to delete requirement" });
   }
-
 });
 
 // POST /api/submit-requirements
