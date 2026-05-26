@@ -572,7 +572,7 @@ const Register = () => {
     if (!isMobile) return;
     axios.get(`${API_BASE_URL}/api/announcements`)
       .then((res) => { if (Array.isArray(res.data.data)) setMobileSlides(res.data.data); })
-      .catch(() => {});
+      .catch(() => { });
   }, [isMobile]);
 
   useEffect(() => {
@@ -641,6 +641,7 @@ const Register = () => {
       setShowOtpModal(true);
       startResendTimer();
       setSnack({ open: true, message: "OTP sent to your email", severity: "success" });
+      setTimeout(() => otpRefs.current[0]?.focus(), 150);
     } catch (error) {
       setSnack({ open: true, message: error.response?.data?.message || "Failed to send OTP", severity: "error" });
     } finally {
@@ -1156,7 +1157,15 @@ const Register = () => {
 
               {/* Submit button */}
               <div
+                tabIndex={0}
                 onClick={() => {
+                  if (!branchSelected) { setSnack({ open: true, message: "Please select a branch first!", severity: "warning" }); return; }
+                  if (!registrationOpen) { setSnack({ open: true, message: "Registration is currently closed for this campus.", severity: "error" }); return; }
+                  if (!reminderChecked) { setSnack({ open: true, message: "Please agree to the Terms and Conditions before registering.", severity: "warning" }); return; }
+                  if (!isSubmitting) handleRegister();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
                   if (!branchSelected) { setSnack({ open: true, message: "Please select a branch first!", severity: "warning" }); return; }
                   if (!registrationOpen) { setSnack({ open: true, message: "Registration is currently closed for this campus.", severity: "error" }); return; }
                   if (!reminderChecked) { setSnack({ open: true, message: "Please agree to the Terms and Conditions before registering.", severity: "warning" }); return; }

@@ -111,8 +111,33 @@ module.exports = function registerSocketHandlers({
     socket.on("forgot-password-applicant", async (data) => {
       const { applicant_number, email, birthdate } = data;
 
+      const insertForgotPasswordAuditLog = async ({ outcome }) => {
+        await insertAuditLogEnrollment({
+          actorId: applicant_number || email || "unknown",
+          role: "applicant",
+          action: "FORGOT_PASSWORD",
+          outcome,
+          severity: outcome === "SUCCESS" ? "INFO" : "WARN",
+          message:
+            outcome === "SUCCESS"
+              ? "The applicant successfully reset their password through forgot password"
+              : "The applicant failed to reset their password through forgot password",
+        });
+      };
+
       try {
-        //  Validate all 3 fields
+        // =========================
+        // GET SCHOOL SHORT TERM
+        // =========================
+        const [company] = await db.query(
+          "SELECT short_term FROM company_settings WHERE id = 1"
+        );
+
+        const shortTerm = company?.[0]?.short_term || "Institution";
+
+        // =========================
+        // VALIDATE APPLICANT
+        // =========================
         const [rows] = await db.query(
           `SELECT ua.email, p.birthOfDate
        FROM user_accounts ua
@@ -124,55 +149,103 @@ module.exports = function registerSocketHandlers({
           [email, applicant_number, birthdate]
         );
 
+
+        // Applicant not found
         if (rows.length === 0) {
+          await insertForgotPasswordAuditLog({ outcome: "FAILED" });
+
           return socket.emit("password-reset-result-applicant", {
             success: false,
-            message: "Invalid Applicant Number, Birthday, or Email.",
+            message: `${shortTerm} applicant account not found. Check your credentials.`,
           });
         }
 
-        //  Generate password
-        const newPassword = Array.from({ length: 8 }, () =>
-          String.fromCharCode(Math.floor(Math.random() * 26) + 65)
-        ).join("");
+        // =========================
+        // GENERATE TEMP PASSWORD
+        // =========================
+        const generateTempPassword = () => {
+          const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-        const hashed = await bcrypt.hash(newPassword, 10);
+          return Array.from({ length: 8 }, () =>
+            chars.charAt(Math.floor(Math.random() * chars.length))
+          ).join("");
+        };
 
+        const tempPassword = generateTempPassword();
+
+        // =========================
+        // HASH PASSWORD
+        // =========================
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+        // =========================
+        // UPDATE PASSWORD
+        // =========================
         await db.query(
           "UPDATE user_accounts SET password = ? WHERE email = ?",
-          [hashed, email]
+          [hashedPassword, email]
         );
 
-        //  Send email (same as your code)
+        // =========================
+        // CREATE EMAIL TRANSPORTER
+        // =========================
         const transporter = nodemailer.createTransport({
           service: "gmail",
           auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
+            user: process.env.EMAIL_USER3,
+            pass: process.env.EMAIL_PASS3,
           },
         });
 
-        await transporter.sendMail({
-          from: `"System" <${process.env.EMAIL_USER}>`,
+        // =========================
+        // SEND EMAIL
+        // =========================
+        const info = await transporter.sendMail({
+          from: `"${shortTerm} - Information System" <${process.env.EMAIL_USER3}>`,
           to: email,
-          subject: "Password Reset",
-          text: `Your new password is: ${newPassword}`,
+          subject: `${shortTerm} Applicant Password Reset`,
+          text: `
+Hello Applicant,
+
+Your ${shortTerm} applicant account password has been successfully reset.
+
+Your new temporary password is:
+
+${tempPassword}
+
+Please log in immediately and change your password for security purposes.
+
+Thank you,
+${shortTerm} Information System
+      `,
         });
 
+        console.log("Password reset email sent:", info.response);
+
+        // =========================
+        // AUDIT LOG
+        // =========================
+        await insertForgotPasswordAuditLog({ outcome: "SUCCESS" });
+
+        // =========================
+        // SUCCESS RESPONSE
+        // =========================
         socket.emit("password-reset-result-applicant", {
           success: true,
-          message: "Password reset successful. Check your email.",
+          message: `Password has been reset successfully. The user has been notified via email.`,
         });
 
       } catch (error) {
-        console.error(error);
+        console.error("Forgot Password Applicant Error:", error);
+
+        await insertForgotPasswordAuditLog({ outcome: "FAILED" });
+
         socket.emit("password-reset-result-applicant", {
           success: false,
-          message: "Server error.",
+          message: "Server error while resetting password.",
         });
       }
     });
-
     // ---------------- Registrar: Reset Password ----------------
     // FORGOT PASSWORD (handles student, registrar, faculty)
 
@@ -965,7 +1038,7 @@ WHERE proctor LIKE ?
         await insertForgotPasswordAuditLog({ outcome: "SUCCESS" });
 
         return res.json({
-          message: `${shortTerm} (Student) password reset successfully.`,
+          message: `Password has been reset successfully. The user has been notified via email.`,
         });
       }
 
@@ -984,7 +1057,7 @@ WHERE proctor LIKE ?
         await insertForgotPasswordAuditLog({ outcome: "SUCCESS" });
 
         return res.json({
-          message: `${shortTerm} (Registrar) password reset successfully.`,
+          message: `Password has been reset successfully. The user has been notified via email.`,
         });
       }
 
@@ -1003,7 +1076,7 @@ WHERE proctor LIKE ?
         await insertForgotPasswordAuditLog({ outcome: "SUCCESS" });
 
         return res.json({
-          message: `${shortTerm} (Faculty) password reset successfully.`,
+          message: `Password has been reset successfully. The user has been notified via email.`,
         });
       }
 
@@ -3598,22 +3671,22 @@ WHERE proctor LIKE ?
 
       const [[activeYear]] = active_school_year_id
         ? await db3.query(
-            `
+          `
             SELECT id AS school_year_id, year_id, semester_id
             FROM active_school_year_table
             WHERE id = ?
             LIMIT 1
             `,
-            [active_school_year_id],
-          )
+          [active_school_year_id],
+        )
         : await db3.query(
-            `
+          `
             SELECT id AS school_year_id, year_id, semester_id
             FROM active_school_year_table
             WHERE astatus = 1
             LIMIT 1
             `,
-          );
+        );
 
       if (!activeYear) {
         return res.json({
@@ -3648,7 +3721,7 @@ WHERE proctor LIKE ?
 
       const [sections] = selectedCourseId
         ? await db3.query(
-            `
+          `
             SELECT DISTINCT
               tt.department_section_id,
               ptbl.program_code,
@@ -3664,8 +3737,8 @@ WHERE proctor LIKE ?
             GROUP BY tt.department_section_id
             ORDER BY section_description
             `,
-            [userID, selectedCourseId, activeYear.school_year_id],
-          )
+          [userID, selectedCourseId, activeYear.school_year_id],
+        )
         : [[]];
 
       const sectionExists = sections.some(
@@ -3677,7 +3750,7 @@ WHERE proctor LIKE ?
 
       const [students] = selectedCourseId && selectedSectionId
         ? await db3.query(
-            `
+          `
             SELECT DISTINCT
               es.student_number,
               ptbl.last_name,
@@ -3732,8 +3805,8 @@ WHERE proctor LIKE ?
               AND es.active_school_year_id = ?
             ORDER BY ptbl.last_name ASC, ptbl.first_name ASC
             `,
-            [userID, selectedCourseId, selectedSectionId, activeYear.school_year_id],
-          )
+          [userID, selectedCourseId, selectedSectionId, activeYear.school_year_id],
+        )
         : [[]];
 
       res.json({
@@ -4950,13 +5023,13 @@ WHERE proctor LIKE ?
 
             qualifying_result:
               applicant.qualifying_status === null ||
-              applicant.qualifying_status === undefined
+                applicant.qualifying_status === undefined
                 ? null
                 : Number(applicant.qualifying_status),
 
             interview_result:
               applicant.interview_status === null ||
-              applicant.interview_status === undefined
+                applicant.interview_status === undefined
                 ? null
                 : Number(applicant.interview_status)
           });
@@ -5149,7 +5222,7 @@ WHERE proctor LIKE ?
       const firstCourseId = courses[0]?.course_id || null;
       const [sections] = firstCourseId
         ? await db3.query(
-            `
+          `
             SELECT DISTINCT
               tt.department_section_id,
               ptbl.program_code,
@@ -5165,8 +5238,8 @@ WHERE proctor LIKE ?
             GROUP BY tt.department_section_id
             ORDER BY section_description
             `,
-            [userID, firstCourseId, activeYear.school_year_id],
-          )
+          [userID, firstCourseId, activeYear.school_year_id],
+        )
         : [[]];
 
       const [classDetails] = await db3.query(

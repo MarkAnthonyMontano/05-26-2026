@@ -369,46 +369,47 @@ const ApplicantProfile = () => {
       // 🧠 Snackbar logic
       if (!entrance_exam_status) {
         showSnackbar(
-          "📝 This applicant is qualified and may now proceed to the Entrance Examination phase. Please complete the examination process to continue with the admission evaluation.",
+          "📝 The applicant is qualified to take the Entrance Examination. Please proceed with the examination process.",
           "info"
         );
 
-      } else if (entrance_exam_status && !qualifying_status) {
+      } else if (
+        entrance_exam_status === "PASSED" &&
+        !qualifyingDone &&
+        !interviewDone
+      ) {
         showSnackbar(
-          "✅ Congratulations! The applicant has successfully passed the Entrance Examination and is now eligible to proceed to the Qualifying Examination stage.",
+          "✅ The applicant has completed the Entrance Examination successfully and is now waiting to be contacted for the Qualifying Examination or Interview schedule.",
           "success"
         );
 
-      } else if (qualifying_result && !interview_result) {
+      } else if (
+        qualifyingDone ||
+        interviewDone
+      ) {
         showSnackbar(
-          "🎤 The applicant has successfully completed the Qualifying Examination and is now endorsed for the Interview process. Please wait for the interview schedule and further instructions.",
-          "success"
-        );
-
-      } else if (interview_result) {
-        showSnackbar(
-          "🏁 All admission requirements, examinations, and interview procedures have been successfully completed by the applicant.",
+          "🎤 The applicant has completed the Qualifying Examination and/or Interview process successfully.",
           "success"
         );
       }
 
       if (isAccepted) {
         showSnackbar(
-          "🎉 Congratulations! This applicant has been officially ACCEPTED for admission. The applicant may now proceed with enrollment and the succeeding registration requirements.",
+          "🏥 The applicant may now proceed with the Medical Examination as part of the admission requirements.",
           "success"
         );
       }
 
       if (isRegistrarApproved) {
         showSnackbar(
-          "📄 The applicant’s admission records and submitted requirements have been successfully reviewed and approved by the Registrar’s Office.",
+          "📄 The applicant has successfully submitted the original documents to the Registrar's Office and is now waiting for the student number to be generated.",
           "success"
         );
       }
 
       if (hasStudentNumberLocal) {
         showSnackbar(
-          "🎓 A student number has been successfully generated for the applicant. The applicant is now officially registered in the student records system.",
+          "🎓 The student number has been successfully generated. The student is now waiting for subject tagging and class schedule assignment.",
           "success"
         );
       }

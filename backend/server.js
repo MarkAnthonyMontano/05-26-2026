@@ -1,4 +1,6 @@
-﻿const express = require("express");
+﻿require("dotenv").config();
+
+const express = require("express");
 const mysql = require("mysql2/promise");
 const cors = require("cors");
 const webtoken = require("jsonwebtoken");
@@ -19,8 +21,6 @@ const {
 } = require("./utils/auditLogger");
 const nodemailer = require("nodemailer");
 const { error } = require("console");
-
-require("dotenv").config();
 const app = express();
 const http = require("http").createServer(app);
 

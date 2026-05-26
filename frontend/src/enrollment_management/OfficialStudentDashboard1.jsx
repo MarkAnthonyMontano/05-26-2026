@@ -3309,55 +3309,55 @@ const OfficialStudentDashboard1 = () => {
                     onBlur={handleBlur}
                     label="Tribe/Ethnic Group"
                   >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    <MenuItem value="Agta">Agta</MenuItem>
-                    <MenuItem value="Agutaynen">Agutaynen</MenuItem>
-                    <MenuItem value="Aklanon">Aklanon</MenuItem>
-                    <MenuItem value="Alangan">Alangan</MenuItem>
-                    <MenuItem value="Alta">Alta</MenuItem>
-                    <MenuItem value="Amersian">Amersian</MenuItem>
-                    <MenuItem value="Ati">Ati</MenuItem>
-                    <MenuItem value="Atta">Atta</MenuItem>
-                    <MenuItem value="Ayta">Ayta</MenuItem>
-                    <MenuItem value="B'laan">B'laan</MenuItem>
-                    <MenuItem value="Badjao">Badjao</MenuItem>
-                    <MenuItem value="Bagobo">Bagobo</MenuItem>
-                    <MenuItem value="Balangao">Balangao</MenuItem>
-                    <MenuItem value="Balangingi">Balangingi</MenuItem>
-                    <MenuItem value="Bangon">Bangon</MenuItem>
-                    <MenuItem value="Bantoanon">Bantoanon</MenuItem>
-                    <MenuItem value="Banwaon">Banwaon</MenuItem>
-                    <MenuItem value="Batak">Batak</MenuItem>
-                    <MenuItem value="Bicolano">Bicolano</MenuItem>
-                    <MenuItem value="Binukid">Binukid</MenuItem>
-                    <MenuItem value="Bohalano">Bohalano</MenuItem>
-                    <MenuItem value="Bolinao">Bolinao</MenuItem>
-                    <MenuItem value="Bontoc">Bontoc</MenuItem>
-                    <MenuItem value="Buhid">Buhid</MenuItem>
-                    <MenuItem value="Butuanon">Butuanon</MenuItem>
-                    <MenuItem value="Cagyanen">Cagyanen</MenuItem>
-                    <MenuItem value="Caray-a">Caray-a</MenuItem>
-                    <MenuItem value="Cebuano">Cebuano</MenuItem>
-                    <MenuItem value="Cuyunon">Cuyunon</MenuItem>
-                    <MenuItem value="Dasen">Dasen</MenuItem>
-                    <MenuItem value="Ilocano">Ilocano</MenuItem>
-                    <MenuItem value="Ilonggo">Ilonggo</MenuItem>
-                    <MenuItem value="Jamah Mapun">Jamah Mapun</MenuItem>
-                    <MenuItem value="Malay">Malay</MenuItem>
-                    <MenuItem value="Mangyan">Mangyan</MenuItem>
-                    <MenuItem value="Maranao">Maranao</MenuItem>
-                    <MenuItem value="Molbogs">Molbogs</MenuItem>
-                    <MenuItem value="Palawano">Palawano</MenuItem>
-                    <MenuItem value="Panimusan">Panimusan</MenuItem>
-                    <MenuItem value="Tagbanua">Tagbanua</MenuItem>
-                    <MenuItem value="Tao't">Tao't</MenuItem>
-                    <MenuItem value="Bato">Bato</MenuItem>
-                    <MenuItem value="Tausug">Tausug</MenuItem>
-                    <MenuItem value="Waray">Waray</MenuItem>
-
-                    <MenuItem value="Others">Others</MenuItem>
+                   <MenuItem value="">
+                                      <em>Select Tribe/Ethnic Group</em>
+                                    </MenuItem>
+                                    <MenuItem value="Agta">Agta</MenuItem>
+                                    <MenuItem value="Agutaynen">Agutaynen</MenuItem>
+                                    <MenuItem value="Aklanon">Aklanon</MenuItem>
+                                    <MenuItem value="Alangan">Alangan</MenuItem>
+                                    <MenuItem value="Alta">Alta</MenuItem>
+                                    <MenuItem value="Amersian">Amersian</MenuItem>
+                                    <MenuItem value="Ati">Ati</MenuItem>
+                                    <MenuItem value="Atta">Atta</MenuItem>
+                                    <MenuItem value="Ayta">Ayta</MenuItem>
+                                    <MenuItem value="B'laan">B'laan</MenuItem>
+                                    <MenuItem value="Badjao">Badjao</MenuItem>
+                                    <MenuItem value="Bagobo">Bagobo</MenuItem>
+                                    <MenuItem value="Balangao">Balangao</MenuItem>
+                                    <MenuItem value="Balangingi">Balangingi</MenuItem>
+                                    <MenuItem value="Bangon">Bangon</MenuItem>
+                                    <MenuItem value="Bantoanon">Bantoanon</MenuItem>
+                                    <MenuItem value="Banwaon">Banwaon</MenuItem>
+                                    <MenuItem value="Batak">Batak</MenuItem>
+                                    <MenuItem value="Bicolano">Bicolano</MenuItem>
+                                    <MenuItem value="Binukid">Binukid</MenuItem>
+                                    <MenuItem value="Bohalano">Bohalano</MenuItem>
+                                    <MenuItem value="Bolinao">Bolinao</MenuItem>
+                                    <MenuItem value="Bontoc">Bontoc</MenuItem>
+                                    <MenuItem value="Buhid">Buhid</MenuItem>
+                                    <MenuItem value="Butuanon">Butuanon</MenuItem>
+                                    <MenuItem value="Cagyanen">Cagyanen</MenuItem>
+                                    <MenuItem value="Caray-a">Caray-a</MenuItem>
+                                    <MenuItem value="Cebuano">Cebuano</MenuItem>
+                                    <MenuItem value="Cuyunon">Cuyunon</MenuItem>
+                                    <MenuItem value="Dasen">Dasen</MenuItem>
+                                    <MenuItem value="Ilocano">Ilocano</MenuItem>
+                                    <MenuItem value="Ilonggo">Ilonggo</MenuItem>
+                                    <MenuItem value="Jamah Mapun">Jamah Mapun</MenuItem>
+                                    <MenuItem value="Malay">Malay</MenuItem>
+                                    <MenuItem value="Mangyan">Mangyan</MenuItem>
+                                    <MenuItem value="Maranao">Maranao</MenuItem>
+                                    <MenuItem value="Molbogs">Molbogs</MenuItem>
+                                    <MenuItem value="Palawano">Palawano</MenuItem>
+                                    <MenuItem value="Panimusan">Panimusan</MenuItem>
+                                    <MenuItem value="Tagbanua">Tagbanua</MenuItem>
+                                    <MenuItem value="Tao't">Tao't</MenuItem>
+                                    <MenuItem value="Bato">Bato</MenuItem>
+                                    <MenuItem value="Tausug">Tausug</MenuItem>
+                                    <MenuItem value="Waray">Waray</MenuItem>
+                                    <MenuItem value="None">None</MenuItem>
+                                    <MenuItem value="Others">Others</MenuItem>
                   </Select>
                   {errors.tribeEthnicGroup && (
                     <FormHelperText>This field is required.</FormHelperText>

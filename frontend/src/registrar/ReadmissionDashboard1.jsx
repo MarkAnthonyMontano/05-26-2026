@@ -3297,7 +3297,7 @@ const ReadmissionDashboard1 = () => {
                     label="Tribe/Ethnic Group"
                   >
                     <MenuItem value="">
-                      <em>None</em>
+                      <em>Select Tribe/Ethnic Group</em>
                     </MenuItem>
                     <MenuItem value="Agta">Agta</MenuItem>
                     <MenuItem value="Agutaynen">Agutaynen</MenuItem>
@@ -3343,7 +3343,7 @@ const ReadmissionDashboard1 = () => {
                     <MenuItem value="Bato">Bato</MenuItem>
                     <MenuItem value="Tausug">Tausug</MenuItem>
                     <MenuItem value="Waray">Waray</MenuItem>
-
+                    <MenuItem value="None">None</MenuItem>
                     <MenuItem value="Others">Others</MenuItem>
                   </Select>
                   {errors.tribeEthnicGroup && (

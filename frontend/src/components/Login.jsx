@@ -452,13 +452,16 @@ const Login = ({ setIsAuthenticated }) => {
 
             {/* Login Button */}
             <div
+              tabIndex={0}
               style={{ height: "50px", borderRadius: "10px", border: "2px solid black", backgroundColor: isLocked ? "#999" : mainButtonColor, opacity: isLocked ? 0.7 : 1, pointerEvents: isLocked ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center", cursor: isLocked ? "not-allowed" : "pointer" }}
               className="Button"
               onClick={!isLocked ? handleLogin : undefined}
+              onKeyDown={(e) => e.key === "Enter" && !isLocked && handleLogin()}
             >
               <span>{isLocked ? `Locked (${lockTimer}s)` : "Log In"}</span>
             </div>
 
+            
             {/* Forgot Password */}
             <div className="LinkContainer">
               <span><Link to="/applicant_forgot_password">Forgot your password</Link></span>

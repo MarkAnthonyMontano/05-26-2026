@@ -346,7 +346,7 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
 
   useEffect(() => {
     if (showOtpModal) {
-      setTimeout(() => otpInputRef.current?.focus(), 100);
+      setTimeout(() => otpRefs.current[0]?.focus(), 150);
     }
   }, [showOtpModal]);
 
@@ -453,7 +453,9 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
                 <div style={{ cursor: lockout || loading ? "not-allowed" : "pointer" }}>
                   <button
                     type="submit"
+                    tabIndex={0}
                     disabled={lockout || loading}
+                    onKeyDown={(e) => e.key === "Enter" && !lockout && !loading && handleLogin()}
                     style={{
                       width: "100%",
                       backgroundColor: lockout ? "#999" : loading ? "#ccc" : mainButtonColor,

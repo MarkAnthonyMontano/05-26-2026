@@ -293,7 +293,7 @@ const StudentAdmissionServices = () => {
 
 
 
-   return (
+    return (
         <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
             <Box
                 sx={{
@@ -351,12 +351,12 @@ const StudentAdmissionServices = () => {
                     <div>
                         <style>
                             {`
-          @media print {
-            button {
-              display: none;
-            }
-          }
-        `}
+             @media print {
+               button {
+                 display: none;
+               }
+             }
+           `}
                         </style>
 
                         <br />
@@ -424,7 +424,7 @@ const StudentAdmissionServices = () => {
                                                     textTransform: "Uppercase"
                                                 }}
                                             >
-                                               {firstLine}
+                                                {firstLine}
                                             </div>
 
                                             {secondLine && (
@@ -437,7 +437,7 @@ const StudentAdmissionServices = () => {
                                                         textTransform: "Uppercase"
                                                     }}
                                                 >
-                                                   {secondLine}
+                                                    {secondLine}
                                                 </div>
                                             )}
 
@@ -459,8 +459,9 @@ const StudentAdmissionServices = () => {
 
                                             <br />
 
+
                                             <div style={{
-                                                fontSize: "12px",
+                                                fontSize: "20px",
                                                 fontFamily: "Arial",
                                                 fontWeight: "bold",
                                                 marginBottom: "5px",
@@ -468,10 +469,22 @@ const StudentAdmissionServices = () => {
                                                 marginLeft: "-145px",
                                                 textAlign: "center",
                                             }}>
-                                                ADMISSION SERVICES
-                                                <br />
                                                 HELP US SERVE YOU BETTER!
                                             </div>
+
+
+                                            <br />
+
+                                            <table style={{ width: "100%", fontFamily: "Arial", fontSize: "12px", fontWeight: "bold", marginBottom: "5px", marginTop: "0" }}>
+                                                <tbody>
+                                                    <tr>
+
+                                                        <td style={{ textAlign: "right" }}>
+                                                            Date: ______________________
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </div>
@@ -612,61 +625,35 @@ const StudentAdmissionServices = () => {
                             >
                                 <tbody>
                                     <tr>
-                                        <td style={{ fontSize: "12px", fontFamily: "Arial", marginRight: "10px" }}>
-                                            Service Availed:
-                                            <label style={{ fontSize: "12px", marginLeft: "10px" }}>
-                                                <input type="checkbox" name="admission" /> Admission
-                                            </label>
+                                        <td style={{ fontSize: "12px", fontFamily: "Arial" }}>
+                                            <div style={{ display: "flex", alignItems: "flex-end" }}>
+                                                <span style={{ marginRight: "5px" }}>
+                                                    Services Availed:
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        display: "inline-block",
+                                                        borderBottom: "1px solid black",
+                                                        width: "87%",
+                                                        height: "20px"
+                                                    }}
+                                                ></span>
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    borderBottom: "1px solid black",
+                                                    width: "100%",
+                                                    height: "20px",
+                                                    marginTop: "5px"
+                                                }}
+                                            ></div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
 
-                            {/* Others Table */}
-                            <table
-                                style={{
-                                    borderCollapse: "collapse",
-                                    fontFamily: "Arial",
-                                    width: "8in",
-                                    margin: "20px auto",
-                                    textAlign: "left",
-                                    tableLayout: "fixed",
-                                    marginTop: "-10px"
-                                }}
-                            >
-                                <tbody>
-                                    <tr>
-                                        <td colSpan="2" style={{ textAlign: "center" }}>
-                                            <span style={{ fontWeight: "bold", fontSize: "12px", marginRight: "10px" }}>Others:</span>
-                                            <span
-                                                style={{
-                                                    display: "inline-block",
-                                                    borderBottom: "1px solid black",
-                                                    width: "40%",
-                                                    height: "20px",
-                                                    verticalAlign: "bottom",
-                                                    marginTop: "5px"
-                                                }}
-                                            ></span>
-                                            <span
-                                                style={{
-                                                    display: "inline-block",
-                                                    marginLeft: "5px",
-                                                    borderBottom: "1px solid black",
-                                                    width: "98.8%",
-                                                    height: "20px",
-                                                    verticalAlign: "bottom",
-                                                    marginTop: "5px"
-                                                }}
-                                            ></span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-
-                            <br />
-
+                            <div style={{ height: "40px" }}></div>
                             <table
                                 style={{
                                     borderCollapse: "collapse",
@@ -682,7 +669,12 @@ const StudentAdmissionServices = () => {
                                     {/* INSTRUCTIONS */}
                                     <tr>
                                         <td colSpan={2} style={{ textAlign: 'justify', fontSize: '12px' }}>
-                                            <strong>INSTRUCTIONS:</strong> Check mark (✓) your answer to the Citizen's Charter (CC) questions. The Citizen's Charter is an official document that reflects the service of a government agency/office including its requirements, fees, and processing times among others.
+                                            <strong>INSTRUCTIONS:</strong>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colSpan={2} style={{ textAlign: 'justify', fontSize: '12px' }}>
+                                            Check mark (✓) your answer to the Citizen's Charter (CC) questions. The Citizen's Charter is an official document that reflects the service of a government agency/office including its requirements, fees, and processing times among others.
                                         </td>
                                     </tr>
 
@@ -786,8 +778,21 @@ const StudentAdmissionServices = () => {
                             >
                                 <tbody>
                                     <tr>
-                                        <td colSpan="40" style={{ textAlign: 'justify', fontSize: '12px' }}>
-                                            <strong>INSTRUCTIONS:</strong> <span> For SQD 0–8, please put a check mark ( ✓ ) on the column that best corresponds to your answer.</span>
+                                        <td
+                                            colSpan="40"
+                                            style={{
+                                                textAlign: "justify",
+                                                fontSize: "12px"
+                                            }}
+                                        >
+                                            <div>
+                                                <strong>INSTRUCTIONS:</strong>
+                                            </div>
+
+                                            <div>
+                                                For SQD 0–8, please put a check mark (✓) on the column that best
+                                                corresponds to your answer.
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1670,7 +1675,7 @@ const StudentAdmissionServices = () => {
                                             <span style={{ fontWeight: "bold", marginRight: "10px", paddingBottom: "20px" }}>Suggestion on how we can further improve our services (optional):</span>{" "}
 
                                             <br />
-                                            <span style={{ marginTop: "20px", display: "inline-block", borderBottom: "1px solid black", width: "99%", paddingLeft: "10px" }}>
+                                            <span style={{ marginTop: "20px", display: "inline-block", borderBottom: "1px solid black", width: "100%", paddingLeft: "10px" }}>
                                                 {/* Full name goes here */}
                                             </span>
                                         </td>
@@ -1691,7 +1696,7 @@ const StudentAdmissionServices = () => {
                             </table>
 
                             <br />
-                            <div style={{ fontSize: "20px", fontFamily: "Arial", textAlign: "Center" }}>THANK YOU!</div>
+                            <div style={{ fontSize: "20px", fontWeight: "bold", fontFamily: "Arial", textAlign: "Center" }}>THANK YOU!</div>
 
 
 

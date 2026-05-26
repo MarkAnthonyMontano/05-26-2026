@@ -418,17 +418,7 @@ const AdmissionServices = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div style={{
-                                                fontSize: "12px",
-                                                fontFamily: "Arial",
-                                                fontWeight: "bold",
-                                                marginBottom: "5px",
-                                                marginTop: "0",
-                                                marginLeft: "-145px",
-                                                textAlign: "center",
-                                            }}>
-                                                Management Information Services
-                                            </div>
+                                      
                                             <br />
                                           
 
