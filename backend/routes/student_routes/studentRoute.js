@@ -1745,6 +1745,36 @@ router.delete("/api/student-upload/:uploadId", async (req, res) => {
 });
 
 
+// GET /api/student-status/:person_id
+router.get("/api/student-status/:person_id", async (req, res) => {
+  const { person_id } = req.params;
+  try {
+    const [[row]] = await db3.query(
+      "SELECT requirements FROM person_status_table WHERE person_id = ?",
+      [person_id]
+    );
+    if (!row) return res.status(404).json({ error: "Not found" });
+    res.json({ requirements: row.requirements });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch status" });
+  }
+});
 
+// POST /api/student-submit-requirements
+router.post("/api/student-submit-requirements", async (req, res) => {
+  const { person_id } = req.body;
+  if (!person_id) return res.status(400).json({ error: "Missing person_id" });
+  try {
+    const [result] = await db3.query(
+      "UPDATE person_status_table SET requirements = 1 WHERE person_id = ?",
+      [person_id]
+    );
+    if (result.affectedRows === 0)
+      return res.status(404).json({ error: "Applicant status record not found" });
+    res.json({ message: "Requirements submitted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update requirements status" });
+  }
+});
 
 module.exports = router;

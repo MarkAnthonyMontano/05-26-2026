@@ -71,9 +71,8 @@ const StudentOnlineRequirements = () => {
   const [uploads, setUploads] = useState([]);
   const [userID, setUserID] = useState("");
   const [selectedFiles, setSelectedFiles] = useState({});
-  const [allRequirementsCompleted, setAllRequirementsCompleted] = useState(
-    localStorage.getItem("requirementsCompleted") === "1",
-  );
+  const [allRequirementsCompleted, setAllRequirementsCompleted] = useState(false);
+
   const [snack, setSnack] = useState({
     open: false,
     message: "",
@@ -86,11 +85,9 @@ const StudentOnlineRequirements = () => {
     fetchStudentDocuments(StudentPersonId);
   }, []);
 
-  const fetchStudentDocuments = async (StudentPersonId) => {
+  const fetchStudentDocuments = async (personId) => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/student-documents/${StudentPersonId}`,
-      );
+      const res = await axios.get(`${API_BASE_URL}/api/student-documents/${personId}`);
       const data = res.data.data;
       const normalized = data.map((doc) => ({
         id: doc.requirements_id,
@@ -110,11 +107,26 @@ const StudentOnlineRequirements = () => {
 
       const rebuiltSelectedFiles = {};
       normalized.forEach((doc) => {
-        if (doc.original_name) {
-          rebuiltSelectedFiles[doc.id] = doc.original_name;
-        }
+        if (doc.original_name) rebuiltSelectedFiles[doc.id] = doc.original_name;
       });
       setSelectedFiles(rebuiltSelectedFiles);
+
+      // ✅ Check DB for submission status
+      const statusRes = await axios.get(`${API_BASE_URL}/api/student-status/${personId}`);
+      const alreadySubmitted = statusRes.data.requirements === 1;
+      setAllRequirementsCompleted(alreadySubmitted);
+
+      if (!alreadySubmitted) {
+        const verifiableMain = normalized.filter(
+          (r) => r.category === "Main" && r.is_optional !== 1
+        );
+        const uploadedIds = new Set(normalized.filter((r) => r.upload_id).map((r) => r.id));
+        const allUploaded =
+          verifiableMain.length > 0 &&
+          verifiableMain.every((r) => uploadedIds.has(r.id));
+
+        if (allUploaded) setOpenConfirmModal(true);
+      }
     } catch (err) {
       console.error("Error fetching student documents:", err);
     }
@@ -124,13 +136,10 @@ const StudentOnlineRequirements = () => {
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
 
   useEffect(() => {
-    const completed = localStorage.getItem("requirementsCompleted");
-    if (completed === "1") setOpenModal(true);
-  }, []);
-
-  useEffect(() => {
     const personId = localStorage.getItem("person_id");
-    if (personId) setUserID(personId);
+    if (!personId) return;
+    setUserID(personId);
+    fetchStudentDocuments(personId);
   }, []);
 
   const handleUpload = async (key, file) => {
@@ -495,91 +504,108 @@ const StudentOnlineRequirements = () => {
         maxWidth="md"
         fullWidth
         fullScreen={isMobile}
+        PaperProps={{ sx: { borderRadius: isMobile ? 0 : "16px", overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.25)" } }}
       >
-        <DialogTitle sx={{ fontWeight: "bold", textAlign: "center", fontSize: { xs: "16px", sm: "20px" } }}>
-          📄 Review Your Uploaded Requirements
+        <DialogTitle sx={{ bgcolor: settings?.header_color || "#1976d2", color: "white", display: "flex", alignItems: "center", fontWeight: "bold", px: 3, py: 2 }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box sx={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+              <Typography fontSize={20}>📄</Typography>
+            </Box>
+            <Box>
+              <Typography fontWeight="bold" fontSize={16} color="white" lineHeight={1.2}>Review Your Uploaded Requirements</Typography>
+              <Typography fontSize={12} color="rgba(255,255,255,0.8)" lineHeight={1.2}>Check all documents carefully before submitting</Typography>
+            </Box>
+          </Box>
         </DialogTitle>
 
-        <DialogContent>
-          <Typography sx={{ mb: 2, textAlign: "center", fontSize: { xs: "13px", sm: "15px" } }}>
-            Please review your uploaded documents before final submission.
-          </Typography>
+        <DialogContent sx={{ pt: 2.5, px: { xs: 2, sm: 3 }, pb: 1 }}>
+          <Box sx={{ border: "1px solid #f5a623", borderRadius: "8px", p: 1.5, mb: 2.5, mt: 2, display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#fffbf2" }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+            <Typography fontSize={12.5} color="#5d4037" lineHeight={1.5}>
+              <strong>Notice:</strong> Ensure all uploaded documents are <strong>correct, clear, and valid</strong>. Incomplete or unclear files may delay the processing of your enrollment records.
+            </Typography>
+          </Box>
 
-          {requirements
-            .filter((r) => r.category === "Main")
-            .map((doc) => {
-              const uploaded = uploads.find(
-                (u) => Number(u.requirements_id) === Number(doc.id),
-              );
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
+            {requirements.filter((r) => r.category === "Main").map((doc) => {
+              const uploaded = doc.upload_id ? doc : null;
               return (
                 <Box
                   key={doc.id}
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: { xs: "flex-start", sm: "center" },
-                    flexDirection: { xs: "column", sm: "row" },
-                    gap: { xs: 1, sm: 0 },
-                    border: "1px solid #ccc",
-                    borderRadius: "8px",
-                    p: 1.5,
-                    mb: 1,
+                    alignItems: "center",
+                    gap: 1.5,
+                    backgroundColor: uploaded ? "#f0fff4" : "#fafafa",
+                    border: uploaded ? "1px solid #4caf50" : "1px solid #e0e0e0",
+                    borderRadius: "10px",
+                    p: "10px 14px",
                   }}
                 >
-                  <Box>
-                    <Typography sx={{ fontWeight: "bold", fontSize: { xs: "13px", sm: "15px" } }}>
+                  <Box sx={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: uploaded ? "#4caf50" : "#e0e0e0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Typography fontSize={16} color="white" fontWeight="bold">{uploaded ? "✓" : "–"}</Typography>
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontSize: 13.5, fontWeight: 600, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {doc.description}
                     </Typography>
-                    <Typography sx={{ fontSize: "12px", color: "#555" }}>
+                    <Typography sx={{ fontSize: 11.5, color: uploaded ? "#2e7d32" : "#999", mt: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {uploaded?.original_name || "No file uploaded"}
                     </Typography>
                   </Box>
-
-                  {uploaded && (
+                  {uploaded ? (
                     <Button
                       variant="contained"
                       color="primary"
-                      startIcon={<VisibilityIcon />}
                       href={`${API_BASE_URL}/StudentOnlineDocuments/${uploaded.file_path}`}
                       target="_blank"
+                      startIcon={<VisibilityIcon />}
                       size="small"
-                      fullWidth={isMobile}
+                      sx={{ color: "white", fontWeight: "bold", textTransform: "none", minWidth: { xs: "80px", sm: "140px" } }}
                     >
-                      Preview
+                      {isMobile ? "View" : "Preview"}
                     </Button>
+                  ) : (
+                    <Chip
+                      label="Missing"
+                      size="small"
+                      sx={{ height: 24, fontSize: 11, fontWeight: 700, backgroundColor: "#FEE2E2", color: "#B91C1C", borderRadius: "6px", flexShrink: 0 }}
+                    />
                   )}
                 </Box>
               );
             })}
-
-          <Box sx={{ mt: 3, p: 2, backgroundColor: "#fff3cd", border: "1px solid #ffeeba", borderRadius: "8px" }}>
-            <Typography sx={{ fontSize: { xs: "12px", sm: "14px" } }}>
-              ⚠ <strong>Notice:</strong> Please ensure that all uploaded documents are correct and clear.
-            </Typography>
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 2, flexDirection: { xs: "column-reverse", sm: "row" }, gap: { xs: 1, sm: 0 } }}>
-          <Button variant="contained" color="error" onClick={() => setOpenConfirmModal(false)} fullWidth={isMobile}>
+        <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: 2.5, pt: 1.5, display: "flex", justifyContent: "space-between", flexDirection: { xs: "column-reverse", sm: "row" }, gap: { xs: 1, sm: 0 } }}>
+          <Button color="error" variant="outlined" fullWidth={isMobile} onClick={() => setOpenConfirmModal(false)}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            color="success"
             fullWidth={isMobile}
-            onClick={() => {
+            onClick={async () => {
               if (!isFormValid()) return;
-              setOpenConfirmModal(false);
-              localStorage.setItem("requirementsCompleted", "1");
-              setSnack({ open: true, severity: "success", message: "Requirements submitted successfully." });
-              window.location.href = "/student_dashboard";
+              try {
+                await axios.post(`${API_BASE_URL}/api/student-submit-requirements`, {
+                  person_id: userID || localStorage.getItem("person_id"),
+                });
+                setAllRequirementsCompleted(true);
+                setOpenConfirmModal(false);
+                setSnack({ open: true, severity: "success", message: "Requirements submitted successfully." });
+                setTimeout(() => { window.location.href = "/student_dashboard"; }, 1500);
+              } catch (err) {
+                setSnack({ open: true, severity: "error", message: "Failed to submit. Please try again." });
+              }
             }}
+            sx={{ minWidth: { xs: "100%", sm: 200 }, height: 42, backgroundColor: settings?.header_color || "#1976d2", color: "#fff", fontWeight: 700, fontSize: 14, textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: settings?.header_color || "#1976d2", opacity: 0.9, boxShadow: "none" } }}
           >
             Submit Requirements
           </Button>
         </DialogActions>
       </Dialog>
-
+      
       {/* Page Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 2 }}>
         <Typography

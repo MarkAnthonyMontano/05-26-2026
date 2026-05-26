@@ -82,9 +82,8 @@ const RequirementUploader = () => {
   const [uploads, setUploads] = useState([]);
   const [userID, setUserID] = useState("");
   const [selectedFiles, setSelectedFiles] = useState({});
-  const [allRequirementsCompleted, setAllRequirementsCompleted] = useState(
-    localStorage.getItem("requirementsCompleted") === "1",
-  );
+  const [allRequirementsCompleted, setAllRequirementsCompleted] = useState(false);
+
   const [snack, setSnack] = useState({ open: false, message: "", severity: "success" });
 
   useEffect(() => {
@@ -114,20 +113,26 @@ const RequirementUploader = () => {
       });
       setSelectedFiles(rebuiltSelectedFiles);
 
-      const reqRes = await axios.get(`${API_BASE_URL}/requirements/${personId}`);
-      const verifiableRequirements = reqRes.data.filter(
-        (r) => r.is_verifiable === 1 && r.category === "Main",
-      );
-      const uploadedIds = new Set(uploadsData.map((u) => u.requirements_id));
-      const allRequiredUploaded =
-        verifiableRequirements.length > 0 &&
-        verifiableRequirements.every((r) => uploadedIds.has(r.id));
+      // ✅ Actually fetch the status from the DB first
+      const statusRes = await axios.get(`${API_BASE_URL}/api/applicant-status/${personId}`);
+      const alreadySubmitted = statusRes.data.requirements === 1;
 
-      if (uploadsData.length > 0 && allRequiredUploaded && !allRequirementsCompleted) {
-        setOpenConfirmModal(true);
+      if (!alreadySubmitted) {
+        const reqRes = await axios.get(`${API_BASE_URL}/requirements/${personId}`);
+        const verifiableRequirements = reqRes.data.filter(
+          (r) => r.is_verifiable === 1 && r.category === "Main",
+        );
+        const uploadedIds = new Set(uploadsData.map((u) => u.requirements_id));
+        const allRequiredUploaded =
+          verifiableRequirements.length > 0 &&
+          verifiableRequirements.every((r) => uploadedIds.has(r.id));
+
+        if (uploadsData.length > 0 && allRequiredUploaded) {
+          setOpenConfirmModal(true);
+        }
       }
-      setAllRequirementsCompleted(allRequiredUploaded);
-      localStorage.setItem("requirementsCompleted", allRequiredUploaded ? "1" : "0");
+
+      setAllRequirementsCompleted(alreadySubmitted);
     } catch (err) {
       console.error("❌ Fetch uploads failed:", err);
     }
@@ -504,11 +509,22 @@ const RequirementUploader = () => {
             variant="contained"
             endIcon={<SendIcon />}
             fullWidth={isMobile}
-            onClick={() => {
+            onClick={async () => {
               if (!isFormValid()) return;
-              setOpenConfirmModal(false);
-              localStorage.setItem("requirementsCompleted", "1");
-              setOpenModal(true);
+              try {
+                await axios.post(`${API_BASE_URL}/api/submit-requirements`, {
+                  person_id: userID || localStorage.getItem("person_id"),
+                });
+                setAllRequirementsCompleted(true);
+                setOpenConfirmModal(false);
+                setOpenModal(true);
+              } catch (err) {
+                setSnack({
+                  open: true,
+                  severity: "error",
+                  message: "Failed to submit requirements. Please try again.",
+                });
+              }
             }}
             sx={{ minWidth: { xs: "100%", sm: 200 }, height: 42, backgroundColor: settings?.header_color || "#1976d2", color: "#fff", fontWeight: 700, fontSize: 14, textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: settings?.header_color || "#1976d2", opacity: 0.9, boxShadow: "none" } }}
           >

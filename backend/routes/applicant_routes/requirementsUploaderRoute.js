@@ -303,6 +303,46 @@ router.delete("/uploads/:id", async (req, res) => {
     console.error("Delete error:", err);
     res.status(500).json({ error: "Failed to delete requirement" });
   }
+
+});
+
+// POST /api/submit-requirements
+router.post("/api/submit-requirements", async (req, res) => {
+  const { person_id } = req.body;
+
+  if (!person_id) {
+    return res.status(400).json({ error: "Missing person_id" });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE person_status_table SET requirements = 1 WHERE person_id = ?",
+      [person_id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Applicant status record not found" });
+    }
+
+    res.json({ message: "Requirements submitted successfully" });
+  } catch (err) {
+    console.error("Submit requirements error:", err);
+    res.status(500).json({ error: "Failed to update requirements status" });
+  }
+});
+
+router.get("/api/applicant-status/:person_id", async (req, res) => {
+  const { person_id } = req.params;
+  try {
+    const [[row]] = await db.query(
+      "SELECT requirements FROM person_status_table WHERE person_id = ?",
+      [person_id]
+    );
+    if (!row) return res.status(404).json({ error: "Not found" });
+    res.json({ requirements: row.requirements });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch status" });
+  }
 });
 
 module.exports = router;
