@@ -28,6 +28,7 @@ import {
   FormControl,
 } from "@mui/material";
 import API_BASE_URL from "../apiConfig";
+import EaristLogo from "../assets/EaristLogo.png";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import SearchIcon from "@mui/icons-material/Search";
@@ -311,12 +312,12 @@ export default function StudentAccounts() {
         prev.map((person) =>
           person.person_id === selectedPerson.person_id
             ? {
-                ...person,
-                first_name: payload.first_name,
-                middle_name: payload.middle_name,
-                last_name: payload.last_name,
-                emailAddress: trimmedEmail,
-              }
+              ...person,
+              first_name: payload.first_name,
+              middle_name: payload.middle_name,
+              last_name: payload.last_name,
+              emailAddress: trimmedEmail,
+            }
             : person,
         ),
       );
@@ -475,11 +476,10 @@ export default function StudentAccounts() {
                   ${firstLine}
                 </div>
 
-                ${
-                  secondLine
-                    ? `<div class="school-name">${secondLine}</div>`
-                    : ""
-                }
+                ${secondLine
+        ? `<div class="school-name">${secondLine}</div>`
+        : ""
+      }
 
                 <div style="font-size: 11px;">
                   ${resolvedCampusAddress}
@@ -653,11 +653,9 @@ export default function StudentAccounts() {
         return;
       }
 
-      // ✅ Only save if email changed from what's already stored
-      if (email.trim() !== (selectedPerson?.emailAddress || "").trim()) {
-        const saved = await handleSaveStudentAccount({ silent: true });
-        if (!saved) return;
-      }
+      // Save the generated password before sending the login credentials.
+      const saved = await handleSaveStudentAccount({ silent: true });
+      if (!saved) return;
 
       setLoading(true);
 
@@ -665,28 +663,35 @@ export default function StudentAccounts() {
         `${API_BASE_URL}/api/send_student_password_reminder`,
         {
           person_id: selectedPerson.person_id,
-          email,
+          email: email.trim(),
           password: generatedPassword,
           audit_actor_id: getAuditHeaders()["x-audit-actor-id"],
           audit_actor_role: getAuditHeaders()["x-audit-actor-role"],
         },
       );
 
-      if (res.data.success) {
+      if (!res.data.success) {
         setSnackbar({
           open: true,
-          message: "Email sent successfully!",
-          severity: "success",
+          message: res.data.message || "Failed to send email",
+          severity: "error",
         });
-
-        printAccountSlip(selectedPerson, generatedPassword, email);
+        return;
       }
+
+      setSnackbar({
+        open: true,
+        message: "Email sent successfully!",
+        severity: "success",
+      });
+
+      printAccountSlip(selectedPerson, generatedPassword, email.trim());
     } catch (error) {
       console.error(error);
 
       setSnackbar({
         open: true,
-        message: "Failed to send email",
+        message: error.response?.data?.message || "Failed to send email",
         severity: "error",
       });
     } finally {
@@ -1468,7 +1473,7 @@ export default function StudentAccounts() {
               variant="contained"
               size="small"
               startIcon={<SendIcon />}
-              disabled={!generatedPassword || !email}
+              disabled={!email}
               onClick={handleNotify}
               sx={{
                 fontWeight: 700,

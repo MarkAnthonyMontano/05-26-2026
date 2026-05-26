@@ -399,9 +399,10 @@ router.post("/send_student_password_reminder", async (req, res) => {
   const { person_id, email, password } = req.body;
 
   let conn;
+  let emailDeliveryAttempted = false;
 
   try {
-    if (!person_id || !email || !password) {
+    if (!person_id || !email) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields",
@@ -441,6 +442,7 @@ router.post("/send_student_password_reminder", async (req, res) => {
     const { first_name, last_name, middle_name, student_number } = student[0];
     const fullName = `${last_name}, ${first_name} ${middle_name || ""}`.trim();
 
+    emailDeliveryAttempted = true;
     await transporter.sendMail({
       from: `"${short_term} — Password Security" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -535,7 +537,12 @@ router.post("/send_student_password_reminder", async (req, res) => {
     });
   } catch (error) {
     console.error("EMAIL ERROR:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: emailDeliveryAttempted
+        ? "Email delivery failed. Check SMTP account credentials and connection."
+        : "Unable to prepare the student password email.",
+    });
   } finally {
     if (conn) conn.release();
   }
