@@ -402,7 +402,7 @@ router.post("/send_student_password_reminder", async (req, res) => {
   let emailDeliveryAttempted = false;
 
   try {
-    if (!person_id || !email) {
+    if (!person_id || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields",

@@ -19,7 +19,9 @@ import API_BASE_URL from "../apiConfig";
 import EaristLogo from "../assets/EaristLogo.png";
 import PersonIcon from "@mui/icons-material/Person";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ClassIcon from "@mui/icons-material/Class";
+import FilterNoneIcon from "@mui/icons-material/FilterNone";
 // ─── Remark Badge ─────────────────────────────────────────────────
 const REMARK_MAP = {
   0: { label: "Ongoing",    bg: "#E8F5E9", color: "#9e9c1e", border: "#807700" },
@@ -138,15 +140,30 @@ const MobileGradeCard = ({ row, index, borderColor, subtitleColor, titleColor })
     </Box>
 
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", mt: 0.8, alignItems: "center" }}>
-      <Typography sx={{ fontSize: 11, color: "#555" }}>
-        👤 {row.fname === "TBA" && row.lname === "TBA" ? "TBA" : `Prof. ${row.fname} ${row.lname}`}
-      </Typography>
-      <Typography sx={{ fontSize: 11, color: "#555" }}>
-        📚 {row.program_code}-{row.section_description}
-      </Typography>
-      <Typography sx={{ fontSize: 11, color: "#555" }}>
-        🔢 {getUnitDisplay(row)} unit{getUnitDisplay(row) !== 1 ? "s" : ""}
-      </Typography>
+      {/* Professor */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <PersonOutlineIcon sx={{ fontSize: 13, color: "#000" }} />
+        <Typography sx={{ fontSize: 11, color: "#000" }}>
+          {row.fname === "TBA" && row.lname === "TBA" ? "TBA" : `Prof. ${row.fname} ${row.lname}`}
+        </Typography>
+      </Box>
+
+      {/* Section */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <ClassIcon sx={{ fontSize: 13, color: "#000" }} />
+        <Typography sx={{ fontSize: 11, color: "#000" }}>
+          {row.program_code}-{row.section_description}
+        </Typography>
+      </Box>
+
+      {/* Units */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <FilterNoneIcon sx={{ fontSize: 13, color: "#000" }} />
+        <Typography sx={{ fontSize: 11, color: "#000" }}>
+          {getUnitDisplay(row)} unit{getUnitDisplay(row) !== 1 ? "s" : ""}
+        </Typography>
+      </Box>
+
       <RemarkBadge value={row.en_remarks} />
     </Box>
   </Box>
@@ -439,7 +456,7 @@ const StudentGradingPage = () => {
                         </Typography>
                         {gwaValue && (
                           <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color: titleColor }}>
-                            GWA:{" "}
+                            Weighted GWA:{" "}
                             <Box component="span" sx={{ fontWeight: "normal", ml: "8px", color: headerBg }}>
                               {Number(gwaValue).toFixed(3)}
                             </Box>

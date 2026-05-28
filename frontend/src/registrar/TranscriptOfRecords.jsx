@@ -55,6 +55,7 @@ const TOR = () => {
   const [fetchedLogo, setFetchedLogo] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [shortTerm, setShortTerm] = useState("");
+  const [branches, setBranches] = useState([]);
 
   useEffect(() => {
     if (!settings) return;
@@ -78,7 +79,19 @@ const TOR = () => {
     // 🏷️ School Information
     if (settings.company_name) setCompanyName(settings.company_name);
     if (settings.short_term) setShortTerm(settings.short_term);
-    if (settings.campus_address) setCampusAddress(settings.campus_address);
+    const settingsBranches = settings?.branches || settings?.branch;
+    if (settingsBranches) {
+      try {
+        const parsed =
+          typeof settingsBranches === "string"
+            ? JSON.parse(settingsBranches)
+            : settingsBranches;
+        setBranches(Array.isArray(parsed) ? parsed : []);
+      } catch (err) {
+        console.error("Failed to parse branches:", err);
+        setBranches([]);
+      }
+    }
   }, [settings]);
 
   const [person, setPerson] = useState({
@@ -158,12 +171,6 @@ const TOR = () => {
   const [campusAddress, setCampusAddress] = useState("");
   const [gradeConversion, setGradeConversions] = useState([]);
 
-  useEffect(() => {
-    if (settings && settings.address) {
-      setCampusAddress(settings.address);
-    }
-  }, [settings]);
-
   // ✅ Fetch person data from backend
   const fetchPersonData = async (id) => {
     try {
@@ -217,6 +224,47 @@ const TOR = () => {
 
   const [activeStep, setActiveStep] = useState(5);
   const [clickedSteps, setClickedSteps] = useState([]);
+
+  useEffect(() => {
+    if (!settings) return;
+
+    const branchId =
+      studentData?.campus ||
+      studentData?.branch_id ||
+      person?.campus ||
+      person?.branch_id;
+    const matchedBranch = branches.find(
+      (branch) =>
+        String(branch?.id ?? branch?.branch_id) === String(branchId),
+    );
+
+    if (
+      matchedBranch?.address ||
+      matchedBranch?.branch_address ||
+      matchedBranch?.campus_address
+    ) {
+      setCampusAddress(
+        matchedBranch.address ||
+          matchedBranch.branch_address ||
+          matchedBranch.campus_address,
+      );
+      return;
+    }
+
+    if (settings.campus_address) {
+      setCampusAddress(settings.campus_address);
+      return;
+    }
+
+    setCampusAddress(settings.address || "");
+  }, [
+    settings,
+    branches,
+    studentData?.campus,
+    studentData?.branch_id,
+    person?.campus,
+    person?.branch_id,
+  ]);
 
   const navigate = useNavigate();
 
@@ -474,7 +522,7 @@ const TOR = () => {
   );
 
   // Constants
-  const MAX_PAGE_HEIGHT_REM = 43;
+  const MAX_PAGE_HEIGHT_REM = 47;
   const SUBJECT_HEIGHT_REM = 1.1;
   const MAX_SUBJECTS_PER_PAGE = Math.floor(
     MAX_PAGE_HEIGHT_REM / SUBJECT_HEIGHT_REM,
@@ -830,7 +878,7 @@ const TOR = () => {
                     max-height: none !important;
                 }
                 .page {
-                    zoom: 0.8;
+                    zoom: 0.85 !important;
                     position: absolute;
                     top: 0;
                 }
@@ -867,8 +915,10 @@ const TOR = () => {
                     height: 10rem !important;
                 }
                 .table{
-                    min-height: 85rem !important;
-                    max-height: 85rem !important;
+                    height: auto !important;
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    border-collapse: collapse !important;
                 }
                 .no-border{
                     border-bottom: none !important;
@@ -1569,12 +1619,18 @@ const TOR = () => {
               </Typography>
               <Box style={{ display: "flex", marginTop: "1rem" }}>
                 <Box>
-                  <Box style={{ display: "flex", height: "17.5rem" }}>
+                  <Box
+                    style={{
+                      display: "flex",
+                      height: "17.5rem",
+                      marginLeft: "1rem",
+                      width: "80rem",
+                      borderBottom: "solid black 1px",
+                    }}
+                  >
                     <Box
                       sx={{
                         padding: "1rem",
-                        marginLeft: "1rem",
-                        borderBottom: "solid black 1px",
                         width: "80rem",
                       }}
                     >
@@ -1738,7 +1794,7 @@ const TOR = () => {
                           <Typography
                             style={{
                               fontSize: "22px",
-                              marginTop: "-5px",
+                              marginTop: "-1px",
                               marginLeft: "2.3rem",
                               fontWeight: "400",
                               letterSpacing: "-1.5px",
@@ -1915,6 +1971,7 @@ const TOR = () => {
                       marginLeft: "1rem",
                       marginTop: "0.5rem",
                       flexWrap: "wrap",
+                      width: "80rem",
                       borderTop: "solid black 1px",
                       overflow: "hidden",
                     }}
@@ -1926,7 +1983,14 @@ const TOR = () => {
                         boxSizing: "border-box",
                       }}
                     >
-                      <table className="table" style={{ minHeight: "67rem" }}>
+                      <table
+                        className="table"
+                        style={{
+                          height: "auto",
+                          minHeight: 0,
+                          borderCollapse: "collapse",
+                        }}
+                      >
                         <thead>
                           <tr
                             style={{
@@ -2076,11 +2140,30 @@ const TOR = () => {
                             </td>
                           </tr>
 
-                          {pageGroups.map((group) => (
+                          {pageGroups.map((group, groupIndex) => {
+                            const compactTermLabel =
+                              pageIndex === paginatedSubjects.length - 1 &&
+                              groupIndex === pageGroups.length - 1 &&
+                              group.subjects.length <= 6;
+
+                            return (
                             <React.Fragment key={group.termKey}>
-                              {group.subjects.map((p, index) => (
+                              {group.subjects.map((p, index) => {
+                                const isCompactTermRow =
+                                  compactTermLabel && index === 0;
+
+                                return (
                                 <tr
-                                  style={{ display: "flex" }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: isCompactTermRow
+                                      ? "center"
+                                      : "flex-start",
+                                    lineHeight: "22px",
+                                    minHeight: isCompactTermRow
+                                      ? "38px"
+                                      : "22px",
+                                  }}
                                   key={p.enrolled_id}
                                 >
                                   <td
@@ -2089,9 +2172,12 @@ const TOR = () => {
                                       fontWeight: "400",
                                       display: "flex",
                                       flexDirection: "column",
-                                      justifyContent: "center",
+                                      justifyContent: compactTermLabel
+                                        ? "center"
+                                        : "center",
                                       alignItems: "flex-start",
                                       position: "relative",
+                                      lineHeight: compactTermLabel ? "18px" : "22px",
                                       paddingTop: index === 0 ? "0" : "0",
                                     }}
                                   >
@@ -2099,10 +2185,13 @@ const TOR = () => {
                                       <>
                                         <span
                                           style={{
-                                            fontSize: "18px",
+                                            fontSize: compactTermLabel
+                                              ? "17px"
+                                              : "18px",
                                             textAlign: "center",
                                             width: "14rem",
                                             fontWeight: "500",
+                                            lineHeight: compactTermLabel ? "18px" : "22px",
                                           }}
                                         >
                                           {convertSemester(
@@ -2111,12 +2200,17 @@ const TOR = () => {
                                         </span>
                                         <span
                                           style={{
-                                            fontSize: "17px",
-                                            marginTop: "3rem",
-                                            position: "absolute",
+                                            fontSize: compactTermLabel
+                                              ? "16px"
+                                              : "17px",
+                                            marginTop: compactTermLabel ? 0 : "3rem",
+                                            position: compactTermLabel
+                                              ? "static"
+                                              : "absolute",
                                             textAlign: "center",
                                             width: "13.5rem",
                                             fontWeight: "500",
+                                            lineHeight: compactTermLabel ? "18px" : "22px",
                                           }}
                                         >
                                           {p.current_year} - {p.next_year}
@@ -2125,24 +2219,37 @@ const TOR = () => {
                                     )}
                                   </td>
                                   <td
-                                    style={{ display: "flex", width: "38rem" }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: isCompactTermRow
+                                        ? "center"
+                                        : "flex-start",
+                                      width: "38rem",
+                                      lineHeight: "22px",
+                                      padding: 0,
+                                    }}
                                   >
                                     <span
                                       style={{
-                                        width: "90px",
+                                        width: "9.5rem",
+                                        flex: "0 0 9.5rem",
                                         margin: "0",
                                         padding: "0",
                                         fontSize: "18px",
+                                        lineHeight: "22px",
                                         letterSpacing: "-0.5px",
+                                        whiteSpace: "normal",
                                       }}
                                     >
                                       {p.course_code}
                                     </span>
                                     <span
                                       style={{
-                                        marginLeft: "30px",
+                                        flex: "1 1 auto",
+                                        marginLeft: 0,
                                         padding: "0",
                                         fontSize: "18px",
+                                        lineHeight: "22px",
                                         letterSpacing: "-0.5px",
                                       }}
                                     >
@@ -2164,6 +2271,10 @@ const TOR = () => {
                                       style={{
                                         display: "flex",
                                         alignItems: "center",
+                                        minHeight: isCompactTermRow
+                                          ? "38px"
+                                          : "22px",
+                                        lineHeight: "22px",
                                       }}
                                     >
                                       <div
@@ -2171,6 +2282,7 @@ const TOR = () => {
                                           fontSize: "18px",
                                           width: "6rem",
                                           textAlign: "center",
+                                          lineHeight: "22px",
                                         }}
                                       >
                                         <span>
@@ -2185,6 +2297,7 @@ const TOR = () => {
                                           textAlign: "center",
                                           width: "7rem",
                                           marginLeft: "-2rem",
+                                          lineHeight: "22px",
                                         }}
                                       >
                                         <span></span>
@@ -2197,9 +2310,13 @@ const TOR = () => {
                                         display: "flex",
                                         fontSize: "18px",
                                         alignItems: "center",
+                                        minHeight: isCompactTermRow
+                                          ? "38px"
+                                          : "22px",
                                         width: "7rem",
                                         marginLeft: "1.7rem",
                                         justifyContent: "center",
+                                        lineHeight: "22px",
                                       }}
                                     >
                                       {totalUnitPerSubject(
@@ -2213,9 +2330,13 @@ const TOR = () => {
                                       style={{
                                         display: "flex",
                                         alignItems: "center",
+                                        minHeight: isCompactTermRow
+                                          ? "38px"
+                                          : "22px",
                                         width: "8.9rem",
                                         fontSize: "18px",
                                         justifyContent: "center",
+                                        lineHeight: "22px",
                                       }}
                                     >
                                       {p.en_remarks === 0
@@ -2232,28 +2353,38 @@ const TOR = () => {
                                     </div>
                                   </td>
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </React.Fragment>
-                          ))}
+                            );
+                          })}
 
-                          <tr style={{ height: "30px" }}>
+                          <tr
+                            style={{
+                              display: "flex",
+                              height: "auto",
+                              lineHeight: 1,
+                            }}
+                          >
                             {pageIndex === paginatedSubjects.length - 1 ? (
                               <td
                                 className="table-cell-padding"
                                 style={{
                                   textAlign: "center",
-                                  marginTop: "2rem",
-                                  paddingTop: "1rem",
+                                  width: "79.9rem",
+                                  padding: "1px 0 0",
+                                  lineHeight: 1,
                                 }}
                               >
                                 <span
                                   style={{
+                                    display: "block",
                                     fontSize: "17px",
                                     fontWeight: "600",
+                                    lineHeight: 1,
                                     whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    maxWidth: "100px",
                                     width: "100%",
+                                    overflow: "hidden",
                                   }}
                                 >
                                   <span
@@ -2281,6 +2412,9 @@ const TOR = () => {
                                 style={{
                                   textAlign: "center",
                                   borderTop: "dashed 1px black",
+                                  width: "79.9rem",
+                                  padding: "1px 0 0",
+                                  lineHeight: 1,
                                 }}
                               >
                                 <span
@@ -2796,8 +2930,7 @@ const TOR = () => {
                                   wordSpacing: "1px",
                                 }}
                               >
-                                EULOGIO "AMANG" RODRIGUEZ INSTITUTE OF SCIENCE
-                                AND TECHNOLOGY
+                                {companyName?.toUpperCase()}
                               </span>
                               <span
                                 style={{

@@ -7,6 +7,9 @@ import axios from "axios";
 import API_BASE_URL from "../apiConfig";
 import { SettingsContext } from "../App";
 import { useNavigate } from "react-router-dom";
+import SchoolIcon from "@mui/icons-material/School";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 
 const fmt = (val) =>
   Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
@@ -66,8 +69,8 @@ const ProgramPayment = () => {
 
   const handleRowClick = (row) => {
     const params = new URLSearchParams({
-      school_year:          String(row.school_year          || ""),
-      semester:             String(row.semester             || ""),
+      school_year:           String(row.school_year           || ""),
+      semester:              String(row.semester              || ""),
       active_school_year_id: String(row.active_school_year_id || ""),
     });
     navigate(`/student_account_balance/info?${params.toString()}`, {
@@ -145,12 +148,24 @@ const ProgramPayment = () => {
                     </Button>
                   </Box>
 
+                  {/* ── Info chips (MUI icons replacing emojis) ── */}
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", mb: 0.8 }}>
-                    <Typography sx={{ fontSize: 11.5, color: "#555" }}>📚 {row.year_level}</Typography>
-                    {row.scholarship && <Typography sx={{ fontSize: 11.5, color: "#555" }}>🎓 {row.scholarship}</Typography>}
-                    <Typography sx={{ fontSize: 11.5, color: "#555" }}>
-                      💳 {row.payment_type ? `${row.payment_type} - ${row.payment_status}` : "TOTAL AMOUNT DUE"}
-                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <SchoolIcon sx={{ fontSize: 14, color: "#555" }} />
+                      <Typography sx={{ fontSize: 11.5, color: "#555" }}>{row.year_level}</Typography>
+                    </Box>
+                    {row.scholarship && (
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        <EmojiEventsIcon sx={{ fontSize: 14, color: "#555" }} />
+                        <Typography sx={{ fontSize: 11.5, color: "#555" }}>{row.scholarship}</Typography>
+                      </Box>
+                    )}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <CreditCardIcon sx={{ fontSize: 14, color: "#555" }} />
+                      <Typography sx={{ fontSize: 11.5, color: "#555" }}>
+                        {row.payment_type ? `${row.payment_type} - ${row.payment_status}` : "TOTAL AMOUNT DUE"}
+                      </Typography>
+                    </Box>
                   </Box>
 
                   <Box sx={{ display: "flex", gap: 2, justifyContent: "space-between", pt: 0.8, borderTop: `1px solid ${borderColor}` }}>

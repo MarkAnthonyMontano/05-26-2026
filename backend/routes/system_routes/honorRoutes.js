@@ -2,6 +2,71 @@ const express = require("express");
 const { db, db3 } = require("../database/database");
 const router = express.Router();
 
+const GWA_UNIT_SQL =
+    "COALESCE(NULLIF(CAST(ct.course_unit AS DECIMAL(10,4)), 0), NULLIF(COALESCE(CAST(ct.lec_unit AS DECIMAL(10,4)), 0) + COALESCE(CAST(ct.lab_unit AS DECIMAL(10,4)), 0), 0), 0)";
+
+const GWA_EXCLUSION_SQL = `
+    (
+        UPPER(REPLACE(COALESCE(ct.course_code, ''), ' ', '')) LIKE 'NSTP%'
+        OR UPPER(REPLACE(COALESCE(ct.course_code, ''), ' ', '')) LIKE 'NST%'
+        OR UPPER(COALESCE(ct.course_code, '')) LIKE '%CWTS%'
+        OR UPPER(COALESCE(ct.course_code, '')) LIKE '%CTWS%'
+        OR UPPER(COALESCE(ct.course_code, '')) LIKE '%LTS%'
+        OR UPPER(COALESCE(ct.course_code, '')) LIKE '%MTS%'
+        OR UPPER(REPLACE(COALESCE(ct.course_description, ''), ' ', '')) LIKE '%NSTP%'
+        OR UPPER(COALESCE(ct.course_description, '')) LIKE '%NATIONAL SERVICE TRAINING%'
+        OR UPPER(COALESCE(ct.course_description, '')) LIKE '%CIVIC WELFARE TRAINING%'
+        OR UPPER(COALESCE(ct.course_description, '')) LIKE '%LITERACY TRAINING SERVICE%'
+        OR UPPER(COALESCE(ct.course_description, '')) LIKE '%RESERVE OFFICERS TRAINING%'
+        OR EXISTS (
+            SELECT 1
+            FROM program_tagging_table ptt_ex
+            LEFT JOIN year_level_table ylt_ex
+                ON ylt_ex.year_level_id = ptt_ex.year_level_id
+            WHERE ptt_ex.curriculum_id = es.curriculum_id
+                AND ptt_ex.course_id = es.course_id
+                AND (
+                    COALESCE(ptt_ex.is_nstp, 0) = 1
+                    OR LOWER(COALESCE(CAST(ptt_ex.category AS CHAR), '')) IN ('bridging', 'bridge', 'special')
+                    OR LOWER(COALESCE(ylt_ex.year_level_description, '')) LIKE '%bridg%'
+                    OR COALESCE(LOWER(ylt_ex.level_type), 'year') = 'special'
+                )
+        )
+    )
+`;
+
+const graduateProgramExclusionSql = (alias) => `
+    (
+        COALESCE(${alias}.academic_program, 0) IN (1, 2)
+        OR UPPER(COALESCE(${alias}.program_code, '')) LIKE '%MASTER%'
+        OR UPPER(COALESCE(${alias}.program_code, '')) LIKE '%DOCTOR%'
+        OR UPPER(COALESCE(${alias}.program_code, '')) LIKE '%PHD%'
+        OR UPPER(COALESCE(${alias}.program_description, '')) LIKE '%MASTER%'
+        OR UPPER(COALESCE(${alias}.program_description, '')) LIKE '%MASTERAL%'
+        OR UPPER(COALESCE(${alias}.program_description, '')) LIKE '%DOCTOR%'
+        OR UPPER(COALESCE(${alias}.program_description, '')) LIKE '%DOCTORAL%'
+        OR UPPER(COALESCE(${alias}.program_description, '')) LIKE '%PHD%'
+        OR UPPER(COALESCE(${alias}.major, '')) LIKE '%MASTER%'
+        OR UPPER(COALESCE(${alias}.major, '')) LIKE '%MASTERAL%'
+        OR UPPER(COALESCE(${alias}.major, '')) LIKE '%DOCTOR%'
+        OR UPPER(COALESCE(${alias}.major, '')) LIKE '%DOCTORAL%'
+        OR UPPER(COALESCE(${alias}.major, '')) LIKE '%PHD%'
+    )
+`;
+
+const honorRecordDisqualificationSql = (studentAlias) => `
+    NOT EXISTS (
+        SELECT 1
+        FROM enrolled_subject es_bad
+        WHERE es_bad.student_number = ${studentAlias}.student_number
+            AND (
+                COALESCE(es_bad.en_remarks, 0) IN (2, 3, 4)
+                OR UPPER(TRIM(COALESCE(CAST(es_bad.final_grade AS CHAR), ''))) IN ('INC', 'INCOMPLETE', 'DRP', 'DROP', 'DROPPED', 'FAILED')
+                OR UPPER(TRIM(COALESCE(CAST(es_bad.grades_status AS CHAR), ''))) IN ('INC', 'INCOMPLETE', 'DRP', 'DROP', 'DROPPED', 'FAILED')
+            )
+    )
+`;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // School Year dropdown → shows "2025-2026" (no semester suffix).
 //   school_year_id sent to API = year_table.year_id
@@ -59,6 +124,8 @@ router.get("/honors/academic_achievers", async (req, res) => {
         // ── Outer filters ──────────────────────────────────────────────────
         const outerConditions = [];
         const outerParams     = [];
+        outerConditions.push(`NOT ${graduateProgramExclusionSql("pgt")}`);
+        outerConditions.push(honorRecordDisqualificationSql("snt"));
 
         if (search) {
             outerConditions.push(
@@ -106,7 +173,11 @@ router.get("/honors/academic_achievers", async (req, res) => {
                 SELECT
                     es.student_number,
                     latest_sy.active_school_year_id                           AS latest_school_year_id,
-                    ROUND(AVG(CAST(gc.equivalent_grade AS DECIMAL(10,4))), 4) AS gwa,
+                    ROUND(
+                        SUM(CAST(gc.equivalent_grade AS DECIMAL(10,4)) * ${GWA_UNIT_SQL})
+                        / NULLIF(SUM(${GWA_UNIT_SQL}), 0),
+                        4
+                    ) AS gwa,
                     MAX(CAST(gc.equivalent_grade       AS DECIMAL(10,4)))     AS max_grade,
                     COUNT(es.id)                                              AS subject_count
                 FROM (${latestSyClause}) latest_sy
@@ -124,6 +195,8 @@ router.get("/honors/academic_achievers", async (req, res) => {
                     AND CAST(es.final_grade AS DECIMAL(8,2)) > 0
                     AND CAST(es.final_grade AS DECIMAL(8,2))
                             BETWEEN gc.min_score AND gc.max_score
+                WHERE ${GWA_UNIT_SQL} > 0
+                    AND NOT ${GWA_EXCLUSION_SQL}
                 GROUP BY es.student_number, latest_sy.active_school_year_id
             ) gwa_calc
 
@@ -166,7 +239,11 @@ router.get("/honors/academic_achievers", async (req, res) => {
                     SELECT
                         es.student_number,
                         latest_sy.active_school_year_id AS latest_school_year_id,
-                        ROUND(AVG(CAST(gc.equivalent_grade AS DECIMAL(10,4))), 4) AS gwa,
+                        ROUND(
+                            SUM(CAST(gc.equivalent_grade AS DECIMAL(10,4)) * ${GWA_UNIT_SQL})
+                            / NULLIF(SUM(${GWA_UNIT_SQL}), 0),
+                            4
+                        ) AS gwa,
                         MAX(CAST(gc.equivalent_grade       AS DECIMAL(10,4)))     AS max_grade
                     FROM (${latestSyClause}) latest_sy
                     INNER JOIN enrolled_subject es
@@ -183,6 +260,8 @@ router.get("/honors/academic_achievers", async (req, res) => {
                         AND CAST(es.final_grade AS DECIMAL(8,2)) > 0
                         AND CAST(es.final_grade AS DECIMAL(8,2))
                                 BETWEEN gc.min_score AND gc.max_score
+                    WHERE ${GWA_UNIT_SQL} > 0
+                        AND NOT ${GWA_EXCLUSION_SQL}
                     GROUP BY es.student_number, latest_sy.active_school_year_id
                 ) gwa_calc
                 INNER JOIN student_numbering_table snt
@@ -238,22 +317,16 @@ router.get("/honors/latin_honors", async (req, res) => {
 
         const search       = (req.query.search || "").trim();
         const programId    = req.query.program_id    || "";
-        const schoolYearId = req.query.school_year_id || "";
         const campusId     = req.query.campus_id     || "";
-        // Latin honors = cumulative, so no semester filter
+        // Latin honors = cumulative overall GWA, so no school-year or semester filter.
 
-        // ── Build inner WHERE for year (applied to asyt inside the subquery) ──
-        const innerParams = [];
         let innerWhere = `es.en_remarks = 1`;
-
-        if (schoolYearId) {
-            innerWhere += ` AND asyt.year_id = ?`;
-            innerParams.push(schoolYearId);
-        }
 
         // ── Outer filters ──────────────────────────────────────────────────
         const outerConditions = [];
         const outerParams     = [];
+        outerConditions.push(`NOT ${graduateProgramExclusionSql("pgt")}`);
+        outerConditions.push(honorRecordDisqualificationSql("snt"));
 
         if (search) {
             outerConditions.push(
@@ -298,7 +371,11 @@ router.get("/honors/latin_honors", async (req, res) => {
             FROM (
                 SELECT
                     es.student_number,
-                    ROUND(AVG(CAST(gc.equivalent_grade AS DECIMAL(10,4))), 4) AS cumulative_gwa,
+                    ROUND(
+                        SUM(CAST(gc.equivalent_grade AS DECIMAL(10,4)) * ${GWA_UNIT_SQL})
+                        / NULLIF(SUM(${GWA_UNIT_SQL}), 0),
+                        4
+                    ) AS cumulative_gwa,
                     MAX(CAST(gc.equivalent_grade       AS DECIMAL(10,4)))     AS max_grade,
                     COUNT(es.id)                                              AS subject_count
                 FROM enrolled_subject es
@@ -319,6 +396,8 @@ router.get("/honors/latin_honors", async (req, res) => {
                     AND CAST(es.final_grade AS DECIMAL(8,2))
                             BETWEEN gc.min_score AND gc.max_score
                 WHERE ${innerWhere}
+                    AND ${GWA_UNIT_SQL} > 0
+                    AND NOT ${GWA_EXCLUSION_SQL}
                 GROUP BY es.student_number
             ) gwa_calc
 
@@ -359,7 +438,11 @@ router.get("/honors/latin_honors", async (req, res) => {
                 FROM (
                     SELECT
                         es.student_number,
-                        ROUND(AVG(CAST(gc.equivalent_grade AS DECIMAL(10,4))), 4) AS cumulative_gwa,
+                        ROUND(
+                            SUM(CAST(gc.equivalent_grade AS DECIMAL(10,4)) * ${GWA_UNIT_SQL})
+                            / NULLIF(SUM(${GWA_UNIT_SQL}), 0),
+                            4
+                        ) AS cumulative_gwa,
                         MAX(CAST(gc.equivalent_grade       AS DECIMAL(10,4)))     AS max_grade
                     FROM enrolled_subject es
                     INNER JOIN student_status_table ss
@@ -379,6 +462,8 @@ router.get("/honors/latin_honors", async (req, res) => {
                         AND CAST(es.final_grade AS DECIMAL(8,2))
                                 BETWEEN gc.min_score AND gc.max_score
                     WHERE ${innerWhere}
+                        AND ${GWA_UNIT_SQL} > 0
+                        AND NOT ${GWA_EXCLUSION_SQL}
                     GROUP BY es.student_number
                 ) gwa_calc
                 INNER JOIN student_numbering_table snt
@@ -402,8 +487,8 @@ router.get("/honors/latin_honors", async (req, res) => {
             ) counted
         `;
 
-        const [rows]      = await db3.query(dataSql,  [...innerParams, ...outerParams, limit, offset]);
-        const [countRows] = await db3.query(countSql, [...innerParams, ...outerParams]);
+        const [rows]      = await db3.query(dataSql,  [...outerParams, limit, offset]);
+        const [countRows] = await db3.query(countSql, [...outerParams]);
 
         res.json({
             data:       rows,
@@ -470,11 +555,35 @@ router.get("/honors/semesters", async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.get("/honors/programs", async (req, res) => {
     try {
+        const campusId = req.query.campus_id || "";
+        const params = [];
+        let campusWhere = "";
+
+        if (campusId) {
+            campusWhere = `
+                AND EXISTS (
+                    SELECT 1
+                    FROM student_numbering_table snt
+                    INNER JOIN person_table pt
+                        ON pt.person_id = snt.person_id
+                    INNER JOIN enrolled_subject es
+                        ON es.student_number = snt.student_number
+                    INNER JOIN curriculum_table ct
+                        ON ct.curriculum_id = es.curriculum_id
+                    WHERE ct.program_id = p.program_id
+                        AND pt.campus = ?
+                )
+            `;
+            params.push(Number(campusId));
+        }
+
         const [rows] = await db3.query(`
       SELECT program_id, program_code, program_description, major
-      FROM   program_table
+      FROM   program_table p
+      WHERE  NOT ${graduateProgramExclusionSql("p")}
+        ${campusWhere}
       ORDER  BY program_code ASC
-    `);
+    `, params);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

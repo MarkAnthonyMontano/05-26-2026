@@ -26,6 +26,18 @@ import {
   Checkbox,
   IconButton,
 } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
+import SchoolIcon from "@mui/icons-material/School";
+import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
+import InfoIcon from "@mui/icons-material/Info";
+import ErrorIcon from "@mui/icons-material/Error";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { motion } from "framer-motion";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { Snackbar, Alert } from "@mui/material";
+
 // ─── Shared mobile style tokens ──────────────────────────────────────────────
 const S = {
   screen: {
@@ -259,21 +271,20 @@ const S = {
   }),
 };
 
-const STEP_ICONS = ["👤", "👨‍👩‍👧", "🎓", "🏥", "ℹ️"];
-const STEP_LABELS = ["Personal\nInfo", "Family\nBG", "Education", "Health", "Other"];
+const steps = [
+  { label: "Personal Information", icon: <PersonIcon /> },
+  { label: "Family Background", icon: <FamilyRestroomIcon /> },
+  { label: "Educational Attainment", icon: <SchoolIcon /> },
+  { label: "Health Medical Records", icon: <HealthAndSafetyIcon /> },
+  { label: "Other Information", icon: <InfoIcon /> },
+];
 const STEP_PATHS = [
   "/student_dashboard1", "/student_dashboard2", "/student_dashboard3",
   "/student_dashboard4", "/student_dashboard5",
 ];
 
-const handleNext = () => {
-  handleUpdate(person);
-  if (isFormValid()) {
-    navigate("/student_dashboard3");
-  } else {
-    showSnackbar("Please fill all required fields before proceeding.", "error");
-  }
-};
+
+
 
 
 // ─── Reusable field components ────────────────────────────────────────────────
@@ -360,6 +371,11 @@ const StudentDashboard2Mobile = () => {
   const [userRole, setUserRole] = useState("");
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "warning" });
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((p) => ({ ...p, open: false }));
+  };
   const [errors, setErrors] = useState({});
   const [soloParentChoice, setSoloParentChoice] = useState("");
 
@@ -381,18 +397,51 @@ const StudentDashboard2Mobile = () => {
     annual_income: "",
   });
 
+  const docLinks = [
+    { label: "ECAT Application Form", to: "/student_ecat_application_form" },
+    { label: "Admission Form Process", to: "/student_form_process" },
+    { label: "Personal Data Form", to: "/student_personal_data_form" },
+    { label: `Application For ${shortTerm?.toUpperCase() || ""} Admission`, to: "/student_office_of_the_registrar" },
+    { label: "Admission Services", to: "/student_admission_services" },
+  ];
+
+  const [activeStep, setActiveStep] = useState(1);
+
+  // handleStepClick:
+  const handleStepClick = (index) => {
+    if (isFormValid()) {
+      showSnackbar("Your record has been saved successfully!", "success");
+      setTimeout(() => { setActiveStep(index); navigate(STEP_PATHS[index]); }, 1000);
+    } else {
+      showSnackbar("Please fill all required fields before proceeding.", "error");
+    }
+  };
+
+  const handleNext = () => {
+    handleUpdate(person);
+    if (isFormValid()) {
+      showSnackbar("Your record has been saved successfully!", "success");
+      setTimeout(() => navigate("/student_dashboard2"), 1000);
+    } else {
+      showSnackbar("Please fill all required fields before proceeding.", "error");
+    }
+  };
+
   const showSnackbar = (message, severity = "warning") => {
     setSnackbar({ open: true, message, severity });
     setTimeout(() => setSnackbar((p) => ({ ...p, open: false })), 3000);
   };
 
   // Settings
+  // ── Settings ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!settings) return;
     if (settings.short_term) setShortTerm(settings.short_term);
     if (settings.company_name) setCompanyName(settings.company_name);
+    if (settings.branches) {
+      setBranches(typeof settings.branches === "string" ? JSON.parse(settings.branches) : settings.branches);
+    }
   }, [settings]);
-
   // Auth
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
@@ -477,57 +526,150 @@ const StudentDashboard2Mobile = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={S.screen}>
-      {snackbar.open && <div style={S.toast(snackbar.severity)}>{snackbar.message}</div>}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={1000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
 
       {/* Header */}
-      <div style={{
-        ...S.header,
-        backgroundColor: settings?.header_color || "#1976d2",
-      }}>
-        <div>
-          <div style={S.headerTitle}>FAMILY BACKGROUND</div>
-          <div style={S.headerSub}>{companyName || "Student Enrollment"}</div>
-        </div>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 1, padding: 1, }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: titleColor,
+
+            fontSize: { xs: "22px", sm: "28px", md: "36px" },
+          }}
+        >
+          FAMILY BACKGROUND
+        </Typography>
+      </Box>
+      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+      <br />
 
       {/* Stepper */}
-      <div style={S.stepperWrap}>
-        {STEP_LABELS.map((label, i) => (
-          <React.Fragment key={i}>
-            <div style={S.stepItem} onClick={() => navigate(STEP_PATHS[i])}>
-              <div style={S.stepCircle(i === 1)}>{STEP_ICONS[i]}</div>
-              <div style={S.stepLabel(i === 1)}>{label}</div>
-            </div>
-            {i < STEP_LABELS.length - 1 && <div style={S.stepLine} />}
-          </React.Fragment>
-        ))}
-      </div>
+
+
 
       {/* Notice */}
-      <div style={S.notice}>
-        <div style={S.noticeIcon}>⚠️</div>
-        <div style={S.noticeText}>
-          <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-          <strong></strong>
-          <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
-          Please indicate “NA” or “N/A” in fields where the requested information is not applicable or no response can be provided.
-          &nbsp;&nbsp;<br />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 1.5,
+          mx: "12px",
+          mt: "12px",
+          p: "10px 12px",
+          borderRadius: "8px",
+          backgroundColor: "#fffaf5",
+          border: "1px solid #6D2323",
+          boxShadow: "0px 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        {/* Icon */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#800000",
+            borderRadius: "6px",
+            width: 36,
+            height: 36,
+            flexShrink: 0,
+          }}
+        >
+          <ErrorIcon sx={{ color: "white", fontSize: 22 }} />
+        </Box>
 
-          <strong></strong>
-          <span
-            style={{
-              fontSize: '1.2em',
-              margin: '0 15px',
-              marginLeft: '100px',
-            }}
-          >
-            ➔
-          </span>
-          To enter the letter “Ñ”, press and hold the ALT key while typing “165”. For “ñ”, press and hold the ALT key while typing “164”.
-        </div>
-      </div>
+        {/* Text */}
+        <Typography sx={{ fontSize: 12, color: "#3e3e3e", lineHeight: 1.6 }}>
+          <strong style={{ color: "maroon" }}>Notice:</strong>{" "}
+          <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+          Please indicate "NA" or "N/A" in fields where the requested information is not applicable or no response can be provided.
+          <br />
+          <span style={{ marginLeft: 16, fontSize: "1.1em", marginRight: 6 }}>➔</span>
+          To enter the letter "Ñ", press and hold the ALT key while typing "165". For "ñ", press and hold the ALT key while typing "164".
+        </Typography>
+      </Box>
 
-      {/* Step indicator */}
+      <Box sx={{ px: "12px", pt: "12px" }}>
+        <Typography sx={{
+          fontSize: "30px",
+          fontWeight: "bold",
+          textAlign: "center",
+          color: "black",
+          marginTop: "25px",
+          mb: 2
+        }}>
+          PRINTABLE DOCUMENTS
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
+          {docLinks.map((d, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, duration: 0.3 }}
+              style={{ width: "calc(50% - 4px)" }}
+            >
+              <Card
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 0.75,
+                  px: 1.5,
+                  py: 1.25,
+                  height: 52,
+                  width: "100%",
+                  borderRadius: "12px",
+                  border: `1px solid ${borderColor || "#6D2323"}`,
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: settings?.header_color || "#6D2323",
+                    "& .chip-icon": { color: "#fff" },
+                    "& .chip-text": { color: "#fff" },
+                  },
+                }}
+                onClick={() => navigate(d.to)}
+              >
+                <PictureAsPdfIcon
+                  className="chip-icon"
+                  sx={{ fontSize: 18, color: mainButtonColor || "#6D2323", flexShrink: 0 }}
+                />
+                <Typography
+                  className="chip-text"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: mainButtonColor || "#6D2323",
+                    fontFamily: "Poppins, sans-serif",
+                    whiteSpace: "normal",
+                    lineHeight: 1.3,
+                    textAlign: "center",
+                  }}
+                >
+                  {d.label}
+                </Typography>
+              </Card>
+            </motion.div>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Applicant Form Intro */}
       <div style={{ padding: "16px 14px 0", textAlign: "center" }}>
         <Container>
           <h1
@@ -539,11 +681,12 @@ const StudentDashboard2Mobile = () => {
               marginTop: "25px",
             }}
           >
-            APPLICANT FORM
+            STUDENT FORM
           </h1>
+
           <div style={{ textAlign: "center" }}>
-            Complete the applicant form to secure your place for the upcoming
-            academic year at{" "}
+            Please update your personal information to keep your student records
+            accurate and up to date for the upcoming academic year at{" "}
             {shortTerm ? (
               <>
                 <strong>{shortTerm.toUpperCase()}</strong> <br />
@@ -557,12 +700,67 @@ const StudentDashboard2Mobile = () => {
         </Container>
       </div>
 
+      <Box sx={{ display: "flex", justifyContent: "center", width: "100%", px: 2, py: 1.5, borderBottom: "1px solid #e0e0e0" }}>
+        {steps.map((step, index) => (
+          <React.Fragment key={index}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}
+              onClick={() => handleStepClick(index)}
+            >
+              <Box
+                sx={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: "50%",
+                  border: `2px solid ${borderColor}`,
+                  backgroundColor: activeStep === index ? (settings?.header_color || "#6D2323") : "#E8C999",
+                  color: activeStep === index ? "#fff" : "#333",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  transition: "all 0.2s",
+                }}
+              >
+                {step.icon}
+              </Box>
+              <Typography
+                sx={{
+                  mt: 0.75,
+                  color: activeStep === index ? "#6D2323" : "#555",
+                  fontWeight: activeStep === index ? 700 : 400,
+                  fontSize: { xs: 10, sm: 12 },
+                  textAlign: "center",
+                  maxWidth: 72,
+                  lineHeight: 1.3,
+                }}
+              >
+                {step.label}
+              </Typography>
+            </Box>
+
+            {index < steps.length - 1 && (
+              <Box
+                sx={{
+                  height: "2px",
+                  backgroundColor: mainButtonColor,
+                  flex: 1,
+                  alignSelf: "center",
+                  mx: 1,
+                  mb: 3,
+                }}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </Box>
+
       {/* ── Solo Parent ───────────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>👨‍👩‍👧 Family Information</div>
+        }}> Family Information</div>
         <div style={S.cardBody}>
           <label style={S.checkRow}>
             <input
@@ -602,11 +800,11 @@ const StudentDashboard2Mobile = () => {
       </div>
 
       {/* ── Father's Details ──────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>👨 Father's Details</div>
+        }}> Father's Details</div>
         <div style={S.cardBody}>
           <label style={S.checkRow}>
             <input
@@ -632,12 +830,12 @@ const StudentDashboard2Mobile = () => {
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Last Name" required error={errors.father_family_name} helperText="Required">
-                    <MInput name="father_family_name" value={(person.father_family_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "father_family_name", value: e.target.value.toUpperCase() } })} error={errors.father_family_name} placeholder="Last Name" />
+                    <MInput name="father_family_name" value={(person.father_family_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "father_family_name", value: e.target.value.toUpperCase() } })} error={errors.father_family_name} placeholder="Enter your Father Last Name" />
                   </Field>
                 </div>
                 <div style={S.flex1}>
                   <Field label="First Name" required error={errors.father_given_name} helperText="Required">
-                    <MInput name="father_given_name" value={(person.father_given_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "father_given_name", value: e.target.value.toUpperCase() } })} error={errors.father_given_name} placeholder="First Name" />
+                    <MInput name="father_given_name" value={(person.father_given_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "father_given_name", value: e.target.value.toUpperCase() } })} error={errors.father_given_name} placeholder="Enter your Father First Name" />
                   </Field>
                 </div>
               </div>
@@ -645,7 +843,7 @@ const StudentDashboard2Mobile = () => {
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Middle Name">
-                    <MInput name="father_middle_name" value={(person.father_middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "father_middle_name", value: e.target.value.toUpperCase() } })} placeholder="Middle Name" />
+                    <MInput name="father_middle_name" value={(person.father_middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "father_middle_name", value: e.target.value.toUpperCase() } })} placeholder="Enter your Father Middle Name" />
                   </Field>
                 </div>
                 <div style={{ width: 110 }}>
@@ -659,11 +857,11 @@ const StudentDashboard2Mobile = () => {
               </div>
 
               <Field label="Nickname">
-                <MInput name="father_nickname" value={person.father_nickname || ""} onChange={handleChange} placeholder="Nickname" />
+                <MInput name="father_nickname" value={person.father_nickname || ""} onChange={handleChange} placeholder="Enter your Father Nickname" />
               </Field>
 
               {/* Father Education */}
-              <div style={S.subHeader}>📚 Father's Educational Background</div>
+              <div style={S.subHeader}> Father's Educational Background</div>
               <label style={S.checkRow}>
                 <input
                   type="checkbox"
@@ -682,29 +880,29 @@ const StudentDashboard2Mobile = () => {
               {person.father_education !== 1 && (
                 <>
                   <Field label="Education Level" required error={errors.father_education_level} helperText="Required">
-                    <MInput name="father_education_level" value={person.father_education_level || ""} onChange={handleChange} error={errors.father_education_level} placeholder="e.g. College Graduate" />
+                    <MInput name="father_education_level" value={person.father_education_level || ""} onChange={handleChange} error={errors.father_education_level} placeholder="Enter your Father Education Level" />
                   </Field>
                   <div style={S.row}>
                     <div style={S.flex1}>
                       <Field label="Last School Attended" required error={errors.father_last_school} helperText="Required">
-                        <MInput name="father_last_school" value={person.father_last_school || ""} onChange={handleChange} error={errors.father_last_school} placeholder="School name" />
+                        <MInput name="father_last_school" value={person.father_last_school || ""} onChange={handleChange} error={errors.father_last_school} placeholder="Enter your Father Last School" />
                       </Field>
                     </div>
                     <div style={S.flex1}>
                       <Field label="Course" required error={errors.father_course} helperText="Required">
-                        <MInput name="father_course" value={person.father_course || ""} onChange={handleChange} error={errors.father_course} placeholder="Course" />
+                        <MInput name="father_course" value={person.father_course || ""} onChange={handleChange} error={errors.father_course} placeholder="Enter your Father Course" />
                       </Field>
                     </div>
                   </div>
                   <div style={S.row}>
                     <div style={S.flex1}>
                       <Field label="Year Graduated" required error={errors.father_year_graduated} helperText="Required">
-                        <MInput type="number" name="father_year_graduated" value={person.father_year_graduated || ""} onChange={handleChange} error={errors.father_year_graduated} placeholder="Year" />
+                        <MInput type="number" name="father_year_graduated" value={person.father_year_graduated || ""} onChange={handleChange} error={errors.father_year_graduated} placeholder="Enter your Father Year Graduated" />
                       </Field>
                     </div>
                     <div style={S.flex1}>
                       <Field label="School Address" required error={errors.father_school_address} helperText="Required">
-                        <MInput name="father_school_address" value={person.father_school_address || ""} onChange={handleChange} error={errors.father_school_address} placeholder="Address" />
+                        <MInput name="father_school_address" value={person.father_school_address || ""} onChange={handleChange} error={errors.father_school_address} placeholder="Enter your Father School Address" />
                       </Field>
                     </div>
                   </div>
@@ -712,7 +910,7 @@ const StudentDashboard2Mobile = () => {
               )}
 
               {/* Father Contact */}
-              <div style={S.subHeader}>📞 Father's Contact Information</div>
+              <div style={S.subHeader}> Father's Contact Information</div>
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Contact Number" required error={errors.father_contact} helperText="Required">
@@ -724,24 +922,24 @@ const StudentDashboard2Mobile = () => {
                 </div>
                 <div style={S.flex1}>
                   <Field label="Occupation" required error={errors.father_occupation} helperText="Required">
-                    <MInput name="father_occupation" value={person.father_occupation || ""} onChange={handleChange} error={errors.father_occupation} placeholder="Occupation" />
+                    <MInput name="father_occupation" value={person.father_occupation || ""} onChange={handleChange} error={errors.father_occupation} placeholder="Enter your Father Occupation" />
                   </Field>
                 </div>
               </div>
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Employer" required error={errors.father_employer} helperText="Required">
-                    <MInput name="father_employer" value={person.father_employer || ""} onChange={handleChange} error={errors.father_employer} placeholder="Employer / Company" />
+                    <MInput name="father_employer" value={person.father_employer || ""} onChange={handleChange} error={errors.father_employer} placeholder="Enter your Father Employer" />
                   </Field>
                 </div>
                 <div style={S.flex1}>
                   <Field label="Monthly Income" required error={errors.father_income} helperText="Required">
-                    <MInput type="number" name="father_income" value={person.father_income || ""} onChange={(e) => handleChange({ target: { name: "father_income", value: e.target.value.replace(/\D/g, "") } })} error={errors.father_income} placeholder="Amount" />
+                    <MInput type="number" name="father_income" value={person.father_income || ""} onChange={(e) => handleChange({ target: { name: "father_income", value: e.target.value.replace(/\D/g, "") } })} error={errors.father_income} placeholder="Enter your Father Income" />
                   </Field>
                 </div>
               </div>
               <Field label="Email Address">
-                <MInput name="father_email" value={person.father_email || ""} onChange={handleChange} placeholder="father@email.com" type="email" />
+                <MInput name="father_email" value={person.father_email || ""} onChange={handleChange} placeholder="Enter your Father Email Address" type="email" />
               </Field>
             </>
           )}
@@ -749,11 +947,11 @@ const StudentDashboard2Mobile = () => {
       </div>
 
       {/* ── Mother's Details ──────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>👩 Mother's Details</div>
+        }}> Mother's Details</div>
         <div style={S.cardBody}>
           <label style={S.checkRow}>
             <input
@@ -779,12 +977,12 @@ const StudentDashboard2Mobile = () => {
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Last Name" required error={errors.mother_family_name} helperText="Required">
-                    <MInput name="mother_family_name" value={(person.mother_family_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "mother_family_name", value: e.target.value.toUpperCase() } })} error={errors.mother_family_name} placeholder="Last Name" />
+                    <MInput name="mother_family_name" value={(person.mother_family_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "mother_family_name", value: e.target.value.toUpperCase() } })} error={errors.mother_family_name} placeholder="Enter your Mother Last Name" />
                   </Field>
                 </div>
                 <div style={S.flex1}>
                   <Field label="First Name" required error={errors.mother_given_name} helperText="Required">
-                    <MInput name="mother_given_name" value={(person.mother_given_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "mother_given_name", value: e.target.value.toUpperCase() } })} error={errors.mother_given_name} placeholder="First Name" />
+                    <MInput name="mother_given_name" value={(person.mother_given_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "mother_given_name", value: e.target.value.toUpperCase() } })} error={errors.mother_given_name} placeholder="Enter your Mother First Name" />
                   </Field>
                 </div>
               </div>
@@ -792,7 +990,7 @@ const StudentDashboard2Mobile = () => {
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Middle Name">
-                    <MInput name="mother_middle_name" value={(person.mother_middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "mother_middle_name", value: e.target.value.toUpperCase() } })} placeholder="Middle Name" />
+                    <MInput name="mother_middle_name" value={(person.mother_middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "mother_middle_name", value: e.target.value.toUpperCase() } })} placeholder="Enter your Mother Middle Name" />
                   </Field>
                 </div>
                 <div style={{ width: 110 }}>
@@ -806,11 +1004,11 @@ const StudentDashboard2Mobile = () => {
               </div>
 
               <Field label="Nickname">
-                <MInput name="mother_nickname" value={person.mother_nickname || ""} onChange={handleChange} placeholder="Nickname" />
+                <MInput name="mother_nickname" value={person.mother_nickname || ""} onChange={handleChange} placeholder="Enter your Mother Nickname" />
               </Field>
 
               {/* Mother Education */}
-              <div style={S.subHeader}>📚 Mother's Educational Background</div>
+              <div style={S.subHeader}> Mother's Educational Background</div>
               <label style={S.checkRow}>
                 <input
                   type="checkbox"
@@ -829,29 +1027,29 @@ const StudentDashboard2Mobile = () => {
               {person.mother_education !== 1 && (
                 <>
                   <Field label="Education Level" required error={errors.mother_education_level} helperText="Required">
-                    <MInput name="mother_education_level" value={person.mother_education_level || ""} onChange={handleChange} error={errors.mother_education_level} placeholder="e.g. College Graduate" />
+                    <MInput name="mother_education_level" value={person.mother_education_level || ""} onChange={handleChange} error={errors.mother_education_level} placeholder="Enter your Mother Education Level" />
                   </Field>
                   <div style={S.row}>
                     <div style={S.flex1}>
                       <Field label="Last School Attended" required error={errors.mother_last_school} helperText="Required">
-                        <MInput name="mother_last_school" value={person.mother_last_school || ""} onChange={handleChange} error={errors.mother_last_school} placeholder="School name" />
+                        <MInput name="mother_last_school" value={person.mother_last_school || ""} onChange={handleChange} error={errors.mother_last_school} placeholder="Enter your Mother Last School" />
                       </Field>
                     </div>
                     <div style={S.flex1}>
                       <Field label="Course" required error={errors.mother_course} helperText="Required">
-                        <MInput name="mother_course" value={person.mother_course || ""} onChange={handleChange} error={errors.mother_course} placeholder="Course" />
+                        <MInput name="mother_course" value={person.mother_course || ""} onChange={handleChange} error={errors.mother_course} placeholder="Enter your Mother Course" />
                       </Field>
                     </div>
                   </div>
                   <div style={S.row}>
                     <div style={S.flex1}>
                       <Field label="Year Graduated" required error={errors.mother_year_graduated} helperText="Required">
-                        <MInput type="number" name="mother_year_graduated" value={person.mother_year_graduated || ""} onChange={handleChange} error={errors.mother_year_graduated} placeholder="Year" />
+                        <MInput type="number" name="mother_year_graduated" value={person.mother_year_graduated || ""} onChange={handleChange} error={errors.mother_year_graduated} placeholder="Enter your Mother Year Graduated" />
                       </Field>
                     </div>
                     <div style={S.flex1}>
                       <Field label="School Address" required error={errors.mother_school_address} helperText="Required">
-                        <MInput name="mother_school_address" value={person.mother_school_address || ""} onChange={handleChange} error={errors.mother_school_address} placeholder="Address" />
+                        <MInput name="mother_school_address" value={person.mother_school_address || ""} onChange={handleChange} error={errors.mother_school_address} placeholder="Enter your Mother Schol Address" />
                       </Field>
                     </div>
                   </div>
@@ -859,7 +1057,7 @@ const StudentDashboard2Mobile = () => {
               )}
 
               {/* Mother Contact */}
-              <div style={S.subHeader}>📞 Mother's Contact Information</div>
+              <div style={S.subHeader}> Mother's Contact Information</div>
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Contact Number" required error={errors.mother_contact} helperText="Required">
@@ -868,24 +1066,24 @@ const StudentDashboard2Mobile = () => {
                 </div>
                 <div style={S.flex1}>
                   <Field label="Occupation" required error={errors.mother_occupation} helperText="Required">
-                    <MInput name="mother_occupation" value={person.mother_occupation || ""} onChange={handleChange} error={errors.mother_occupation} placeholder="Occupation" />
+                    <MInput name="mother_occupation" value={person.mother_occupation || ""} onChange={handleChange} error={errors.mother_occupation} placeholder="Enter your Mother Occupation" />
                   </Field>
                 </div>
               </div>
               <div style={S.row}>
                 <div style={S.flex1}>
                   <Field label="Employer" required error={errors.mother_employer} helperText="Required">
-                    <MInput name="mother_employer" value={person.mother_employer || ""} onChange={handleChange} error={errors.mother_employer} placeholder="Employer / Company" />
+                    <MInput name="mother_employer" value={person.mother_employer || ""} onChange={handleChange} error={errors.mother_employer} placeholder="Enter your Mother Employer" />
                   </Field>
                 </div>
                 <div style={S.flex1}>
                   <Field label="Monthly Income" required error={errors.mother_income} helperText="Required">
-                    <MInput type="number" name="mother_income" value={person.mother_income || ""} onChange={(e) => handleChange({ target: { name: "mother_income", value: e.target.value.replace(/\D/g, "") } })} error={errors.mother_income} placeholder="Amount" />
+                    <MInput type="number" name="mother_income" value={person.mother_income || ""} onChange={(e) => handleChange({ target: { name: "mother_income", value: e.target.value.replace(/\D/g, "") } })} error={errors.mother_income} placeholder="Enter your Mother Income" />
                   </Field>
                 </div>
               </div>
               <Field label="Email Address">
-                <MInput name="mother_email" value={person.mother_email || ""} onChange={handleChange} placeholder="mother@email.com" type="email" />
+                <MInput name="mother_email" value={person.mother_email || ""} onChange={handleChange} placeholder="Enter your Mother Email Address" type="email" />
               </Field>
             </>
           )}
@@ -893,11 +1091,11 @@ const StudentDashboard2Mobile = () => {
       </div>
 
       {/* ── Guardian / Emergency Contact ─────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🚨 In Case of Emergency — Guardian</div>
+        }}> In Case of Emergency — Guardian</div>
         <div style={S.cardBody}>
           <Field label="Guardian Relationship" required error={errors.guardian} helperText="This field is required.">
             <MSelect name="guardian" value={person.guardian || ""} onChange={handleGuardianChange} error={errors.guardian}>
@@ -909,12 +1107,12 @@ const StudentDashboard2Mobile = () => {
           <div style={S.row}>
             <div style={S.flex1}>
               <Field label="Last Name" required error={errors.guardian_family_name} helperText="Required">
-                <MInput name="guardian_family_name" value={(person.guardian_family_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "guardian_family_name", value: e.target.value.toUpperCase() } })} error={errors.guardian_family_name} placeholder="Last Name" />
+                <MInput name="guardian_family_name" value={(person.guardian_family_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "guardian_family_name", value: e.target.value.toUpperCase() } })} error={errors.guardian_family_name} placeholder="Enter your Guardian Last Name" />
               </Field>
             </div>
             <div style={S.flex1}>
               <Field label="First Name" required error={errors.guardian_given_name} helperText="Required">
-                <MInput name="guardian_given_name" value={(person.guardian_given_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "guardian_given_name", value: e.target.value.toUpperCase() } })} error={errors.guardian_given_name} placeholder="First Name" />
+                <MInput name="guardian_given_name" value={(person.guardian_given_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "guardian_given_name", value: e.target.value.toUpperCase() } })} error={errors.guardian_given_name} placeholder="Enter your Guardian First Name" />
               </Field>
             </div>
           </div>
@@ -922,7 +1120,7 @@ const StudentDashboard2Mobile = () => {
           <div style={S.row}>
             <div style={S.flex1}>
               <Field label="Middle Name">
-                <MInput name="guardian_middle_name" value={(person.guardian_middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "guardian_middle_name", value: e.target.value.toUpperCase() } })} placeholder="Middle Name" />
+                <MInput name="guardian_middle_name" value={(person.guardian_middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "guardian_middle_name", value: e.target.value.toUpperCase() } })} placeholder="Enter your Guardian Middle Name" />
               </Field>
             </div>
             <div style={{ width: 110 }}>
@@ -936,11 +1134,11 @@ const StudentDashboard2Mobile = () => {
           </div>
 
           <Field label="Nickname">
-            <MInput name="guardian_nickname" value={person.guardian_nickname || ""} onChange={handleChange} placeholder="Nickname" />
+            <MInput name="guardian_nickname" value={person.guardian_nickname || ""} onChange={handleChange} placeholder="Enter your Guardian Nickname" />
           </Field>
 
           <Field label="Complete Address" required error={errors.guardian_address} helperText="This field is required.">
-            <MInput name="guardian_address" value={person.guardian_address || ""} onChange={handleChange} error={errors.guardian_address} placeholder="Street, Barangay, City" />
+            <MInput name="guardian_address" value={person.guardian_address || ""} onChange={handleChange} error={errors.guardian_address} placeholder="Enter your Guardian Address" />
           </Field>
 
           <div style={S.row}>
@@ -951,7 +1149,7 @@ const StudentDashboard2Mobile = () => {
             </div>
             <div style={S.flex1}>
               <Field label="Email Address">
-                <MInput name="guardian_email" value={person.guardian_email || ""} onChange={handleChange} placeholder="guardian@email.com" type="email" />
+                <MInput name="guardian_email" value={person.guardian_email || ""} onChange={handleChange} placeholder="Enter your Guardian Email Address" type="email" />
               </Field>
             </div>
           </div>
@@ -959,15 +1157,13 @@ const StudentDashboard2Mobile = () => {
       </div>
 
       {/* ── Annual Income ─────────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>💰 Family Annual Income</div>
+        }}> Family Annual Income</div>
         <div style={S.cardBody}>
-          <div style={{ fontSize: 11, color: "#888", marginBottom: 10 }}>
-            Auto-calculated from father + mother income, or select manually.
-          </div>
+         
           <Field label="Annual Income Bracket" required error={errors.annual_income} helperText="This field is required.">
             <MSelect name="annual_income" value={person.annual_income || ""} onChange={handleChange} error={errors.annual_income}>
               <option value="">Select Annual Income</option>
@@ -975,24 +1171,64 @@ const StudentDashboard2Mobile = () => {
             </MSelect>
           </Field>
         </div>
+        {/* Bottom Nav */}
+        <Box display="flex" justifyContent="space-between" mt={1} mx="12px" mb={3}>
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleUpdate(person);
+              showSnackbar("Your record has been saved successfully!", "success");
+              setTimeout(() => navigate("/student_dashboard1"), 1000);
+            }}
+            startIcon={<ArrowBackIcon sx={{ color: "#000", transition: "color 0.3s" }} />}
+            sx={{
+              backgroundColor: subButtonColor,
+              border: `1px solid ${borderColor}`,
+              color: "#000",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "#000",
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              },
+            }}
+          >
+            Previous Step
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleUpdate(person);
+              handleNext;
+              if (isFormValid()) {
+                showSnackbar("Your record has been saved successfully!", "success");
+                setTimeout(() => navigate("/student_dashboard3"), 1000);
+              } else {
+                showSnackbar("Please fill all required fields.", "error");
+              }
+            }}
+            endIcon={<ArrowForwardIcon sx={{ color: "#fff", transition: "color 0.3s" }} />}
+            sx={{
+              backgroundColor: mainButtonColor,
+              border: `1px solid ${borderColor}`,
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "#000",
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              },
+            }}
+          >
+            Next Step
+          </Button>
+        </Box>
       </div>
 
-      {/* Bottom Nav */}
-      <div style={S.bottomBar}>
-        <button style={S.btnSecondary} onClick={() => { handleUpdate(person); navigate("/student_dashboard1"); }}>
-          ← Previous
-        </button>
-        <button
-          style={S.btnPrimary}
-          onClick={() => {
-            handleUpdate(person);
-            if (isFormValid()) navigate("/student_dashboard3");
-            else showSnackbar("Please fill all required fields.", "error");
-          }}
-        >
-          Next Step →
-        </button>
-      </div>
+
     </div>
   );
 };

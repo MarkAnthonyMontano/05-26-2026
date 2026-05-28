@@ -471,13 +471,25 @@ const StudentDashboard1 = () => {
     Array(steps.length).fill(false),
   );
 
-  const handleStepClick = (index) => {
+  const handleStepClick = async (index) => {
     if (isFormValid()) {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: "Your record has been saved successfully!",
+        severity: "success",
+      });
+
       setActiveStep(index);
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
+
+      // Delay navigation so snackbar can be seen
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
     } else {
       setSnackbar({
         open: true,
@@ -1193,7 +1205,7 @@ const StudentDashboard1 = () => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       {/* Cards Section */}
@@ -1507,7 +1519,6 @@ const StudentDashboard1 = () => {
               >
                 <InputLabel id="classified-as-label">Classified As</InputLabel>
                 <Select
-                  readOnly
                   labelId="classified-as-label"
                   id="classified-as-select"
                   name="classifiedAs"
@@ -1544,7 +1555,7 @@ const StudentDashboard1 = () => {
               >
                 <InputLabel id="applying-as-label">Applying As</InputLabel>
                 <Select
-                  readOnly
+
                   labelId="applying-as-label"
                   id="applying-as-select"
                   name="applyingAs"
@@ -3514,15 +3525,25 @@ const StudentDashboard1 = () => {
               </Button>
               <Button
                 variant="contained"
-                onClick={(e) => {
-                  handleUpdate(person);
-
+                onClick={async (e) => {
                   if (isFormValid()) {
-                    navigate("/student_dashboard2");
+                    await handleUpdate(person);
+
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+
+                    setTimeout(() => {
+                      navigate("/student_dashboard2");
+                    }, 1200);
                   } else {
-                    showSnackbar(
-                      "Please complete all required fields before proceeding.",
-                    );
+                    setSnackbar({
+                      open: true,
+                      message: "Please complete all required fields before proceeding.",
+                      severity: "error",
+                    });
                   }
                 }}
                 endIcon={
@@ -3552,7 +3573,7 @@ const StudentDashboard1 = () => {
 
             <Snackbar
               open={snackbar.open}
-              autoHideDuration={3000} // 3 seconds
+              autoHideDuration={1000} // 3 seconds
               onClose={handleCloseSnackbar}
               anchorOrigin={{ vertical: "top", horizontal: "center" }}
             >

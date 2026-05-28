@@ -18,7 +18,9 @@ import {
 } from "@mui/material";
 
 import SchoolIcon from "@mui/icons-material/School";
-
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import ScienceIcon from "@mui/icons-material/Science";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 // ─── Term Sorting ─────────────────────────────────────────────────
 const sortTerms = (terms) =>
   [...terms].sort((a, b) => {
@@ -92,16 +94,25 @@ const MobileSubjectCard = ({ row, index, borderColor, titleColor, subtitleColor 
     </Box>
 
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: "5px 14px", mt: 0.8 }}>
-      <Typography sx={{ fontSize: 11, color: "#555" }}>
-        📖 Lec: {formatUnit(row.lec_unit)}
-      </Typography>
-      <Typography sx={{ fontSize: 11, color: "#555" }}>
-        🔬 Lab: {formatUnit(row.lab_unit)}
-      </Typography>
-      {row.schedule && (
-        <Typography sx={{ fontSize: 11, color: "#555", whiteSpace: "pre-line" }}>
-          🕐 {row.schedule}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <MenuBookIcon sx={{ fontSize: 13, color: "#000" }} />
+        <Typography sx={{ fontSize: 11, color: "#000" }}>
+          Lec: {formatUnit(row.lec_unit)}
         </Typography>
+      </Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <ScienceIcon sx={{ fontSize: 13, color: "#000" }} />
+        <Typography sx={{ fontSize: 11, color: "#000" }}>
+          Lab: {formatUnit(row.lab_unit)}
+        </Typography>
+      </Box>
+      {row.schedule && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <AccessTimeIcon sx={{ fontSize: 13, color: "#000" }} />
+          <Typography sx={{ fontSize: 11, color: "#000", whiteSpace: "pre-line" }}>
+            {row.schedule}
+          </Typography>
+        </Box>
       )}
     </Box>
   </Box>

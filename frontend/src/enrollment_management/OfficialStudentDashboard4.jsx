@@ -709,7 +709,7 @@ const OfficialStudentDashboard4 = () => {
                     marginTop: "25px",
                 }}
             >
-                AVAILABLE PRINTABLE DOCUMENTS
+                PRINTABLE DOCUMENTS
             </h1>
 
 

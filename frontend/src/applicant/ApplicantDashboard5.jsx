@@ -27,7 +27,7 @@ import ErrorIcon from "@mui/icons-material/Error";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import ExamPermit from "../applicant/ExamPermit";
+import ExamPermit from "./ExamPermit";
 import API_BASE_URL from "../apiConfig";
 
 const Dashboard5 = (props) => {
@@ -168,18 +168,31 @@ const Dashboard5 = (props) => {
     Array(steps.length).fill(false),
   );
 
-  const handleStepClick = (index) => {
+  const handleStepClick = async (index) => {
     if (isFormValid()) {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: `Your record has been saved successfully!`,
+        severity: "success",
+      });
+
       setActiveStep(index);
+
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
+
+      // Delay navigation so snackbar can be seen
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
     } else {
       setSnackbar({
         open: true,
-        message: "Please complete required fields first.",
-        severity: "warning",
+        message: "Please fill all required fields before proceeding.",
+        severity: "error",
       });
     }
   };
@@ -188,7 +201,7 @@ const Dashboard5 = (props) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/form/person/${id}`);
       setPerson(res.data);
-    } catch (error) {}
+    } catch (error) { }
   };
 
   // Do not alter
@@ -530,7 +543,7 @@ const Dashboard5 = (props) => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
       <Box
         sx={{
@@ -918,7 +931,19 @@ const Dashboard5 = (props) => {
               {/* Previous Page Button */}
               <Button
                 variant="contained"
-                onClick={() => navigate(`/dashboard/${keys.step4}`)} // ✅ FIXED to use step4 key
+                onClick={async () => {
+                  await handleUpdate(person);
+
+                  setSnackbar({
+                    open: true,
+                    message: "Your record has been saved successfully!",
+                    severity: "success",
+                  });
+
+                  setTimeout(() => {
+                    navigate(`/dashboard/${keys.step4}`);
+                  }, 1000);
+                }}
                 startIcon={
                   <ArrowBackIcon
                     sx={{
@@ -962,7 +987,7 @@ const Dashboard5 = (props) => {
 
             <Snackbar
               open={snackbar.open}
-              autoHideDuration={3000} // 3 seconds
+              autoHideDuration={1000} // 3 seconds
               onClose={handleCloseSnackbar}
               anchorOrigin={{ vertical: "top", horizontal: "center" }}
             >

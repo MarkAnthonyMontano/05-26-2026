@@ -45,7 +45,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import API_BASE_URL from "../apiConfig";
 import DateField from "../components/DateField";
-
+import { Snackbar, Alert } from "@mui/material";
 const StudentDashboard4 = () => {
   const settings = useContext(SettingsContext);
 
@@ -328,17 +328,49 @@ const StudentDashboard4 = () => {
     Array(steps.length).fill(false),
   );
   const [currentStep, setCurrentStep] = useState(0);
-  const handleStepClick = (index) => {
-    if (isFormValid()) {
+
+
+  // 1. Add errors state alongside your other state declarations
+  const [errors, setErrors] = useState({});
+
+
+
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "warning",
+  });
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleStepClick = async (index) => {
+    try {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: "Your record has been saved successfully!",
+        severity: "success",
+      });
+
       setActiveStep(index);
+
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
-    } else {
+
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
+    } catch (error) {
+      console.error(error);
+
       setSnackbar({
         open: true,
-        message: "Please fill all required fields before proceeding.",
+        message: "Failed to save record.",
         severity: "error",
       });
     }
@@ -366,38 +398,39 @@ const StudentDashboard4 = () => {
   ];
 
   return (
-    <Box
-      sx={{
-        height: "calc(100vh - 140px)",
-        overflowY: "auto",
-        paddingRight: 1,
-        backgroundColor: "transparent",
-      }}
-    >
+    <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+
+      {/* Top header: DOCUMENTS SUBMITTED + Search */}
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
 
           mb: 2,
+
         }}
       >
         <Typography
           variant="h4"
           sx={{
-            fontWeight: "bold",
+            fontWeight: 'bold',
             color: titleColor,
-            fontSize: "36px",
+            fontSize: '36px',
           }}
         >
           HEALTH MEDICAL RECORDS
         </Typography>
+
+
       </Box>
+
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
       <br />
       <br />
+
+
 
       <Box
         sx={{
@@ -441,7 +474,7 @@ const StudentDashboard4 = () => {
           <Typography
             sx={{
               fontSize: "20px",
-              fontFamily: "Poppins, sans-serif",
+              fontFamily: "Arial",
               color: "#3e3e3e",
               lineHeight: 1.3, // slightly tighter to fit in fewer rows
               whiteSpace: "normal",
@@ -449,22 +482,9 @@ const StudentDashboard4 = () => {
             }}
           >
             <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-            <strong></strong>{" "}
-            <span style={{ fontSize: "1.2em", margin: "0 15px" }}>➔</span>{" "}
-            Kindly type 'NA' in boxes where there are no possible answers to the
-            information being requested. &nbsp; &nbsp; <br />
-            <strong></strong>{" "}
-            <span
-              style={{
-                fontSize: "1.2em",
-                margin: "0 15px",
-                marginLeft: "100px",
-              }}
-            >
-              ➔
-            </span>{" "}
-            To make use of the letter 'Ñ', please press ALT while typing "165",
-            while for 'ñ', please press ALT while typing "164"
+            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span> Kindly type 'NA' in boxes where there are no possible answers to the information being requested. &nbsp;  &nbsp; <br />
+            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px', marginLeft: "100px", }}>➔</span> To make use of the letter 'Ñ', please press ALT while typing "165", while for 'ñ', please press ALT while typing "164"
+
           </Typography>
         </Box>
       </Box>
@@ -478,11 +498,14 @@ const StudentDashboard4 = () => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
-      {/* Cards Section */}
 
+
+
+
+      {/* Cards Section */}
       <Box
         sx={{
           display: "flex",
@@ -506,6 +529,8 @@ const StudentDashboard4 = () => {
                 minHeight: 60,
                 borderRadius: 2,
                 border: `1px solid ${borderColor}`,
+
+
                 backgroundColor: "#fff",
                 display: "flex",
                 flexDirection: "row",
@@ -546,7 +571,7 @@ const StudentDashboard4 = () => {
                 className="card-text"
                 sx={{
                   color: mainButtonColor,
-                  fontFamily: "Poppins, sans-serif",
+                  fontFamily: "Arial",
                   fontWeight: "bold",
                   fontSize: "0.85rem",
                 }}
@@ -558,7 +583,12 @@ const StudentDashboard4 = () => {
         ))}
       </Box>
 
+
+
+
       <Container>
+
+
         <Container>
           <h1
             style={{
@@ -572,8 +602,7 @@ const StudentDashboard4 = () => {
             APPLICANT FORM
           </h1>
           <div style={{ textAlign: "center" }}>
-            Complete the applicant form to secure your place for the upcoming
-            academic year at{" "}
+            Complete the applicant form to secure your place for the upcoming academic year at{" "}
             {shortTerm ? (
               <>
                 <strong>{shortTerm.toUpperCase()}</strong> <br />
@@ -584,64 +613,52 @@ const StudentDashboard4 = () => {
             )}
             .
           </div>
+
+
         </Container>
+
         <br />
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            width: "100%",
-            px: 4,
-          }}
-        >
+
+        <Box sx={{ display: "flex", justifyContent: "center", width: "100%", px: 4 }}>
           {steps.map((step, index) => (
             <React.Fragment key={index}>
-              {/* Wrap the step with Link for routing */}
-              <Link to={step.path} style={{ textDecoration: "none" }}>
+              {/* ❌ Remove the <Link> wrapper — handleStepClick handles navigation */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  cursor: "pointer",
+                }}
+                onClick={() => handleStepClick(index)}
+              >
                 <Box
                   sx={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: "50%",
+                    border: `1px solid ${borderColor}`,
+                    backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                    color: activeStep === index ? "#fff" : "#000",
                     display: "flex",
-                    flexDirection: "column",
                     alignItems: "center",
-                    cursor: "pointer",
+                    justifyContent: "center",
                   }}
-                  onClick={() => handleStepClick(index)}
                 >
-                  {/* Step Icon */}
-                  <Box
-                    sx={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: "50%",
-                      border: `1px solid ${borderColor}`,
-                      backgroundColor:
-                        activeStep === index
-                          ? settings?.header_color || "#1976d2"
-                          : "#E8C999",
-                      color: activeStep === index ? "#fff" : "#000",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {step.icon}
-                  </Box>
-
-                  {/* Step Label */}
-                  <Typography
-                    sx={{
-                      mt: 1,
-                      color: activeStep === index ? "#6D2323" : "#000",
-                      fontWeight: activeStep === index ? "bold" : "normal",
-                      fontSize: 14,
-                    }}
-                  >
-                    {step.label}
-                  </Typography>
+                  {step.icon}
                 </Box>
-              </Link>
+                <Typography
+                  sx={{
+                    mt: 1,
+                    color: activeStep === index ? "#6D2323" : "#000",
+                    fontWeight: activeStep === index ? "bold" : "normal",
+                    fontSize: 14,
+                  }}
+                >
+                  {step.label}
+                </Typography>
+              </Box>
 
-              {/* Connector Line */}
               {index < steps.length - 1 && (
                 <Box
                   sx={{
@@ -673,45 +690,18 @@ const StudentDashboard4 = () => {
             }}
           >
             <Box sx={{ width: "100%" }}>
-              <Typography
-                style={{
-                  fontSize: "20px",
-                  padding: "10px",
-                  fontFamily: "Poppins, sans-serif",
-                }}
-              >
-                Step 4: Health Medical Records
-              </Typography>
+              <Typography style={{ fontSize: "20px", padding: "10px", fontFamily: "Arial" }}>Step 4: Health and Medical Records</Typography>
             </Box>
           </Container>
 
-          <Container
-            maxWidth="100%"
-            sx={{
-              backgroundColor: "#f1f1f1",
-              border: `1px solid ${borderColor}`,
-              padding: 4,
-              borderRadius: 2,
-              boxShadow: 3,
-              ...readOnlySx,
-            }}
-          >
-            <Typography
-              style={{
-                fontSize: "20px",
-                color: mainButtonColor,
-                fontWeight: "bold",
-              }}
-            >
-              Health and Mecidal Record:
-            </Typography>
+          <Container maxWidth="100%" sx={{ backgroundColor: "#f1f1f1", border: `1px solid ${borderColor}`, padding: 4, borderRadius: 2, boxShadow: 3 }}>
+            <Typography style={{ fontSize: "20px", color: mainButtonColor, fontWeight: "bold" }}>Health and Mecidal Record:</Typography>
             <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
 
+
             <Typography variant="subtitle1" mb={1}>
-              <div style={{ fontWeight: "bold" }}>
-                I. Do you have any of the following symptoms today?
-              </div>
+              <div style={{ fontWeight: "bold" }}>I. Do you have any of the following symptoms today?</div>
             </Typography>
 
             <FormGroup row sx={{ ml: 2 }}>
@@ -721,7 +711,6 @@ const StudentDashboard4 = () => {
                   control={
                     <Checkbox
                       name={symptom}
-                      disabled
                       checked={person[symptom] === 1}
                       onChange={(e) => {
                         const { name, checked } = e.target;
@@ -744,62 +733,33 @@ const StudentDashboard4 = () => {
             <br />
 
             <Typography variant="subtitle1" mb={1}>
-              <div style={{ fontWeight: "bold" }}>
-                II. MEDICAL HISTORY: Have you suffered from, or been told you
-                had, any of the following conditions:
-              </div>
+              <div style={{ fontWeight: "bold" }}>II. MEDICAL HISTORY: Have you suffered from, or been told you had, any of the following conditions:</div>
             </Typography>
+
 
             <table
               style={{
                 width: "100%",
                 border: "1px solid black",
                 borderCollapse: "collapse",
-                fontFamily: "Poppins, sans-serif",
+                fontFamily: "Arial, Helvetica, sans-serif",
                 tableLayout: "fixed",
               }}
             >
               <tbody>
                 {/* Headers */}
                 <tr>
-                  <td
-                    colSpan={15}
-                    style={{ border: "1px solid black", height: "0.25in" }}
-                  ></td>
-                  <td
-                    colSpan={12}
-                    style={{ border: "1px solid black", textAlign: "center" }}
-                  >
-                    Yes or No
-                  </td>
-                  <td
-                    colSpan={15}
-                    style={{ border: "1px solid black", height: "0.25in" }}
-                  ></td>
-                  <td
-                    colSpan={12}
-                    style={{ border: "1px solid black", textAlign: "center" }}
-                  >
-                    Yes or No
-                  </td>
-                  <td
-                    colSpan={15}
-                    style={{ border: "1px solid black", height: "0.25in" }}
-                  ></td>
-                  <td
-                    colSpan={12}
-                    style={{ border: "1px solid black", textAlign: "center" }}
-                  >
-                    Yes or No
-                  </td>
+                  <td colSpan={15} style={{ border: "1px solid black", height: "0.25in" }}></td>
+                  <td colSpan={12} style={{ border: "1px solid black", textAlign: "center" }}>Yes or No</td>
+                  <td colSpan={15} style={{ border: "1px solid black", height: "0.25in" }}></td>
+                  <td colSpan={12} style={{ border: "1px solid black", textAlign: "center" }}>Yes or No</td>
+                  <td colSpan={15} style={{ border: "1px solid black", height: "0.25in" }}></td>
+                  <td colSpan={12} style={{ border: "1px solid black", textAlign: "center" }}>Yes or No</td>
                 </tr>
 
                 {[
                   { label: "Asthma", key: "asthma" },
-                  {
-                    label: "Fainting Spells and seizures",
-                    key: "faintingSpells",
-                  },
+                  { label: "Fainting Spells and seizures", key: "faintingSpells" },
                   { label: "Heart Disease", key: "heartDisease" },
                   { label: "Tuberculosis", key: "tuberculosis" },
                   { label: "Frequent Headaches", key: "frequentHeadaches" },
@@ -811,10 +771,7 @@ const StudentDashboard4 = () => {
                   { label: "Diabetes Mellitus", key: "diabetesMellitus" },
                   { label: "Allergies", key: "allergies" },
                   { label: "Cancer", key: "cancer" },
-                  {
-                    label: "Smoking of cigarette/day",
-                    key: "smokingCigarette",
-                  },
+                  { label: "Smoking of cigarette/day", key: "smokingCigarette" },
                   { label: "Alcohol Drinking", key: "alcoholDrinking" },
                 ]
                   .reduce((rows, item, idx, arr) => {
@@ -825,48 +782,14 @@ const StudentDashboard4 = () => {
                     <tr key={rowIndex}>
                       {rowGroup.map(({ label, key }) => (
                         <React.Fragment key={key}>
-                          <td
-                            colSpan={15}
-                            style={{
-                              border: "1px solid black",
-                              padding: "4px",
-                            }}
-                          >
-                            {label}
-                          </td>
-                          <td
-                            colSpan={12}
-                            style={{
-                              border: "1px solid black",
-                              padding: "4px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "1px",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "2px",
-                                  marginLeft: "10px",
-                                }}
-                              >
+                          <td colSpan={15} style={{ border: "1px solid black", padding: "4px" }}>{label}</td>
+                          <td colSpan={12} style={{ border: "1px solid black", padding: "4px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "2px", marginLeft: "10px" }}>
                                 {/* YES */}
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "1px",
-                                  }}
-                                >
+                                <div style={{ display: "flex", alignItems: "center", gap: "1px", }}>
                                   <Checkbox
                                     name={key}
-                                    disabled
                                     checked={person[key] === 1}
                                     onChange={() => {
                                       const updatedPerson = {
@@ -878,27 +801,13 @@ const StudentDashboard4 = () => {
                                     }}
                                     onBlur={handleBlur}
                                   />
-                                  <span
-                                    style={{
-                                      fontSize: "15px",
-                                      fontFamily: "Poppins, sans-serif",
-                                    }}
-                                  >
-                                    Yes
-                                  </span>
+                                  <span style={{ fontSize: "15px", fontFamily: "Arial" }}>Yes</span>
                                 </div>
 
                                 {/* NO */}
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "1px",
-                                  }}
-                                >
+                                <div style={{ display: "flex", alignItems: "center", gap: "1px" }}>
                                   <Checkbox
                                     name={key}
-                                    disabled
                                     checked={person[key] === 0}
                                     onChange={() => {
                                       const updatedPerson = {
@@ -910,16 +819,11 @@ const StudentDashboard4 = () => {
                                     }}
                                     onBlur={handleBlur}
                                   />
-                                  <span
-                                    style={{
-                                      fontSize: "15px",
-                                      fontFamily: "Poppins, sans-serif",
-                                    }}
-                                  >
-                                    No
-                                  </span>
+                                  <span style={{ fontSize: "15px", fontFamily: "Arial" }}>No</span>
                                 </div>
                               </div>
+
+
                             </div>
                           </td>
                         </React.Fragment>
@@ -929,22 +833,13 @@ const StudentDashboard4 = () => {
               </tbody>
             </table>
 
-            <Box
-              mt={1}
-              flexDirection="column"
-              display="flex"
-              alignItems="flex-start"
-            >
-              <Box
-                mt={1}
-                flexDirection="column"
-                display="flex"
-                alignItems="flex-start"
-              >
+
+
+            <Box mt={1} flexDirection="column" display="flex" alignItems="flex-start">
+              <Box mt={1} flexDirection="column" display="flex" alignItems="flex-start">
                 <Box display="flex" alignItems="center" flexWrap="wrap">
-                  <Typography sx={{ marginRight: "16px" }}>
-                    Do you have any previous history of hospitalization or
-                    operation?
+                  <Typography sx={{ marginRight: '16px' }}>
+                    Do you have any previous history of hospitalization or operation?
                   </Typography>
 
                   <Box display="flex" gap="16px" ml={4} alignItems="center">
@@ -953,13 +848,11 @@ const StudentDashboard4 = () => {
                       control={
                         <Checkbox
                           name="hospitalized"
-                          disabled
                           checked={person.hospitalized === 1}
                           onChange={() => {
                             const updatedPerson = {
                               ...person,
-                              hospitalized:
-                                person.hospitalized === 1 ? null : 1,
+                              hospitalized: person.hospitalized === 1 ? null : 1,
                             };
                             setPerson(updatedPerson);
                             handleUpdate(updatedPerson);
@@ -975,13 +868,11 @@ const StudentDashboard4 = () => {
                       control={
                         <Checkbox
                           name="hospitalized"
-                          disabled
                           checked={person.hospitalized === 0}
                           onChange={() => {
                             const updatedPerson = {
                               ...person,
-                              hospitalized:
-                                person.hospitalized === 0 ? null : 0,
+                              hospitalized: person.hospitalized === 0 ? null : 0,
                             };
                             setPerson(updatedPerson);
                             handleUpdate(updatedPerson);
@@ -991,22 +882,23 @@ const StudentDashboard4 = () => {
                       }
                       label="No"
                     />
+
+
                   </Box>
                 </Box>
               </Box>
             </Box>
 
+
+
+
             <Box width="100%" maxWidth={500} display="flex" alignItems="center">
-              <Typography
-                component="label"
-                sx={{ mr: 1, whiteSpace: "nowrap" }}
-              >
+              <Typography component="label" sx={{ mr: 1, whiteSpace: 'nowrap' }}>
                 IF YES, PLEASE SPECIFY:
               </Typography>
               <TextField
                 fullWidth
                 name="hospitalizationDetails"
-                readOnly
                 placeholder=""
                 variant="outlined"
                 size="small"
@@ -1030,13 +922,14 @@ const StudentDashboard4 = () => {
               <div style={{ fontWeight: "bold" }}>III. MEDICATION</div>
             </Typography>
 
+
+
             <Box mb={2}>
               <TextField
                 fullWidth
                 multiline
                 minRows={3}
                 name="medications"
-                readOnly
                 variant="outlined"
                 size="small"
                 value={person.medications || ""}
@@ -1058,11 +951,12 @@ const StudentDashboard4 = () => {
               <div style={{ fontWeight: "bold" }}>IV. COVID PROFILE: </div>
             </Typography>
 
+
             <table
               style={{
                 border: "1px solid black",
                 borderCollapse: "collapse",
-                fontFamily: "Poppins, sans-serif",
+                fontFamily: "Arial, Helvetica, sans-serif",
                 width: "100%",
                 tableLayout: "fixed",
               }}
@@ -1077,15 +971,9 @@ const StudentDashboard4 = () => {
                       padding: "8px",
                     }}
                   >
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      gap={2}
-                      flexWrap="nowrap"
-                    >
-                      <Typography>
-                        A. Do you have history of COVID-19?
-                      </Typography>
+
+                    <Box display="flex" alignItems="center" gap={2} flexWrap="nowrap">
+                      <Typography>A. Do you have history of COVID-19?</Typography>
 
                       {/* YES/NO Checkboxes */}
                       <Box display="flex" alignItems="center" gap="10px" ml={1}>
@@ -1094,7 +982,6 @@ const StudentDashboard4 = () => {
                           <Checkbox
                             name="hadCovid"
                             checked={person.hadCovid === 1}
-                            disabled
                             onChange={() => {
                               const updatedPerson = {
                                 ...person,
@@ -1105,11 +992,7 @@ const StudentDashboard4 = () => {
                             }}
                             onBlur={handleBlur}
                           />
-                          <span
-                            style={{ fontSize: "15px", fontFamily: "Poppins, sans-serif" }}
-                          >
-                            YES
-                          </span>
+                          <span style={{ fontSize: "15px", fontFamily: "Arial" }}>YES</span>
                         </Box>
 
                         {/* NO */}
@@ -1117,7 +1000,6 @@ const StudentDashboard4 = () => {
                           <Checkbox
                             name="hadCovid"
                             checked={person.hadCovid === 0}
-                            disabled
                             onChange={() => {
                               const updatedPerson = {
                                 ...person,
@@ -1128,20 +1010,17 @@ const StudentDashboard4 = () => {
                             }}
                             onBlur={handleBlur}
                           />
-                          <span
-                            style={{ fontSize: "15px", fontFamily: "Poppins, sans-serif" }}
-                          >
-                            NO
-                          </span>
+                          <span style={{ fontSize: "15px", fontFamily: "Arial" }}>NO</span>
+
+
                         </Box>
                       </Box>
 
                       {/* IF YES, WHEN */}
                       <span>IF YES, WHEN:</span>
-                      <DateField
-                        size="small"
+                      <input
+                        type="date"
                         name="covidDate"
-                        readOnly
                         value={person.covidDate || ""}
                         onChange={(e) => {
                           const updatedPerson = {
@@ -1180,7 +1059,7 @@ const StudentDashboard4 = () => {
                       style={{
                         borderCollapse: "collapse",
                         width: "100%",
-                        fontFamily: "Poppins, sans-serif",
+                        fontFamily: "Arial, Helvetica, sans-serif",
                         tableLayout: "fixed",
                       }}
                     >
@@ -1199,17 +1078,11 @@ const StudentDashboard4 = () => {
                         <tr>
                           <td style={{ padding: "4px 0" }}>Brand</td>
 
-                          {[
-                            "vaccine1Brand",
-                            "vaccine2Brand",
-                            "booster1Brand",
-                            "booster2Brand",
-                          ].map((field) => (
+                          {["vaccine1Brand", "vaccine2Brand", "booster1Brand", "booster2Brand"].map((field) => (
                             <td key={field} style={{ padding: "4px" }}>
                               <input
                                 type="text"
                                 name={field}
-                                disabled
                                 value={person[field] || ""}
                                 onChange={(e) => {
                                   const updatedPerson = {
@@ -1230,17 +1103,11 @@ const StudentDashboard4 = () => {
                         <tr>
                           <td style={{ padding: "4px 0" }}>Date</td>
 
-                          {[
-                            "vaccine1Date",
-                            "vaccine2Date",
-                            "booster1Date",
-                            "booster2Date",
-                          ].map((field) => (
+                          {["vaccine1Date", "vaccine2Date", "booster1Date", "booster2Date"].map((field) => (
                             <td key={field} style={{ padding: "4px" }}>
-                              <DateField
-                                size="small"
+                              <input
+                                type="date"
                                 name={field}
-                                readOnly
                                 value={person[field] || ""}
                                 onChange={(e) => {
                                   const updatedPerson = {
@@ -1258,32 +1125,30 @@ const StudentDashboard4 = () => {
                         </tr>
                       </tbody>
                     </table>
+
                   </td>
                 </tr>
+
               </tbody>
             </table>
 
             <br />
             {/* V. Please Indicate Result of the Following (Form Style, Table Layout) */}
             <Typography variant="subtitle1" mb={1}>
-              <div style={{ fontWeight: "bold" }}>
-                V. Please Indicate Result of the Following:
-              </div>
+              <div style={{ fontWeight: "bold" }}>V. Please Indicate Result of the Following:</div>
             </Typography>
+
 
             <table className="w-full border border-black border-collapse table-fixed">
               <tbody>
                 {/* Chest X-ray */}
                 <tr>
-                  <td className="border border-black p-2 w-1/3 font-medium">
-                    Chest X-ray:
-                  </td>
+                  <td className="border border-black p-2 w-1/3 font-medium">Chest X-ray:</td>
                   <td className="border border-black p-2 w-2/3">
                     <input
                       type="text"
                       name="chestXray"
                       value={person.chestXray || ""}
-                      readOnly
                       onChange={(e) => {
                         const { name, value } = e.target;
                         const updatedPerson = { ...person, [name]: value };
@@ -1304,7 +1169,6 @@ const StudentDashboard4 = () => {
                       type="text"
                       name="cbc"
                       value={person.cbc || ""}
-                      readOnly
                       onChange={(e) => {
                         const { name, value } = e.target;
                         const updatedPerson = { ...person, [name]: value };
@@ -1319,15 +1183,12 @@ const StudentDashboard4 = () => {
 
                 {/* Urinalysis */}
                 <tr>
-                  <td className="border border-black p-2 font-medium">
-                    Urinalysis:
-                  </td>
+                  <td className="border border-black p-2 font-medium">Urinalysis:</td>
                   <td className="border border-black p-2">
                     <input
                       type="text"
                       name="urinalysis"
                       value={person.urinalysis || ""}
-                      readOnly
                       onChange={(e) => {
                         const { name, value } = e.target;
                         const updatedPerson = { ...person, [name]: value };
@@ -1342,15 +1203,12 @@ const StudentDashboard4 = () => {
 
                 {/* Other Workups */}
                 <tr>
-                  <td className="border border-black p-2 font-medium">
-                    Other Workups:
-                  </td>
+                  <td className="border border-black p-2 font-medium">Other Workups:</td>
                   <td className="border border-black p-2">
                     <input
                       type="text"
                       name="otherworkups"
                       value={person.otherworkups || ""}
-                      readOnly
                       onChange={(e) => {
                         const { name, value } = e.target;
                         const updatedPerson = { ...person, [name]: value };
@@ -1365,6 +1223,8 @@ const StudentDashboard4 = () => {
               </tbody>
             </table>
 
+
+
             <div style={{ marginTop: "16px" }}>
               <Typography variant="subtitle1" mb={1}>
                 <div style={{ fontWeight: "bold" }}>VI. Diagnosis :</div>
@@ -1375,7 +1235,7 @@ const StudentDashboard4 = () => {
                   width: "100%",
                   border: "1px solid black",
                   borderCollapse: "collapse",
-                  fontFamily: "Poppins, sans-serif",
+                  fontFamily: "Arial, Helvetica, sans-serif",
                   tableLayout: "fixed",
                 }}
               >
@@ -1390,83 +1250,46 @@ const StudentDashboard4 = () => {
                       }}
                     >
                       {/* Question */}
-                      <Typography
-                        sx={{
-                          fontSize: "15px",
-                          fontFamily: "Poppins, sans-serif",
-                          marginBottom: "4px",
-                        }}
-                      >
+                      <Typography sx={{ fontSize: "15px", fontFamily: "Arial", marginBottom: "4px" }}>
                         Do you have any of the following symptoms today?
                       </Typography>
 
                       {/* Answer checkboxes below (YES/NO) */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "20px",
-                          marginTop: "8px",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "8px" }}>
                         {/* Physically Fit (0) */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
+                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                           <Checkbox
                             name="symptomsToday"
                             checked={person.symptomsToday === 0}
-                            disabled
                             onChange={() => {
                               const updatedPerson = {
                                 ...person,
-                                symptomsToday:
-                                  person.symptomsToday === 0 ? null : 0,
+                                symptomsToday: person.symptomsToday === 0 ? null : 0,
                               };
                               setPerson(updatedPerson);
                               handleUpdate(updatedPerson);
                             }}
                             onBlur={handleBlur}
                           />
-                          <span
-                            style={{ fontSize: "15px", fontFamily: "Poppins, sans-serif" }}
-                          >
-                            Physically Fit
-                          </span>
+                          <span style={{ fontSize: "15px", fontFamily: "Arial" }}>Physically Fit</span>
                         </div>
 
                         {/* For Compliance (1) */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
+                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                           <Checkbox
                             name="symptomsToday"
                             checked={person.symptomsToday === 1}
-                            disabled
                             onChange={() => {
                               const updatedPerson = {
                                 ...person,
-                                symptomsToday:
-                                  person.symptomsToday === 1 ? null : 1,
+                                symptomsToday: person.symptomsToday === 1 ? null : 1,
                               };
                               setPerson(updatedPerson);
                               handleUpdate(updatedPerson);
                             }}
                             onBlur={handleBlur}
                           />
-                          <span
-                            style={{ fontSize: "15px", fontFamily: "Poppins, sans-serif" }}
-                          >
-                            For Compliance
-                          </span>
+                          <span style={{ fontSize: "15px", fontFamily: "Arial" }}>For Compliance</span>
                         </div>
                       </div>
                     </td>
@@ -1474,6 +1297,7 @@ const StudentDashboard4 = () => {
                 </tbody>
               </table>
             </div>
+
 
             {/* VII. Remarks Section */}
             <div style={{ marginTop: "16px" }}>
@@ -1496,7 +1320,6 @@ const StudentDashboard4 = () => {
                         multiline
                         minRows={2}
                         fullWidth
-                        disabled
                         size="small"
                         value={person.remarks || ""}
                         onChange={(e) => {
@@ -1511,10 +1334,10 @@ const StudentDashboard4 = () => {
                         sx={{
                           backgroundColor: "white",
                           borderRadius: "8px",
-                          "& .MuiOutlinedInput-root": {
-                            padding: "4px 8px",
+                          '& .MuiOutlinedInput-root': {
+                            padding: '4px 8px',
                           },
-                          "& .MuiInputBase-multiline": {
+                          '& .MuiInputBase-multiline': {
                             padding: 0,
                           },
                         }}
@@ -1525,24 +1348,31 @@ const StudentDashboard4 = () => {
               </Table>
             </div>
 
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mt={4}
-            >
-              {/* Previous Page Button */}
+
+
+
+
+
+
+
+
+            <Box display="flex" justifyContent="space-between" mt={4}>
+              {/* Previous Step */}
               <Button
                 variant="contained"
-                component={Link}
-                to="/student_dashboard3"
+                onClick={async () => {
+                  await handleUpdate(person);
+                  setSnackbar({
+                    open: true,
+                    message: "Your record has been saved successfully!",
+                    severity: "success",
+                  });
+                  setTimeout(() => {
+                    navigate("/student_dashboard3");
+                  }, 1000);
+                }}
                 startIcon={
-                  <ArrowBackIcon
-                    sx={{
-                      color: "#000",
-                      transition: "color 0.3s",
-                    }}
-                  />
+                  <ArrowBackIcon sx={{ color: "#000", transition: "color 0.3s" }} />
                 }
                 sx={{
                   backgroundColor: subButtonColor,
@@ -1551,29 +1381,41 @@ const StudentDashboard4 = () => {
                   "&:hover": {
                     backgroundColor: "#000000",
                     color: "#fff",
-                    "& .MuiSvgIcon-root": {
-                      color: "#fff",
-                    },
+                    "& .MuiSvgIcon-root": { color: "#fff" },
                   },
                 }}
               >
                 Previous Step
               </Button>
 
-              {/* Next Step Button */}
+              {/* Next Step */}
               <Button
                 variant="contained"
-                onClick={(e) => {
-                   handleUpdate(person);
-                  navigate("/student_dashboard5");
+                onClick={async () => {
+                  try {
+                    await handleUpdate(person);
+
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+
+                    setTimeout(() => {
+                      navigate("/student_dashboard5");
+                    }, 1000);
+                  } catch (error) {
+                    console.error(error);
+
+                    setSnackbar({
+                      open: true,
+                      message: "Failed to save record.",
+                      severity: "error",
+                    });
+                  }
                 }}
                 endIcon={
-                  <ArrowForwardIcon
-                    sx={{
-                      color: "#fff",
-                      transition: "color 0.3s",
-                    }}
-                  />
+                  <ArrowForwardIcon sx={{ color: "#fff", transition: "color 0.3s" }} />
                 }
                 sx={{
                   backgroundColor: mainButtonColor,
@@ -1582,15 +1424,29 @@ const StudentDashboard4 = () => {
                   "&:hover": {
                     backgroundColor: "#000000",
                     color: "#fff",
-                    "& .MuiSvgIcon-root": {
-                      color: "#fff",
-                    },
+                    "& .MuiSvgIcon-root": { color: "#fff" },
                   },
                 }}
               >
                 Next Step
               </Button>
             </Box>
+
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={1000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
+
           </Container>
         </form>
       </Container>

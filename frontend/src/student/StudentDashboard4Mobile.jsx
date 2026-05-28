@@ -27,6 +27,18 @@ import {
   Checkbox,
   IconButton,
 } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
+import SchoolIcon from "@mui/icons-material/School";
+import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
+import InfoIcon from "@mui/icons-material/Info";
+import ErrorIcon from "@mui/icons-material/Error";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { motion } from "framer-motion";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { Snackbar, Alert } from "@mui/material";
+
 // ─── Style tokens (same system as Dashboard3 Mobile) ─────────────────────────
 const S = {
   screen: {
@@ -285,8 +297,13 @@ const S = {
   },
 };
 
-const STEP_ICONS = ["👤", "👨‍👩‍👧", "🎓", "🏥", "ℹ️"];
-const STEP_LABELS = ["Personal\nInfo", "Family\nBG", "Education", "Health", "Other"];
+const steps = [
+  { label: "Personal Information", icon: <PersonIcon /> },
+  { label: "Family Background", icon: <FamilyRestroomIcon /> },
+  { label: "Educational Attainment", icon: <SchoolIcon /> },
+  { label: "Health Medical Records", icon: <HealthAndSafetyIcon /> },
+  { label: "Other Information", icon: <InfoIcon /> },
+];
 const STEP_PATHS = [
   "/student_dashboard1",
   "/student_dashboard2",
@@ -406,6 +423,11 @@ const StudentDashboard4Mobile = () => {
     severity: "warning",
   });
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((p) => ({ ...p, open: false }));
+  };
+
   const [person, setPerson] = useState({
     cough: "", colds: "", fever: "",
     asthma: "", faintingSpells: "", heartDisease: "", tuberculosis: "",
@@ -423,6 +445,19 @@ const StudentDashboard4Mobile = () => {
     symptomsToday: "",
     remarks: "",
   });
+
+  const docLinks = [
+    { label: "ECAT Application Form", to: "/student_ecat_application_form" },
+    { label: "Admission Form Process", to: "/student_form_process" },
+    { label: "Personal Data Form", to: "/student_personal_data_form" },
+    { label: `Application For ${shortTerm?.toUpperCase() || ""} Admission`, to: "/student_office_of_the_registrar" },
+    { label: "Admission Services", to: "/student_admission_services" },
+  ];
+
+  const [activeStep, setActiveStep] = useState(3);
+
+
+
 
   const showSnackbar = (message, severity = "warning") => {
     setSnackbar({ open: true, message, severity });
@@ -480,6 +515,26 @@ const StudentDashboard4Mobile = () => {
     handleUpdate(updated);
   };
 
+  // 1. Add errors state alongside your other state declarations
+  const [errors, setErrors] = useState({});
+
+
+  const handleNext = () => {
+    handleUpdate(person);
+    if (isFormValid()) {
+      showSnackbar("Your record has been saved successfully!", "success");
+      setTimeout(() => navigate("/student_dashboard2"), 1000);
+    } else {
+      showSnackbar("Please fill all required fields before proceeding.", "error");
+    }
+  };
+
+  const handleStepClick = (index) => {
+    showSnackbar("Your record has been saved successfully!", "success");
+    setTimeout(() => { setActiveStep(index); navigate(STEP_PATHS[index]); }, 1000);
+  };
+
+
   // Toggle helper for yes/no fields
   const handleToggle = (fieldKey, newValue) => {
     const updated = { ...person, [fieldKey]: newValue };
@@ -511,6 +566,8 @@ const StudentDashboard4Mobile = () => {
     { label: "Alcohol Drinking", key: "alcoholDrinking" },
   ];
 
+
+
   const vaccineColumns = [
     { label: "1st Dose", brandKey: "vaccine1Brand", dateKey: "vaccine1Date" },
     { label: "2nd Dose", brandKey: "vaccine2Brand", dateKey: "vaccine2Date" },
@@ -521,59 +578,148 @@ const StudentDashboard4Mobile = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={S.screen}>
-      {snackbar.open && (
-        <div style={S.toast(snackbar.severity)}>{snackbar.message}</div>
-      )}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={1000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {/* Header */}
-      <div style={{
-        ...S.header,
-        backgroundColor: settings?.header_color || "#1976d2",
-      }}>
-        <div>
-          <div style={S.headerTitle}>HEALTH MEDICAL RECORDS</div>
-          <div style={S.headerSub}>{companyName || "Student Enrollment"}</div>
-        </div>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 1, padding: 1, }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: titleColor,
+
+            fontSize: { xs: "22px", sm: "28px", md: "36px" },
+          }}
+        >
+          HEALTH MEDICAL RECORDS
+        </Typography>
+      </Box>
+      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+      <br />
 
       {/* Stepper */}
-      <div style={S.stepperWrap}>
-        {STEP_LABELS.map((label, i) => (
-          <React.Fragment key={i}>
-            <div style={S.stepItem} onClick={() => navigate(STEP_PATHS[i])}>
-              <div style={S.stepCircle(i === 3)}>{STEP_ICONS[i]}</div>
-              <div style={S.stepLabel(i === 3)}>{label}</div>
-            </div>
-            {i < STEP_LABELS.length - 1 && <div style={S.stepLine} />}
-          </React.Fragment>
-        ))}
-      </div>
+
 
       {/* Notice */}
-      <div style={S.notice}>
-        <div style={S.noticeIcon}>⚠️</div>
-        <div style={S.noticeText}>
-          <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-          <strong></strong>
-          <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
-          Please indicate “NA” or “N/A” in fields where the requested information is not applicable or no response can be provided.
-          &nbsp;&nbsp;<br />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 1.5,
+          mx: "12px",
+          mt: "12px",
+          p: "10px 12px",
+          borderRadius: "8px",
+          backgroundColor: "#fffaf5",
+          border: "1px solid #6D2323",
+          boxShadow: "0px 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        {/* Icon */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#800000",
+            borderRadius: "6px",
+            width: 36,
+            height: 36,
+            flexShrink: 0,
+          }}
+        >
+          <ErrorIcon sx={{ color: "white", fontSize: 22 }} />
+        </Box>
 
-          <strong></strong>
-          <span
-            style={{
-              fontSize: '1.2em',
-              margin: '0 15px',
-              marginLeft: '100px',
-            }}
-          >
-            ➔
-          </span>
-          To enter the letter “Ñ”, press and hold the ALT key while typing “165”. For “ñ”, press and hold the ALT key while typing “164”.
-        </div>
-      </div>
+        {/* Text */}
+        <Typography sx={{ fontSize: 12, color: "#3e3e3e", lineHeight: 1.6 }}>
+          <strong style={{ color: "maroon" }}>Notice:</strong>{" "}
+          <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+          Please indicate "NA" or "N/A" in fields where the requested information is not applicable or no response can be provided.
+          <br />
+          <span style={{ marginLeft: 16, fontSize: "1.1em", marginRight: 6 }}>➔</span>
+          To enter the letter "Ñ", press and hold the ALT key while typing "165". For "ñ", press and hold the ALT key while typing "164".
+        </Typography>
+      </Box>
 
-      {/* Step indicator */}
+      <Box sx={{ px: "12px", pt: "12px" }}>
+        <Typography sx={{
+          fontSize: "30px",
+          fontWeight: "bold",
+          textAlign: "center",
+          color: "black",
+          marginTop: "25px",
+          mb: 2
+        }}>
+          PRINTABLE DOCUMENTS
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
+          {docLinks.map((d, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, duration: 0.3 }}
+              style={{ width: "calc(50% - 4px)" }}
+            >
+              <Card
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 0.75,
+                  px: 1.5,
+                  py: 1.25,
+                  height: 52,
+                  width: "100%",
+                  borderRadius: "12px",
+                  border: `1px solid ${borderColor || "#6D2323"}`,
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: settings?.header_color || "#6D2323",
+                    "& .chip-icon": { color: "#fff" },
+                    "& .chip-text": { color: "#fff" },
+                  },
+                }}
+                onClick={() => navigate(d.to)}
+              >
+                <PictureAsPdfIcon
+                  className="chip-icon"
+                  sx={{ fontSize: 18, color: mainButtonColor || "#6D2323", flexShrink: 0 }}
+                />
+                <Typography
+                  className="chip-text"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: mainButtonColor || "#6D2323",
+                    fontFamily: "Poppins, sans-serif",
+                    whiteSpace: "normal",
+                    lineHeight: 1.3,
+                    textAlign: "center",
+                  }}
+                >
+                  {d.label}
+                </Typography>
+              </Card>
+            </motion.div>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Applicant Form Intro */}
       <div style={{ padding: "16px 14px 0", textAlign: "center" }}>
         <Container>
           <h1
@@ -585,11 +731,12 @@ const StudentDashboard4Mobile = () => {
               marginTop: "25px",
             }}
           >
-            APPLICANT FORM
+            STUDENT FORM
           </h1>
+
           <div style={{ textAlign: "center" }}>
-            Complete the applicant form to secure your place for the upcoming
-            academic year at{" "}
+            Please update your personal information to keep your student records
+            accurate and up to date for the upcoming academic year at{" "}
             {shortTerm ? (
               <>
                 <strong>{shortTerm.toUpperCase()}</strong> <br />
@@ -603,12 +750,68 @@ const StudentDashboard4Mobile = () => {
         </Container>
       </div>
 
+      <Box sx={{ display: "flex", justifyContent: "center", width: "100%", px: 2, py: 1.5, borderBottom: "1px solid #e0e0e0" }}>
+        {steps.map((step, index) => (
+          <React.Fragment key={index}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}
+              onClick={() => handleStepClick(index)}
+            >
+              <Box
+                sx={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: "50%",
+                  border: `2px solid ${borderColor}`,
+                  backgroundColor: activeStep === index ? (settings?.header_color || "#6D2323") : "#E8C999",
+                  color: activeStep === index ? "#fff" : "#333",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  transition: "all 0.2s",
+                }}
+              >
+                {step.icon}
+              </Box>
+              <Typography
+                sx={{
+                  mt: 0.75,
+                  color: activeStep === index ? "#6D2323" : "#555",
+                  fontWeight: activeStep === index ? 700 : 400,
+                  fontSize: { xs: 10, sm: 12 },
+                  textAlign: "center",
+                  maxWidth: 72,
+                  lineHeight: 1.3,
+                }}
+              >
+                {step.label}
+              </Typography>
+            </Box>
+
+            {index < steps.length - 1 && (
+              <Box
+                sx={{
+                  height: "2px",
+                  backgroundColor: mainButtonColor,
+                  flex: 1,
+                  alignSelf: "center",
+                  mx: 1,
+                  mb: 3,
+                }}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </Box>
+
+
       {/* ── I. Symptoms Today ─────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🤒 I. Symptoms Today</div>
+        }}> I. Symptoms Today</div>
         <div style={S.cardBody}>
           <div style={{ fontSize: 12, color: "#555", marginBottom: 12 }}>
             Do you have any of the following symptoms today?
@@ -630,11 +833,11 @@ const StudentDashboard4Mobile = () => {
       </div>
 
       {/* ── II. Medical History ───────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🏥 II. Medical History</div>
+        }}> II. Medical History</div>
         <div style={S.cardBody}>
           <div style={{ fontSize: 12, color: "#555", marginBottom: 12 }}>
             Have you suffered from, or been told you had, any of the following
@@ -690,11 +893,11 @@ const StudentDashboard4Mobile = () => {
       </div>
 
       {/* ── III. Medication ───────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>💊 III. Medication</div>
+        }}> III. Medication</div>
         <div style={S.cardBody}>
           <Field label="List all current medications:">
             <textarea
@@ -710,11 +913,11 @@ const StudentDashboard4Mobile = () => {
       </div>
 
       {/* ── IV. COVID Profile ─────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🦠 IV. COVID Profile</div>
+        }}> IV. COVID Profile</div>
         <div style={S.cardBody}>
           {/* A. COVID History */}
           <div style={S.sectionLabel}>A. COVID-19 History</div>
@@ -810,11 +1013,11 @@ const StudentDashboard4Mobile = () => {
       </div>
 
       {/* ── V. Lab Results ────────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🔬 V. Laboratory Results</div>
+        }}> V. Laboratory Results</div>
         <div style={S.cardBody}>
           <div style={{ fontSize: 12, color: "#555", marginBottom: 12 }}>
             Please indicate the result of the following:
@@ -841,11 +1044,11 @@ const StudentDashboard4Mobile = () => {
       </div>
 
       {/* ── VI. Diagnosis ─────────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>📋 VI. Diagnosis</div>
+        }}> VI. Diagnosis</div>
         <div style={S.cardBody}>
           <div style={{ fontSize: 13, color: "#333", marginBottom: 12 }}>
             Do you have any of the following symptoms today?
@@ -878,11 +1081,11 @@ const StudentDashboard4Mobile = () => {
       </div>
 
       {/* ── VII. Remarks ──────────────────────────────────────────────── */}
-      <div style={{ ...S.card, marginBottom: 16 }}>
+      <div style={{ ...S.card, marginBottom: 16, border: `1px solid ${borderColor}` }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>📝 VII. Remarks</div>
+        }}> VII. Remarks</div>
         <div style={S.cardBody}>
           <textarea
             name="remarks"
@@ -893,29 +1096,62 @@ const StudentDashboard4Mobile = () => {
             placeholder="Remarks from physician..."
           />
         </div>
+        {/* Bottom Nav */}
+        <Box display="flex" justifyContent="space-between" mt={1} mx="12px" mb={3}>
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleUpdate(person);
+              showSnackbar("Your record has been saved successfully!", "success");
+              setTimeout(() => navigate("/student_dashboard3"), 1000);
+            }}
+            startIcon={<ArrowBackIcon sx={{ color: "#000", transition: "color 0.3s" }} />}
+            sx={{
+              backgroundColor: subButtonColor,
+              border: `1px solid ${borderColor}`,
+              color: "#000",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "#000",
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              },
+            }}
+          >
+            Previous Step
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleUpdate(person);
+              handleNext;
+              showSnackbar("Your record has been saved successfully!", "success");
+              setTimeout(() => navigate("/student_dashboard5"), 1000);
+            }}
+
+            endIcon={<ArrowForwardIcon sx={{ color: "#fff", transition: "color 0.3s" }} />}
+            sx={{
+              backgroundColor: mainButtonColor,
+              border: `1px solid ${borderColor}`,
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "#000",
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              },
+            }}
+          >
+            Next Step
+          </Button>
+        </Box>
       </div>
 
       {/* Bottom Nav */}
-      <div style={S.bottomBar}>
-        <button
-          style={S.btnSecondary}
-          onClick={() => {
-            handleUpdate(person);
-            navigate("/student_dashboard3");
-          }}
-        >
-          ← Previous
-        </button>
-        <button
-          style={S.btnPrimary}
-          onClick={() => {
-            handleUpdate(person);
-            navigate("/student_dashboard5");
-          }}
-        >
-          Next Step →
-        </button>
-      </div>
+
     </div>
   );
 };

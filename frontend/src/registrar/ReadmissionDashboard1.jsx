@@ -1930,7 +1930,7 @@ const ReadmissionDashboard1 = () => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       <Container>

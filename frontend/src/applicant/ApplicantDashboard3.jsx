@@ -15,7 +15,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import ExamPermit from "../applicant/ExamPermit";
+import ExamPermit from "./ExamPermit";
 import API_BASE_URL from "../apiConfig";
 import { Snackbar, Alert } from "@mui/material";
 const Dashboard3 = (props) => {
@@ -233,15 +233,32 @@ const Dashboard3 = (props) => {
   const [activeStep, setActiveStep] = useState(2);
   const [clickedSteps, setClickedSteps] = useState(Array(steps.length).fill(false));
 
-  const handleStepClick = (index) => {
+  const handleStepClick = async (index) => {
     if (isFormValid()) {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: `Your record has been saved successfully!`,
+        severity: "success",
+      });
+
       setActiveStep(index);
+
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
+
+      // Delay navigation so snackbar can be seen
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
     } else {
-      showSnackbar("Please fill all required fields before proceeding.");
+      setSnackbar({
+        open: true,
+        message: "Please fill all required fields before proceeding.",
+        severity: "error",
+      });
     }
   };
 
@@ -501,7 +518,7 @@ const Dashboard3 = (props) => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       <Box
@@ -1067,7 +1084,7 @@ const Dashboard3 = (props) => {
             <br />
 
             <Typography variant="subtitle1" mb={1}>
-             Strand <Asterisk show={requiresSeniorHigh} />
+              Strand <Asterisk show={requiresSeniorHigh} />
             </Typography>
             <FormControl fullWidth size="small" className="mb-4">
               <InputLabel id="strand-label">Strand</InputLabel>
@@ -1152,15 +1169,29 @@ const Dashboard3 = (props) => {
 
             <Box display="flex" justifyContent="space-between" mt={4}>
               {/* Previous Step Button */}
+              {/* Previous Step Button */}
               <Button
                 variant="contained"
-                onClick={() => {
-                  handleUpdate(person);
+                onClick={async () => {
+                  await handleUpdate(person);
 
                   if (isFormValid()) {
-                    navigate(`/dashboard/${keys.step2}`);
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+
+                    setTimeout(() => {
+                      navigate(`/dashboard/${keys.step2}`);
+                    }, 1000);
                   } else {
-                    showSnackbar("Please complete all required fields before proceeding.");
+                    setSnackbar({
+                      open: true,
+                      message:
+                        "Please complete all required fields before proceeding.",
+                      severity: "error",
+                    });
                   }
                 }}
                 startIcon={
@@ -1190,13 +1221,26 @@ const Dashboard3 = (props) => {
               {/* Next Step Button */}
               <Button
                 variant="contained"
-                onClick={() => {
-                  handleUpdate(person);
+                onClick={async () => {
+                  await handleUpdate(person);
 
                   if (isFormValid()) {
-                    navigate(`/dashboard/${keys.step4}`); // ✅ Goes to step4
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+
+                    setTimeout(() => {
+                      navigate(`/dashboard/${keys.step4}`);
+                    }, 1000);
                   } else {
-                    showSnackbar("Please complete all required fields before proceeding.");
+                    setSnackbar({
+                      open: true,
+                      message:
+                        "Please complete all required fields before proceeding.",
+                      severity: "error",
+                    });
                   }
                 }}
                 endIcon={<ArrowForwardIcon sx={{ color: "#fff" }} />}
@@ -1220,11 +1264,19 @@ const Dashboard3 = (props) => {
 
             <Snackbar
               open={snackbar.open}
-              autoHideDuration={3000} // 3 seconds
-              onClose={handleCloseSnackbar}
+              autoHideDuration={1000} // 3 seconds
+              onClose={() =>
+                setSnackbar((prev) => ({ ...prev, open: false }))
+              }
               anchorOrigin={{ vertical: "top", horizontal: "center" }}
             >
-              <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+              <Alert
+                onClose={() =>
+                  setSnackbar((prev) => ({ ...prev, open: false }))
+                }
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+              >
                 {snackbar.message}
               </Alert>
             </Snackbar>

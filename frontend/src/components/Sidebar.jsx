@@ -1032,7 +1032,7 @@ const SideBar = ({
               <NavItem to="/student_dashboard" icon={DashboardIcon} label="Dashboard" active={isActive("/student_dashboard")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
               <NavItem to="/student_schedule" icon={EventNoteIcon} label="Schedule" active={isActive("/student_schedule")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
               <NavItem to="/grades_page" icon={GradeIcon} label="Grades" active={isActive("/grades_page")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
-              <NavItem to="/student_section_offering" icon={MenuBook} label="Curriculum" active={isActive("/student_section_offering")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
+              <NavItem to="/student_curriculum_subjects" icon={MenuBook} label="Curriculum" active={isActive("/student_curriculum_subjects")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
               <NavItem to="/student_faculty_evaluation" icon={AssignmentTurnedInIcon} label="Faculty Evaluation" active={isActive("/student_faculty_evaluation")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
               <NavItem to="/student_dashboard1" icon={PersonIcon} label="Student Profile" active={/^\/student_dashboard[1-5]$/.test(loc)} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />
               <NavItem to="/student_online_requirements" icon={FolderCopy} label="Official Student Requirements" active={isActive("/student_online_requirements")} collapsed={effectiveCollapsed} onNavClick={handleNavClick} />

@@ -94,11 +94,16 @@ const VerifyApplicantDocumentSchedule = lazy(() => import("./admission/VerifySch
 const AdmissionFormProcess = lazy(() => import("./applicant/AdmissionFormProcess"));
 const AdmissionServices = lazy(() => import("./applicant/AdmissionServices"));
 const ApplicantResetPassword = lazy(() => import("./applicant/ApplicantResetPassword"));
-const Dashboard1 = lazy(() => import("./applicant/Dashboard1"));
-const Dashboard2 = lazy(() => import("./applicant/Dashboard2"));
-const Dashboard3 = lazy(() => import("./applicant/Dashboard3"));
-const Dashboard4 = lazy(() => import("./applicant/Dashboard4"));
-const Dashboard5 = lazy(() => import("./applicant/Dashboard5"));
+const ApplicantDashboard1 = lazy(() => import("./applicant/ApplicantDashboard1"));
+const ApplicantDashboard1Mobile = lazy(() => import("./applicant/ApplicantDashboard1Mobile"));
+const ApplicantDashboard2 = lazy(() => import("./applicant/ApplicantDashboard2"));
+const ApplicantDashboard2Mobile = lazy(() => import("./applicant/ApplicantDashboard2Mobile"));
+const ApplicantDashboard3 = lazy(() => import("./applicant/ApplicantDashboard3"));
+const ApplicantDashboard3Mobile = lazy(() => import("./applicant/ApplicantDashboard3Mobile"));
+const ApplicantDashboard4 = lazy(() => import("./applicant/ApplicantDashboard4"));
+const ApplicantDashboard4Mobile = lazy(() => import("./applicant/ApplicantDashboard4Mobile"));
+const ApplicantDashboard5 = lazy(() => import("./applicant/ApplicantDashboard5"));
+const ApplicantDashboard5Mobile = lazy(() => import("./applicant/ApplicantDashboard5Mobile"));
 const ECATApplicationForm = lazy(() => import("./applicant/ECATApplicationForm"));
 const ExamPermit = lazy(() => import("./applicant/ExamPermit"));
 const OfficeOfTheRegistrar = lazy(() => import("./applicant/OfficeOfTheRegistrar"));
@@ -227,7 +232,7 @@ const StudentOnlineRequirements = lazy(() => import("./student/StudentOnlineRequ
 const StudentPersonalDataForm = lazy(() => import("./student/StudentPersonalDataForm"));
 const StudentResetPassword = lazy(() => import("./student/StudentResetPassword"));
 const StudentSchedule = lazy(() => import("./student/StudentSchedule"));
-const StudentSectionOffering = lazy(() => import("./student/StudentSectionOffering"));
+const StudentCurriculumSubjects = lazy(() => import("./student/StudentCurriculumSubjects"));
 const AdminBranches = lazy(() => import("./system_management/AdminBranches"));
 const Announcement = lazy(() => import("./system_management/Announcement"));
 const AuditLogs = lazy(() => import("./system_management/AuditLogs"));
@@ -288,6 +293,33 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const ApplicantDashboard1Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <ApplicantDashboard1Mobile /> : <ApplicantDashboard1 />;
+  };
+
+  const ApplicantDashboard2Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <ApplicantDashboard2Mobile /> : <ApplicantDashboard2 />;
+  };
+
+  const ApplicantDashboard3Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <ApplicantDashboard3Mobile /> : <ApplicantDashboard3 />;
+  };
+
+
+  const ApplicantDashboard4Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <ApplicantDashboard4Mobile /> : <ApplicantDashboard4 />;
+  };
+
+  const ApplicantDashboard5Responsive = () => {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? <ApplicantDashboard5Mobile /> : <ApplicantDashboard5 />;
+  };
+
+
   const StudentDashboard1Responsive = () => {
     const isMobile = window.innerWidth < 768;
     return isMobile ? <StudentDashboard1Mobile /> : <StudentDashboard1 />;
@@ -304,12 +336,12 @@ function App() {
     return isMobile ? <StudentDashboard3Mobile /> : <StudentDashboard3 />;
   };
 
-    const StudentDashboard4Responsive = () => {
+  const StudentDashboard4Responsive = () => {
     const isMobile = window.innerWidth < 768;
     return isMobile ? <StudentDashboard4Mobile /> : <StudentDashboard4 />;
   };
 
-    const StudentDashboard5Responsive = () => {
+  const StudentDashboard5Responsive = () => {
     const isMobile = window.innerWidth < 768;
     return isMobile ? <StudentDashboard5Mobile /> : <StudentDashboard5 />;
   };
@@ -724,11 +756,11 @@ function App() {
                       <Route path="/payment_exporting_module" element={<ProtectedRoute><PaymentExportingModule /></ProtectedRoute>} />
                       <Route path="/cor_exporting_module" element={<ProtectedRoute><CORExportingModule /></ProtectedRoute>} />
                       <Route path="/cor_export_render" element={<CORExportRender />} />
-                      {keys.step1 && <Route path={`/dashboard/${keys.step1}`} element={<ProtectedRoute allowedRoles={["applicant"]}><Dashboard1 /></ProtectedRoute>} />}
-                      {keys.step2 && <Route path={`/dashboard/${keys.step2}`} element={<ProtectedRoute allowedRoles={["applicant"]}><Dashboard2 /></ProtectedRoute>} />}
-                      {keys.step3 && <Route path={`/dashboard/${keys.step3}`} element={<ProtectedRoute allowedRoles={["applicant"]}><Dashboard3 /></ProtectedRoute>} />}
-                      {keys.step4 && <Route path={`/dashboard/${keys.step4}`} element={<ProtectedRoute allowedRoles={["applicant"]}><Dashboard4 /></ProtectedRoute>} />}
-                      {keys.step5 && <Route path={`/dashboard/${keys.step5}`} element={<ProtectedRoute allowedRoles={["applicant"]}><Dashboard5 /></ProtectedRoute>} />}
+                      {keys.step1 && <Route path={`/dashboard/${keys.step1}`} element={<ProtectedRoute allowedRoles={["applicant"]}><ApplicantDashboard1Responsive /></ProtectedRoute>} />}
+                      {keys.step2 && <Route path={`/dashboard/${keys.step2}`} element={<ProtectedRoute allowedRoles={["applicant"]}><ApplicantDashboard2Responsive /></ProtectedRoute>} />}
+                      {keys.step3 && <Route path={`/dashboard/${keys.step3}`} element={<ProtectedRoute allowedRoles={["applicant"]}><ApplicantDashboard3Responsive /></ProtectedRoute>} />}
+                      {keys.step4 && <Route path={`/dashboard/${keys.step4}`} element={<ProtectedRoute allowedRoles={["applicant"]}><ApplicantDashboard4Responsive /></ProtectedRoute>} />}
+                      {keys.step5 && <Route path={`/dashboard/${keys.step5}`} element={<ProtectedRoute allowedRoles={["applicant"]}><ApplicantDashboard5Responsive /></ProtectedRoute>} />}
                       <Route path="/requirements_uploader" element={<ProtectedRoute allowedRoles={["applicant"]}><RequirementUploader /></ProtectedRoute>} />
                       <Route path="/student_requirements" element={<ProtectedRoute><StudentRequirements /></ProtectedRoute>} />
                       <Route path="/registrar_requirements" element={<ProtectedRoute><RegistrarRequirements /></ProtectedRoute>} />
@@ -761,7 +793,7 @@ function App() {
                       <Route path="/student_admission_services" element={<ProtectedRoute allowedRoles={["student"]}><StudentAdmissionServices /></ProtectedRoute>} />
                       <Route path="/student_form_process" element={<ProtectedRoute allowedRoles={["student", "registrar", "applicant"]}><StudentAdmissionFormProcess /></ProtectedRoute>} />
                       <Route path="/student_grade_file" element={<ProtectedRoute><StudentGradeFile /></ProtectedRoute>} />
-                      <Route path="/student_section_offering" element={<ProtectedRoute allowedRoles={"student"}><StudentSectionOffering /></ProtectedRoute>} />
+                      <Route path="/student_curriculum_subjects" element={<ProtectedRoute allowedRoles={"student"}><StudentCurriculumSubjects /></ProtectedRoute>} />
                       <Route path="/student_enrollment" element={<ProtectedRoute><StudentEnrollment /></ProtectedRoute>} />
                       <Route path="/assign_receipt_counter" element={<ProtectedRoute><ReceiptCounterAssignment /></ProtectedRoute>} />
                       <Route path="/matriculation_payment" element={<ProtectedRoute><MatriculationPaymentModule /></ProtectedRoute>} />
@@ -817,4 +849,4 @@ function App() {
   );
 }
 
-export default App;59
+export default App; 59

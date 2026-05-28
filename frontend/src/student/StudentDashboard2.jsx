@@ -43,6 +43,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import DescriptionIcon from "@mui/icons-material/Description";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import API_BASE_URL from "../apiConfig";
+import { Snackbar, Alert } from "@mui/material";
 const StudentDashboard2 = () => {
   const settings = useContext(SettingsContext);
 
@@ -228,6 +229,17 @@ const StudentDashboard2 = () => {
     });
   }, [queryPersonId]);
 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "warning",
+  });
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   // Fetch person by ID (when navigating with ?person_id=... or sessionStorage)
   useEffect(() => {
     const fetchPersonById = async () => {
@@ -368,13 +380,25 @@ const StudentDashboard2 = () => {
   );
   const [currentStep, setCurrentStep] = useState(0);
 
-  const handleStepClick = (index) => {
+ const handleStepClick = async (index) => {
     if (isFormValid()) {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: "Your record has been saved successfully!",
+        severity: "success",
+      });
+
       setActiveStep(index);
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
+
+      // Delay navigation so snackbar can be seen
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
     } else {
       setSnackbar({
         open: true,
@@ -383,6 +407,7 @@ const StudentDashboard2 = () => {
       });
     }
   };
+
 
   const handleGuardianChange = (e) => {
 
@@ -674,7 +699,7 @@ const StudentDashboard2 = () => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       {/* Cards Section */}
@@ -1064,7 +1089,7 @@ const StudentDashboard2 = () => {
                     </Box>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="subtitle2" mb={1}>
-                        Father Middle Name 
+                        Father Middle Name
                       </Typography>
                       <TextField
                         fullWidth
@@ -2248,67 +2273,61 @@ const StudentDashboard2 = () => {
             </Box>
 
             <Box display="flex" justifyContent="space-between" mt={4}>
-              {/* Previous Page Button */}
+              {/* Previous Step */}
               <Button
                 variant="contained"
-                component={Link}
-                to="/student_dashboard1"
-                onClick={() => {
-                  handleUpdate(person);
-
-                  if (isFormValid()) {
+                onClick={async () => {
+                  await handleUpdate(person);
+                  setSnackbar({
+                    open: true,
+                    message: "Your record has been saved successfully!",
+                    severity: "success",
+                  });
+                  setTimeout(() => {
                     navigate("/student_dashboard1");
-                  } else {
-                    showSnackbar(
-                      "Please complete all required fields before proceeding.",
-                    );
-                  }
+                  }, 1000);
                 }}
                 startIcon={
-                  <ArrowBackIcon
-                    sx={{
-                      color: "#000",
-                      transition: "color 0.3s",
-                    }}
-                  />
+                  <ArrowBackIcon sx={{ color: "#000", transition: "color 0.3s" }} />
                 }
                 sx={{
                   backgroundColor: subButtonColor,
                   border: `1px solid ${borderColor}`,
-
                   color: "#000",
                   "&:hover": {
                     backgroundColor: "#000000",
                     color: "#fff",
-                    "& .MuiSvgIcon-root": {
-                      color: "#fff",
-                    },
+                    "& .MuiSvgIcon-root": { color: "#fff" },
                   },
                 }}
               >
                 Previous Step
               </Button>
 
+              {/* Next Step */}
               <Button
                 variant="contained"
-                onClick={() => {
-                  handleUpdate(person);
-
+                onClick={async () => {
                   if (isFormValid()) {
-                    navigate("/student_dashboard3");
+                    await handleUpdate(person);
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+                    setTimeout(() => {
+                      navigate("/student_dashboard3");
+                    }, 1000);
                   } else {
-                    showSnackbar(
-                      "Please complete all required fields before proceeding.",
-                    );
+                    setSnackbar({
+                      open: true,
+                      message: "Please complete all required fields before proceeding.",
+                      severity: "error",
+                    });
                   }
                 }}
                 endIcon={
-                  <ArrowForwardIcon
-                    sx={{
-                      color: "#fff",
-                      transition: "color 0.3s",
-                    }}
-                  />
+                  <ArrowForwardIcon sx={{ color: "#fff", transition: "color 0.3s" }} />
                 }
                 sx={{
                   backgroundColor: mainButtonColor,
@@ -2317,15 +2336,28 @@ const StudentDashboard2 = () => {
                   "&:hover": {
                     backgroundColor: "#000000",
                     color: "#fff",
-                    "& .MuiSvgIcon-root": {
-                      color: "#fff",
-                    },
+                    "& .MuiSvgIcon-root": { color: "#fff" },
                   },
                 }}
               >
                 Next Step
               </Button>
             </Box>
+
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={1000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
           </Container>
         </form>
       </Container>

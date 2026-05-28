@@ -2,8 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { SettingsContext } from "../App";
 
 import axios from "axios";
-import { Button, Box, TextField, Container, Typography, Card, Table, TableBody, FormGroup, Modal, FormHelperText, FormControlLabel, Checkbox, TableCell, TableRow } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Button, Box, TextField, Container, Typography, Card, Table, TableBody, FormGroup, Modal, FormHelperText, FormControlLabel, Checkbox, TableCell, TableRow, Snackbar, Alert } from "@mui/material"; import { Link } from "react-router-dom";
 import PersonIcon from "@mui/icons-material/Person";
 import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
 import SchoolIcon from "@mui/icons-material/School";
@@ -16,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useLocation } from "react-router-dom";
-import ExamPermit from "../applicant/ExamPermit";
+import ExamPermit from "./ExamPermit";
 import API_BASE_URL from "../apiConfig";
 import DateField from "../components/DateField";
 const Dashboard4 = (props) => {
@@ -73,6 +72,8 @@ const Dashboard4 = (props) => {
     booster1Brand: "", booster1Date: "", booster2Brand: "", booster2Date: "",
     chestXray: "", cbc: "", urinalysis: "", otherworkups: "", symptomsToday: "", remarks: ""
   });
+
+
 
   // do not alter
   useEffect(() => {
@@ -191,13 +192,32 @@ const Dashboard4 = (props) => {
   const [activeStep, setActiveStep] = useState(3);
   const [clickedSteps, setClickedSteps] = useState(Array(steps.length).fill(false));
 
-  const handleStepClick = (index) => {
-    // remove or replace isFormValid() until implemented
+
+
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const handleStepClick = async (index) => {
+    await handleUpdate(person);
+
+    setSnackbar({
+      open: true,
+      message: "Your record has been saved successfully!",
+      severity: "success",
+    });
+
     setActiveStep(index);
+
     const newClickedSteps = [...clickedSteps];
     newClickedSteps[index] = true;
     setClickedSteps(newClickedSteps);
-    navigate(steps[index].path);
+
+    setTimeout(() => {
+      navigate(steps[index].path);
+    }, 1000);
   };
 
 
@@ -422,7 +442,7 @@ const Dashboard4 = (props) => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       <Box
@@ -1294,7 +1314,19 @@ const Dashboard4 = (props) => {
               {/* Previous Page Button */}
               <Button
                 variant="contained"
-                onClick={() => navigate(`/dashboard/${keys.step3}`)} // ✅ FIXED
+                onClick={async () => {
+                  await handleUpdate(person);
+
+                  setSnackbar({
+                    open: true,
+                    message: "Your record has been saved successfully!",
+                    severity: "success",
+                  });
+
+                  setTimeout(() => {
+                    navigate(`/dashboard/${keys.step3}`);
+                  }, 1000);
+                }}
                 startIcon={
                   <ArrowBackIcon
                     sx={{
@@ -1318,13 +1350,21 @@ const Dashboard4 = (props) => {
               >
                 Previous Step
               </Button>
-
               {/* Next Step Button */}
               <Button
                 variant="contained"
-                onClick={() => {
-                  handleUpdate(person);
-                  navigate(`/dashboard/${keys.step5}`); // ✅ Goes to step5
+                onClick={async () => {
+                  await handleUpdate(person);
+
+                  setSnackbar({
+                    open: true,
+                    message: "Your record has been saved successfully!",
+                    severity: "success",
+                  });
+
+                  setTimeout(() => {
+                    navigate(`/dashboard/${keys.step5}`);
+                  }, 1000);
                 }}
                 endIcon={
                   <ArrowForwardIcon
@@ -1352,6 +1392,24 @@ const Dashboard4 = (props) => {
             </Box>
 
 
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={1000} // 3 seconds
+              onClose={() =>
+                setSnackbar((prev) => ({ ...prev, open: false }))
+              }
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+              <Alert
+                onClose={() =>
+                  setSnackbar((prev) => ({ ...prev, open: false }))
+                }
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
 
           </Container>
         </form>

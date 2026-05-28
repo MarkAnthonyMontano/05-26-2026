@@ -470,7 +470,7 @@ const SuperAdminStudentDashboard4 = () => {
                         fontSize: '36px',
                     }}
                 >
-                     HEALTH MEDICAL RECORDS
+                    HEALTH MEDICAL RECORDS
                 </Typography>
 
 
@@ -575,7 +575,7 @@ const SuperAdminStudentDashboard4 = () => {
                     marginTop: "25px",
                 }}
             >
-                LISTS OF ALL PRINTABLE FILES
+                PRINTABLE DOCUMENTS
             </h1>
 
 
@@ -1510,7 +1510,7 @@ const SuperAdminStudentDashboard4 = () => {
                             <Button
                                 variant="contained"
                                 onClick={(e) => {
-                            handleUpdate(person);
+                                    handleUpdate(person);
                                     navigate(`/super_admin_student_dashboard5?person_id=${userID}`);
 
                                 }}

@@ -6330,7 +6330,7 @@ WHERE proctor LIKE ?
       const [rows] = await db3.query(
         `
         SELECT DISTINCT
-          pt.gender, pt.birthOfDate, rt.id AS requirements, pt.last_name, pt.first_name, pt.schoolLastAttended, pt.profile_img AS profile_image, pt.yearGraduated - 1 AS previous_year, pt.yearGraduated, pt.middle_name, pgt.program_code, pgt.major, yt.year_description, pgt.program_description, snt.student_number, dpt.dprtmnt_name FROM enrolled_subject AS es
+          pt.gender, pt.birthOfDate, pt.campus, rt.id AS requirements, pt.last_name, pt.first_name, pt.schoolLastAttended, pt.profile_img AS profile_image, pt.yearGraduated - 1 AS previous_year, pt.yearGraduated, pt.middle_name, pgt.program_code, pgt.major, yt.year_description, pgt.program_description, snt.student_number, dpt.dprtmnt_name FROM enrolled_subject AS es
         LEFT JOIN student_numbering_table AS snt ON es.student_number = snt.student_number
         LEFT JOIN person_table AS pt ON snt.person_id = pt.person_id
         LEFT JOIN curriculum_table AS cct ON es.curriculum_id = cct.curriculum_id

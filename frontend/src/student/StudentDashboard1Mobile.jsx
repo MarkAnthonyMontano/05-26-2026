@@ -31,6 +31,20 @@ import {
   Checkbox,
   IconButton,
 } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
+import SchoolIcon from "@mui/icons-material/School";
+import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
+import InfoIcon from "@mui/icons-material/Info";
+import ErrorIcon from "@mui/icons-material/Error";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { motion } from "framer-motion";
+import CloseIcon from "@mui/icons-material/Close";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { Snackbar, Alert } from "@mui/material";
+
 // ─── Inline mobile-only styles ──────────────────────────────────────────────
 const S = {
   screen: {
@@ -135,6 +149,7 @@ const S = {
     margin: "12px 12px 0",
     overflow: "hidden",
     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+
   },
   cardHeader: {
 
@@ -373,14 +388,12 @@ const S = {
   },
 };
 
-// ─── Step icons (emoji-like) ─────────────────────────────────────────────────
-const STEP_ICONS = ["👤", "👨‍👩‍👧", "🎓", "🏥", "ℹ️"];
-const STEP_LABELS = [
-  "Personal\nInfo",
-  "Family\nBG",
-  "Education",
-  "Health",
-  "Other",
+const steps = [
+  { label: "Personal Information", icon: <PersonIcon /> },
+  { label: "Family Background", icon: <FamilyRestroomIcon /> },
+  { label: "Educational Attainment", icon: <SchoolIcon /> },
+  { label: "Health Medical Records", icon: <HealthAndSafetyIcon /> },
+  { label: "Other Information", icon: <InfoIcon /> },
 ];
 const STEP_PATHS = [
   "/student_dashboard1",
@@ -415,7 +428,7 @@ const MSelect = ({ error, style, children, ...props }) => (
 );
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-const StudentDashboard1Mobile = () => {
+const ApplicantDashboard1Mobile = () => {
   const settings = useContext(SettingsContext);
 
   const [titleColor, setTitleColor] = useState("#000000");
@@ -473,6 +486,12 @@ const StudentDashboard1Mobile = () => {
   const [userRole, setUserRole] = useState("");
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "warning" });
+
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((p) => ({ ...p, open: false }));
+  };
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -490,6 +509,9 @@ const StudentDashboard1Mobile = () => {
   const [permanentProvinceList, setPermanentProvinceList] = useState([]);
   const [permanentCityList, setPermanentCityList] = useState([]);
   const [permanentBarangayList, setPermanentBarangayList] = useState([]);
+
+  const [activeStep, setActiveStep] = useState(0);
+
 
   const [person, setPerson] = useState({
     profile_img: "", campus: "", academicProgram: "", classifiedAs: "",
@@ -700,82 +722,173 @@ const StudentDashboard1Mobile = () => {
     { label: "Admission Services", to: "/student_admission_services" },
   ];
 
+  // handleNext — update message:
   const handleNext = () => {
     handleUpdate(person);
     if (isFormValid()) {
-      navigate("/student_dashboard2");
+      showSnackbar("Your record has been saved successfully!", "success");
+      setTimeout(() => navigate("/student_dashboard2"), 1000);
     } else {
       showSnackbar("Please fill all required fields before proceeding.", "error");
     }
   };
 
+  // handleStepClick — update message:
+  const handleStepClick = (index) => {
+    if (isFormValid()) {
+      showSnackbar("Your record has been saved successfully!", "success");
+      setTimeout(() => { setActiveStep(index); navigate(STEP_PATHS[index]); }, 1000);
+    } else {
+      showSnackbar("Please fill all required fields before proceeding.", "error");
+    }
+  };
+
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={S.screen}>
       {/* Toast */}
-      {snackbar.open && <div style={S.toast(snackbar.severity)}>{snackbar.message}</div>}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={1000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {/* Header */}
-      <div style={{
-        ...S.header,
-        backgroundColor: settings?.header_color || "#1976d2",
-      }}>
-        <div>
-          <div style={S.headerTitle}>PERSONAL INFORMATION</div>
-          <div style={S.headerSub}>{companyName || "Student Enrollment"}</div>
-        </div>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 1, padding: 1, }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: titleColor,
+
+            fontSize: { xs: "22px", sm: "28px", md: "36px" },
+          }}
+        >
+          PERSONAL INFORMATION
+        </Typography>
+      </Box>
+      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+      <br />
 
       {/* Stepper */}
-      <div style={S.stepperWrap}>
-        {STEP_LABELS.map((label, i) => (
-          <React.Fragment key={i}>
-            <div style={S.stepItem} onClick={() => { if (isFormValid()) navigate(STEP_PATHS[i]); }}>
-              <div style={S.stepCircle(i === 0)}>{STEP_ICONS[i]}</div>
-              <div style={S.stepLabel(i === 0)}>{label}</div>
-            </div>
-            {i < STEP_LABELS.length - 1 && <div style={S.stepLine} />}
-          </React.Fragment>
-        ))}
-      </div>
+
 
       {/* Notice */}
-      <div style={S.notice}>
-        <div style={S.noticeIcon}>⚠️</div>
-        <div style={S.noticeText}>
-          <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-          <strong></strong>
-          <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
-          Please indicate “NA” or “N/A” in fields where the requested information is not applicable or no response can be provided.
-          &nbsp;&nbsp;<br />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 1.5,
+          mx: "12px",
+          mt: "12px",
+          p: "10px 12px",
+          borderRadius: "8px",
+          backgroundColor: "#fffaf5",
+          border: "1px solid #6D2323",
+          boxShadow: "0px 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        {/* Icon */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#800000",
+            borderRadius: "6px",
+            width: 36,
+            height: 36,
+            flexShrink: 0,
+          }}
+        >
+          <ErrorIcon sx={{ color: "white", fontSize: 22 }} />
+        </Box>
 
-          <strong></strong>
-          <span
-            style={{
-              fontSize: '1.2em',
-              margin: '0 15px',
-              marginLeft: '100px',
-            }}
-          >
-            ➔
-          </span>
-          To enter the letter “Ñ”, press and hold the ALT key while typing “165”. For “ñ”, press and hold the ALT key while typing “164”.
-        </div>
-      </div>
+        {/* Text */}
+        <Typography sx={{ fontSize: 12, color: "#3e3e3e", lineHeight: 1.6 }}>
+          <strong style={{ color: "maroon" }}>Notice:</strong>{" "}
+          <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+          Please indicate "NA" or "N/A" in fields where the requested information is not applicable or no response can be provided.
+          <br />
+          <span style={{ marginLeft: 16, fontSize: "1.1em", marginRight: 6 }}>➔</span>
+          To enter the letter "Ñ", press and hold the ALT key while typing "165". For "ñ", press and hold the ALT key while typing "164".
+        </Typography>
+      </Box>
 
-      {/* Printable Documents */}
-      <div style={{ padding: "12px 12px 0" }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
-          📄 Printable Documents
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      <Box sx={{ px: "12px", pt: "12px" }}>
+        <Typography sx={{
+          fontSize: "30px",
+          fontWeight: "bold",
+          textAlign: "center",
+          color: "black",
+          marginTop: "25px",
+          mb: 2
+        }}>
+          PRINTABLE DOCUMENTS
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
           {docLinks.map((d, i) => (
-            <button key={i} style={S.docChip("#6D2323")} onClick={() => navigate(d.to)}>
-              📑 {d.label}
-            </button>
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, duration: 0.3 }}
+              style={{ width: "calc(50% - 4px)" }}
+            >
+              <Card
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 0.75,
+                  px: 1.5,
+                  py: 1.25,
+                  height: 52,
+                  width: "100%",
+                  borderRadius: "12px",
+                  border: `1px solid ${borderColor || "#6D2323"}`,
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: settings?.header_color || "#6D2323",
+                    "& .chip-icon": { color: "#fff" },
+                    "& .chip-text": { color: "#fff" },
+                  },
+                }}
+                onClick={() => navigate(d.to)}
+              >
+                <PictureAsPdfIcon
+                  className="chip-icon"
+                  sx={{ fontSize: 18, color: mainButtonColor || "#6D2323", flexShrink: 0 }}
+                />
+                <Typography
+                  className="chip-text"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: mainButtonColor || "#6D2323",
+                    fontFamily: "Poppins, sans-serif",
+                    whiteSpace: "normal",
+                    lineHeight: 1.3,
+                    textAlign: "center",
+                  }}
+                >
+                  {d.label}
+                </Typography>
+              </Card>
+            </motion.div>
           ))}
-        </div>
-      </div>
+        </Box>
+      </Box>
+
 
       {/* Applicant Form Intro */}
       <div style={{ padding: "16px 14px 0", textAlign: "center" }}>
@@ -789,11 +902,12 @@ const StudentDashboard1Mobile = () => {
               marginTop: "25px",
             }}
           >
-            APPLICANT FORM
+            STUDENT FORM
           </h1>
+
           <div style={{ textAlign: "center" }}>
-            Complete the applicant form to secure your place for the upcoming
-            academic year at{" "}
+            Please update your personal information to keep your student records
+            accurate and up to date for the upcoming academic year at{" "}
             {shortTerm ? (
               <>
                 <strong>{shortTerm.toUpperCase()}</strong> <br />
@@ -807,29 +921,98 @@ const StudentDashboard1Mobile = () => {
         </Container>
       </div>
 
+      <Box sx={{ display: "flex", justifyContent: "center", width: "100%", px: 2, py: 1.5, borderBottom: "1px solid #e0e0e0" }}>
+        {steps.map((step, index) => (
+          <React.Fragment key={index}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}
+              onClick={() => handleStepClick(index)}
+            >
+              <Box
+                sx={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: "50%",
+                  border: `2px solid ${borderColor}`,
+                  backgroundColor: activeStep === index ? (settings?.header_color || "#6D2323") : "#E8C999",
+                  color: activeStep === index ? "#fff" : "#333",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  transition: "all 0.2s",
+                }}
+              >
+                {step.icon}
+              </Box>
+              <Typography
+                sx={{
+                  mt: 0.75,
+                  color: activeStep === index ? "#6D2323" : "#555",
+                  fontWeight: activeStep === index ? 700 : 400,
+                  fontSize: { xs: 10, sm: 12 },
+                  textAlign: "center",
+                  maxWidth: 72,
+                  lineHeight: 1.3,
+                }}
+              >
+                {step.label}
+              </Typography>
+            </Box>
+
+            {index < steps.length - 1 && (
+              <Box
+                sx={{
+                  height: "2px",
+                  backgroundColor: mainButtonColor,
+                  flex: 1,
+                  alignSelf: "center",
+                  mx: 1,
+                  mb: 3,
+                }}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </Box>
+
       {/* ── SECTION: Personal Information ─────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, mb: 2 }}>
         <div
           style={{
             ...S.cardHeader,
             backgroundColor: settings?.header_color || "#1976d2",
           }}
         >
-          👤 Personal Information
+          Personal Information
         </div>
         <div style={S.cardBody}>
 
-          {/* Campus */}
           <Field label="Campus" required error={errors.campus} helperText="This field is required.">
-            <MSelect name="campus" value={person.campus || ""} onChange={handleChange} error={errors.campus}>
+            <MSelect
+              name="campus"
+              value={person.campus || ""}
+              onChange={handleChange}
+              error={errors.campus}
+              disabled
+            >
               <option value="">Select Campus</option>
-              {branches.map((b) => <option key={b.id} value={String(b.id)}>{b.branch.toUpperCase()}</option>)}
+              {branches.map((b) => (
+                <option key={b.id} value={String(b.id)}>
+                  {b.branch.toUpperCase()}
+                </option>
+              ))}
             </MSelect>
           </Field>
 
-          {/* Academic Program */}
           <Field label="Academic Program" required error={errors.academicProgram} helperText="This field is required.">
-            <MSelect name="academicProgram" value={person.academicProgram || ""} onChange={handleChange} error={errors.academicProgram}>
+            <MSelect
+              name="academicProgram"
+              value={person.academicProgram || ""}
+              onChange={handleChange}
+              error={errors.academicProgram}
+              disabled
+            >
               <option value="">Select Program</option>
               <option value="0">Undergraduate</option>
               <option value="1">Graduate</option>
@@ -837,9 +1020,14 @@ const StudentDashboard1Mobile = () => {
             </MSelect>
           </Field>
 
-          {/* Classified As */}
           <Field label="Classified As" required error={errors.classifiedAs} helperText="This field is required.">
-            <MSelect name="classifiedAs" value={person.classifiedAs || ""} onChange={handleChange} error={errors.classifiedAs}>
+            <MSelect
+              name="classifiedAs"
+              value={person.classifiedAs || ""}
+              onChange={handleChange}
+              error={errors.classifiedAs}
+              disabled
+            >
               <option value="">Select Classification</option>
               <option value="Freshman (First Year)">Freshman (First Year)</option>
               <option value="Transferee">Transferee</option>
@@ -849,13 +1037,18 @@ const StudentDashboard1Mobile = () => {
             </MSelect>
           </Field>
 
-          {/* Applying As */}
           <Field label="Applying As" required error={errors.applyingAs} helperText="This field is required.">
-            <MSelect name="applyingAs" value={person.applyingAs || ""} onChange={handleChange} error={errors.applyingAs}>
+            <MSelect
+              name="applyingAs"
+              value={person.applyingAs || ""}
+              onChange={handleChange}
+              error={errors.applyingAs}
+              disabled
+            >
               <option value="">Select Applying As</option>
               <option value="1">Senior High School Graduate</option>
               <option value="2">Senior High School Graduating Student</option>
-              <option value="3">ALS Passer</option>
+              <option value="3">ALS (Alternative Learning System) Passer</option>
               <option value="4">Transferee from other University/College</option>
               <option value="5">Cross Enrolee Student</option>
               <option value="6">Foreign Applicant/Student</option>
@@ -863,15 +1056,16 @@ const StudentDashboard1Mobile = () => {
               <option value="8">Master Degree Graduate</option>
             </MSelect>
           </Field>
+
         </div>
       </div>
 
       {/* ── SECTION: Course Program ───────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>📚 Course Program</div>
+        }}> Course Program</div>
         <div style={S.cardBody}>
 
           {/* Profile Photo */}
@@ -897,9 +1091,184 @@ const StudentDashboard1Mobile = () => {
             </div>
           </div>
 
+          {/* ── Photo Upload Modal ───────────────────────────────────────── */}
+          {uploadModalOpen && (
+            <div
+              style={S.overlay}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setUploadModalOpen(false);
+                  setPreview(null);
+                  setSelectedFile(null);
+                }
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: 12,
+                  width: "92%",
+                  maxWidth: 480,
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                  padding: 20,
+                  position: "relative",
+                  margin: "auto",
+                }}
+              >
+                {/* Close Button */}
+                <IconButton
+                  size="small"
+                  onClick={() => { setUploadModalOpen(false); setPreview(null); setSelectedFile(null); }}
+                  sx={{
+                    position: "absolute",
+                    top: 10,
+                    right: 10,
+                    width: 30,
+                    height: 30,
+                    backgroundColor: "#000",
+                    color: "#fff",
+                    border: "2px solid #fff",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+                    zIndex: 10,
+
+                  }}
+                >
+                  <CloseIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+
+                {/* Header */}
+                <div
+                  style={{
+                    backgroundColor: settings?.header_color || "#1976d2",
+                    color: "#fff",
+                    borderRadius: 8,
+                    padding: "12px 16px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  Upload Your Photo
+                </div>
+
+                {/* Preview */}
+                {(preview || person.profile_img) && (
+                  <div style={{ position: "relative", width: 160, margin: "0 auto 16px" }}>
+                    <img
+                      src={preview || `${API_BASE_URL}/uploads/Applicant1by1/${person.profile_img}`}
+                      alt="Preview"
+                      style={{
+                        width: 160,
+                        height: 160,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        border: "2px solid #6D2323",
+                        display: "block",
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={async () => {
+                        setSelectedFile(null);
+                        setPreview(null);
+                        const updated = { ...person, profile_img: "" };
+                        setPerson(updated);
+                        await handleUpdate(updated);
+                        showSnackbar("Photo removed.", "info");
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: -10,
+                        right: -10,
+                        width: 28,
+                        height: 28,
+                        backgroundColor: "#000",
+                        color: "#fff",
+                        border: "2px solid #fff",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+
+                      }}
+                    >
+                      <CloseIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </div>
+                )}
+
+                {/* Guidelines */}
+                <div
+                  style={{
+                    border: "1px dashed #ccc",
+                    borderRadius: 8,
+                    padding: "12px 14px",
+                    marginBottom: 16,
+                    backgroundColor: "#f9f9f9",
+                    fontSize: 12,
+                    color: "#444",
+                    lineHeight: 1.8,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Guidelines:</div>
+                  {[
+                    "Size: 2\" x 2\"",
+                    "Color: Your photo must be in colored.",
+                    "Background: White.",
+                    "Head size and position: Look directly into the camera at a straight angle, face centered.",
+                    "File types: JPEG, JPG, PNG",
+                    "Attire must be formal.",
+                    "Required File Size: 2MB",
+                  ].map((g, i) => (
+                    <div key={i} style={{ display: "flex", gap: 6, marginBottom: 2 }}>
+                      <span style={{ color: "#6D2323", fontWeight: 700, flexShrink: 0 }}>•</span>
+                      <span>{g}</span>
+                    </div>
+                  ))}
+
+                  <div style={{ fontWeight: 700, fontSize: 13, margin: "10px 0 6px" }}>How to Change the Photo?</div>
+                  {[
+                    "Tap the × button to remove the current photo",
+                    "Choose a new file",
+                    "Tap the Upload button",
+                  ].map((g, i) => (
+                    <div key={i} style={{ display: "flex", gap: 6, marginBottom: 2 }}>
+                      <span style={{ color: "#6D2323", fontWeight: 700, flexShrink: 0 }}>•</span>
+                      <span>{g}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* File Input */}
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#6D2323", marginBottom: 6 }}>
+                  Select Your Image:
+                </div>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  onClick={(e) => (e.target.value = null)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: "8px",
+                    border: "1px solid #ccc",
+                    borderRadius: 6,
+                    marginBottom: 14,
+                    fontSize: 13,
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                {/* Upload Button */}
+                <button style={{ ...S.btnPrimary, width: "100%", backgroundColor: mainButtonColor, }} onClick={handleUpload}>
+                  Upload
+                </button>
+              </div>
+            </div>
+          )}
           {/* Course Applied */}
           <Field label="Course Applied" required error={errors.program} helperText="This field is required.">
-            <MSelect name="program" value={person.program || ""} onChange={handleChange} error={errors.program}>
+            <MSelect disabled name="program" value={person.program || ""} onChange={handleChange} error={errors.program}>
               <option value="">Select Program</option>
               {filteredCurriculum.map((item, i) => (
                 <option key={i} value={item.curriculum_id}>
@@ -912,7 +1281,7 @@ const StudentDashboard1Mobile = () => {
 
           {/* Year Level */}
           <Field label="Year Level" required error={errors.yearLevel} helperText="This field is required.">
-            <MSelect name="yearLevel" value={person.yearLevel || ""} onChange={handleChange} error={errors.yearLevel}>
+            <MSelect disabled name="yearLevel" value={person.yearLevel || ""} onChange={handleChange} error={errors.yearLevel}>
               <option value="">Select Year Level</option>
               {filteredYearLevels.map((yl) => (
                 <option key={yl.year_level_id} value={String(yl.year_level_id)}>
@@ -925,30 +1294,30 @@ const StudentDashboard1Mobile = () => {
       </div>
 
       {/* ── SECTION: Person Details ───────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🪪 Person Details</div>
+        }}> Person Details</div>
         <div style={S.cardBody}>
 
           <Field label="Last Name" required error={errors.last_name} helperText="This field is required.">
-            <MInput name="last_name" value={(person.last_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "last_name", value: e.target.value.toUpperCase() } })} error={errors.last_name} placeholder="Last Name" />
+            <MInput disabled name="last_name" value={(person.last_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "last_name", value: e.target.value.toUpperCase() } })} error={errors.last_name} placeholder="Enter your Last Name" />
           </Field>
 
           <Field label="First Name" required error={errors.first_name} helperText="This field is required.">
-            <MInput name="first_name" value={(person.first_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "first_name", value: e.target.value.toUpperCase() } })} error={errors.first_name} placeholder="First Name" />
+            <MInput disabled name="first_name" value={(person.first_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "first_name", value: e.target.value.toUpperCase() } })} error={errors.first_name} placeholder="Enter your First Name" />
           </Field>
 
           <div style={S.row}>
             <div style={S.flex1}>
               <Field label="Middle Name">
-                <MInput name="middle_name" value={(person.middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "middle_name", value: e.target.value.toUpperCase() } })} placeholder="Middle Name" />
+                <MInput disabled name="middle_name" value={(person.middle_name || "").toUpperCase()} onChange={(e) => handleChange({ target: { name: "middle_name", value: e.target.value.toUpperCase() } })} placeholder="Enter your Middle Name" />
               </Field>
             </div>
             <div style={{ width: 110 }}>
               <Field label="Extension">
-                <MSelect name="extension" value={person.extension || ""} onChange={handleChange}>
+                <MSelect disabled name="extension" value={person.extension || ""} onChange={handleChange}>
                   <option value="">None</option>
                   {["Jr.", "Sr.", "I", "II", "III", "IV", "V"].map((v) => <option key={v} value={v}>{v}</option>)}
                 </MSelect>
@@ -957,18 +1326,18 @@ const StudentDashboard1Mobile = () => {
           </div>
 
           <Field label="Nickname">
-            <MInput name="nickname" value={person.nickname || ""} onChange={handleChange} placeholder="Nickname" />
+            <MInput name="nickname" value={person.nickname || ""} onChange={handleChange} placeholder="Enter your Nickname" />
           </Field>
 
           <div style={S.row}>
             <div style={S.flex1}>
               <Field label="Height (cm)" required error={errors.height} helperText="Required">
-                <MInput type="number" name="height" value={person.height || ""} onChange={handleChange} error={errors.height} placeholder="cm" />
+                <MInput type="number" name="height" value={person.height || ""} onChange={handleChange} error={errors.height} placeholder="Enter your Height" />
               </Field>
             </div>
             <div style={S.flex1}>
               <Field label="Weight (kg)" required error={errors.weight} helperText="Required">
-                <MInput type="number" name="weight" value={person.weight || ""} onChange={handleChange} error={errors.weight} placeholder="kg" />
+                <MInput type="number" name="weight" value={person.weight || ""} onChange={handleChange} error={errors.weight} placeholder="Enter your Weight" />
               </Field>
             </div>
           </div>
@@ -981,7 +1350,7 @@ const StudentDashboard1Mobile = () => {
               onChange={handleChange}
               disabled={person.lrnNumber === "No LRN Number"}
               error={errors.lrnNumber}
-              placeholder="Enter LRN"
+              placeholder="Enter LRN Number"
               style={{ opacity: person.lrnNumber === "No LRN Number" ? 0.5 : 1 }}
             />
             <label style={{ ...S.checkRow, marginTop: 6 }}>
@@ -1024,7 +1393,7 @@ const StudentDashboard1Mobile = () => {
                 </MSelect>
               </Field>
               <Field label="PWD ID" required error={errors.pwdId} helperText="This field is required.">
-                <MInput name="pwdId" value={person.pwdId || ""} onChange={handleChange} error={errors.pwdId} placeholder="PWD ID Number" />
+                <MInput name="pwdId" value={person.pwdId || ""} onChange={handleChange} error={errors.pwdId} placeholder="Enter your PWD ID Number" />
               </Field>
             </>
           )}
@@ -1034,6 +1403,7 @@ const StudentDashboard1Mobile = () => {
             <div style={S.flex1}>
               <Field label="Date of Birth" required error={errors.birthOfDate} helperText="Required">
                 <DateField
+                disabled
                   name="birthOfDate"
                   value={person.birthOfDate || ""}
                   onChange={handleChange}
@@ -1043,17 +1413,17 @@ const StudentDashboard1Mobile = () => {
             </div>
             <div style={{ width: 80 }}>
               <Field label="Age" required error={errors.age} helperText="Required">
-                <MInput name="age" value={person.age || ""} readOnly placeholder="Age" error={errors.age} style={{ backgroundColor: "#f5f5f5" }} />
+                <MInput disabled name="age" value={person.age || ""} readOnly placeholder="Enter your Age" error={errors.age} style={{ backgroundColor: "#f5f5f5" }} />
               </Field>
             </div>
           </div>
 
           <Field label="Birth Place" required error={errors.birthPlace} helperText="This field is required.">
-            <MInput name="birthPlace" value={person.birthPlace || ""} onChange={handleChange} error={errors.birthPlace} placeholder="City / Province" />
+            <MInput name="birthPlace" value={person.birthPlace || ""} onChange={handleChange} error={errors.birthPlace} placeholder="Enter your Birth Place" />
           </Field>
 
           <Field label="Language / Dialect Spoken" required error={errors.languageDialectSpoken} helperText="This field is required.">
-            <MInput name="languageDialectSpoken" value={person.languageDialectSpoken || ""} onChange={handleChange} error={errors.languageDialectSpoken} placeholder="e.g. Filipino, Cebuano" />
+            <MInput name="languageDialectSpoken" value={person.languageDialectSpoken || ""} onChange={handleChange} error={errors.languageDialectSpoken} placeholder="Enter your Language Spoken" />
           </Field>
 
           <Field label="Citizenship" required error={errors.citizenship} helperText="This field is required.">
@@ -1147,11 +1517,11 @@ const StudentDashboard1Mobile = () => {
       </div>
 
       {/* ── SECTION: Contact Information ─────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>📞 Contact Information</div>
+        }}> Contact Information</div>
         <div style={S.cardBody}>
           <Field label="Contact Number" required error={errors.cellphoneNumber} helperText="This field is required.">
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1174,32 +1544,83 @@ const StudentDashboard1Mobile = () => {
               value={person.emailAddress || ""}
               readOnly
               style={{ backgroundColor: "#f0f0f0" }}
-              placeholder="Registered email"
+              placeholder="Enter your Email Address"
             />
           </Field>
         </div>
       </div>
 
       {/* ── SECTION: Present Address ─────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, mb: 2 }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>📍 Present Address</div>
+        }}> Present Address</div>
         <div style={S.cardBody}>
-          <div style={S.warningBox}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
-            <div style={S.warningText}>
-              Fill in order: <strong>Region → Province → Municipality → Barangay</strong>
-            </div>
-          </div>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: {
+                xs: "column",
+                sm: "row",
+              },
+              gap: 1,
+              backgroundColor: "#FFF4E5",
+              border: "1px solid #FFA726",
+              borderRadius: 2,
+              p: {
+                xs: 1.5,
+                sm: 2,
+              },
+              minHeight: {
+                xs: "auto",
+                sm: "50px",
+              },
+              mb: 2,
+              textAlign: "center",
+            }}
+          >
+            <WarningAmberIcon
+              sx={{
+                color: "#FF9800",
+                fontSize: {
+                  xs: 28,
+                  sm: 24,
+                },
+              }}
+            />
 
+            <Typography
+              fontWeight="medium"
+              color="#BF360C"
+              sx={{
+                fontSize: {
+                  xs: "0.85rem",
+                  sm: "1rem",
+                },
+                lineHeight: 1.5,
+              }}
+            >
+              NOTICE: Fill up first the{" "}
+              <strong>
+                REGION{" "}
+                <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+                PERMANENT PROVINCE{" "}
+                <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+                PERMANENT MUNICIPALITY{" "}
+                <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+                PERMANENT BARANGAY
+              </strong>
+            </Typography>
+          </Box>
           <Field label="Street / House No." required error={errors.presentStreet} helperText="This field is required.">
-            <MInput name="presentStreet" value={person.presentStreet || ""} onChange={handleChange} error={errors.presentStreet} placeholder="Street, Purok, House No." />
+            <MInput name="presentStreet" value={person.presentStreet || ""} onChange={handleChange} error={errors.presentStreet} placeholder="Enter your Present Street" />
           </Field>
 
           <Field label="Zip Code" required error={errors.presentZipCode} helperText="This field is required.">
-            <MInput type="number" name="presentZipCode" value={person.presentZipCode || ""} onChange={handleChange} error={errors.presentZipCode} placeholder="Zip Code" />
+            <MInput type="number" name="presentZipCode" value={person.presentZipCode || ""} onChange={handleChange} error={errors.presentZipCode} placeholder="Enter your Zip Code" />
           </Field>
 
           <Field label="Region" required error={errors.presentRegion} helperText="This field is required.">
@@ -1236,75 +1657,177 @@ const StudentDashboard1Mobile = () => {
           </label>
           {person.presentDswdChecked === 1 && (
             <Field label="Present DSWD Household Number" required error={errors.presentDswdHouseholdNumber} helperText="This field is required.">
-              <MInput name="presentDswdHouseholdNumber" value={person.presentDswdHouseholdNumber || ""} onChange={handleChange} error={errors.presentDswdHouseholdNumber} placeholder="DSWD Household Number" />
+              <MInput name="presentDswdHouseholdNumber" value={person.presentDswdHouseholdNumber || ""} onChange={handleChange} error={errors.presentDswdHouseholdNumber} placeholder="Enter your DSWD Household Number" />
             </Field>
           )}
         </div>
+
+
+
       </div>
-
       {/* ── SECTION: Permanent Address ───────────────────────────────── */}
-      <div style={S.card}>
-        <div style={{
-          ...S.cardHeader,
-          backgroundColor: settings?.header_color || "#1976d2",
-        }}>🏠 Permanent Address</div>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, marginBottom: 2 }}>
+        <div style={{ ...S.cardHeader, backgroundColor: settings?.header_color || "#1976d2" }}> Permanent Address</div>
         <div style={S.cardBody}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: {
+                xs: "column",
+                sm: "row",
+              },
+              gap: 1,
+              backgroundColor: "#FFF4E5",
+              border: "1px solid #FFA726",
+              borderRadius: 2,
+              p: {
+                xs: 1.5,
+                sm: 2,
+              },
+              minHeight: {
+                xs: "auto",
+                sm: "50px",
+              },
+              mb: 3,
+              textAlign: "center",
+            }}
+          >
+            <WarningAmberIcon
+              sx={{
+                color: "#FF9800",
+                fontSize: {
+                  xs: 28,
+                  sm: 24,
+                },
+              }}
+            />
 
+            <Typography
+              fontWeight="medium"
+              color="#BF360C"
+              sx={{
+                fontSize: {
+                  xs: "0.85rem",
+                  sm: "1rem",
+                },
+                lineHeight: 1.5,
+              }}
+            >
+              NOTICE: Fill up first the{" "}
+              <strong>
+                REGION{" "}
+                <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+                PERMANENT PROVINCE{" "}
+                <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+                PERMANENT MUNICIPALITY{" "}
+                <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+                PERMANENT BARANGAY
+              </strong>
+            </Typography>
+          </Box>
+          {/* From Dashboard1: sameAsPresentAddress logic */}
           <label style={S.checkRow}>
             <input
               type="checkbox"
               style={S.checkbox}
+              name="sameAsPresentAddress"
               checked={person.sameAsPresentAddress === 1}
               onChange={(e) => {
                 const checked = e.target.checked;
-                const updated = { ...person, sameAsPresentAddress: checked ? 1 : 0 };
+                const updatedPerson = { ...person, sameAsPresentAddress: checked ? 1 : 0 };
                 if (checked) {
-                  updated.permanentStreet = person.presentStreet;
-                  updated.permanentZipCode = person.presentZipCode;
-                  updated.permanentRegion = person.presentRegion;
-                  updated.permanentProvince = person.presentProvince;
-                  updated.permanentMunicipality = person.presentMunicipality;
-                  updated.permanentBarangay = person.presentBarangay;
-                  updated.permanentDswdHouseholdNumber = person.presentDswdHouseholdNumber;
+                  updatedPerson.permanentStreet = person.presentStreet;
+                  updatedPerson.permanentZipCode = person.presentZipCode;
+                  updatedPerson.permanentRegion = person.presentRegion;
+                  updatedPerson.permanentProvince = person.presentProvince;
+                  updatedPerson.permanentMunicipality = person.presentMunicipality;
+                  updatedPerson.permanentBarangay = person.presentBarangay;
+                  updatedPerson.permanentDswdHouseholdNumber = person.presentDswdHouseholdNumber;
+                  setPermanentRegion(person.presentRegion);
+                  setPermanentProvince(person.presentProvince);
+                  setPermanentCity(person.presentMunicipality);
+                  setPermanentBarangay(person.presentBarangay);
                 }
-                setPerson(updated);
-                handleUpdate(updated);
+                setPerson(updatedPerson);
+                handleUpdate(updatedPerson);
               }}
             />
             Same as Present Address
           </label>
 
-          <Field label="Permanent Street" required error={errors.permanentStreet} helperText="This field is required.">
-            <MInput name="permanentStreet" value={person.permanentStreet || ""} onChange={handleChange} error={errors.permanentStreet} placeholder="Street, Purok, House No." />
+          <Field label="Street / House No." required error={errors.permanentStreet} helperText="This field is required.">
+            <MInput name="permanentStreet" value={person.permanentStreet || ""} onChange={handleChange} onBlur={() => handleUpdate(person)} error={errors.permanentStreet} placeholder="Enter your Permanent Street" />
           </Field>
 
           <Field label="Zip Code" required error={errors.permanentZipCode} helperText="This field is required.">
-            <MInput type="number" name="permanentZipCode" value={person.permanentZipCode || ""} onChange={handleChange} error={errors.permanentZipCode} placeholder="Zip Code" />
+            <MInput type="number" name="permanentZipCode" value={person.permanentZipCode || ""} onChange={handleChange} onBlur={() => handleUpdate(person)} error={errors.permanentZipCode} placeholder="Enter your Zip Code" />
           </Field>
 
           <Field label="Region" required error={errors.permanentRegion} helperText="This field is required.">
-            <MSelect name="permanentRegion" value={person.permanentRegion || ""} onChange={(e) => { handleChange(e); setPermanentProvinceList([]); setPermanentCityList([]); setPermanentBarangayList([]); }} error={errors.permanentRegion}>
+            <MSelect
+              name="permanentRegion"
+              value={person.permanentRegion || ""}
+              onChange={(e) => {
+                handleChange(e);
+                setPermanentRegion(e.target.value);
+                setPermanentProvince(""); setPermanentCity(""); setPermanentBarangay("");
+                setPermanentProvinceList([]); setPermanentCityList([]); setPermanentBarangayList([]);
+                autoSave();
+              }}
+              error={errors.permanentRegion}
+            >
               <option value="">Select Region</option>
               {permanentRegionList.map((r) => <option key={r.region_code} value={r.region_name}>{r.region_name}</option>)}
             </MSelect>
           </Field>
 
           <Field label="Province" required error={errors.permanentProvince} helperText="This field is required.">
-            <MSelect name="permanentProvince" value={person.permanentProvince || ""} onChange={(e) => { handleChange(e); setPermanentCityList([]); setPermanentBarangayList([]); }} disabled={!person.permanentRegion} error={errors.permanentProvince}>
+            <MSelect
+              name="permanentProvince"
+              value={person.permanentProvince || ""}
+              onChange={(e) => {
+                handleChange(e);
+                setPermanentProvince(e.target.value);
+                setPermanentCity(""); setPermanentBarangay("");
+                setPermanentCityList([]); setPermanentBarangayList([]);
+                autoSave();
+              }}
+              disabled={!person.permanentRegion}
+              error={errors.permanentProvince}
+            >
               <option value="">Select Province</option>
               {permanentProvinceList.map((p) => <option key={p.province_code} value={p.province_name}>{p.province_name}</option>)}
             </MSelect>
           </Field>
 
           <Field label="Municipality / City" required error={errors.permanentMunicipality} helperText="This field is required.">
-            <MSelect name="permanentMunicipality" value={person.permanentMunicipality || ""} onChange={(e) => { handleChange(e); setPermanentBarangayList([]); }} disabled={!person.permanentProvince} error={errors.permanentMunicipality}>
+            <MSelect
+              name="permanentMunicipality"
+              value={person.permanentMunicipality || ""}
+              onChange={(e) => {
+                handleChange(e);
+                setPermanentCity(e.target.value);
+                setPermanentBarangay(""); setPermanentBarangayList([]);
+                autoSave();
+              }}
+              disabled={!person.permanentProvince}
+              error={errors.permanentMunicipality}
+            >
               <option value="">Select Municipality</option>
               {permanentCityList.map((c) => <option key={c.city_code} value={c.city_name}>{c.city_name}</option>)}
             </MSelect>
           </Field>
 
           <Field label="Barangay" required error={errors.permanentBarangay} helperText="This field is required.">
-            <MSelect name="permanentBarangay" value={person.permanentBarangay || ""} onChange={handleChange} disabled={!person.permanentMunicipality} error={errors.permanentBarangay}>
+            <MSelect
+              name="permanentBarangay"
+              value={person.permanentBarangay || ""}
+              onChange={(e) => { handleChange(e); setPermanentBarangay(e.target.value); autoSave(); }}
+              disabled={!person.permanentMunicipality}
+              error={errors.permanentBarangay}
+            >
               <option value="">Select Barangay</option>
               {permanentBarangayList.map((b) => <option key={b.brgy_code} value={b.brgy_name}>{b.brgy_name}</option>)}
             </MSelect>
@@ -1316,77 +1839,55 @@ const StudentDashboard1Mobile = () => {
           </label>
           {person.permanentDswdChecked === 1 && (
             <Field label="Permanent DSWD Household Number" required error={errors.permanentDswdHouseholdNumber} helperText="This field is required.">
-              <MInput name="permanentDswdHouseholdNumber" value={person.permanentDswdHouseholdNumber || ""} onChange={handleChange} error={errors.permanentDswdHouseholdNumber} placeholder="DSWD Household Number" />
+              <MInput name="permanentDswdHouseholdNumber" value={person.permanentDswdHouseholdNumber || ""} onChange={handleChange} onBlur={() => handleUpdate(person)} error={errors.permanentDswdHouseholdNumber} placeholder="Enter your DSWD Household Number" />
             </Field>
           )}
         </div>
+
+        {/* Action Buttons */}
+        <Box display="flex" justifyContent="flex-end" mt={1} gap={1} mb={3} mr={2}>
+          <Button
+            variant="contained"
+            onClick={() => setUploadModalOpen(true)}
+            sx={{
+              backgroundColor: mainButtonColor || "#6D2323",
+              border: `1px solid ${borderColor || "#6D2323"}`,
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: 13,
+              "&:hover": { backgroundColor: "#000" },
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <PhotoCameraIcon sx={{ mr: 1, fontSize: 18 }} />
+            Upload Photo <br /> Student Picture
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            endIcon={<ArrowForwardIcon sx={{ color: "#fff" }} />}
+            sx={{
+              backgroundColor: mainButtonColor || "#6D2323",
+              border: `1px solid ${borderColor || "#6D2323"}`,
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: 13,
+              "&:hover": { backgroundColor: "#000", color: "#fff", "& .MuiSvgIcon-root": { color: "#fff" } },
+            }}
+          >
+            Next Step
+          </Button>
+        </Box>
       </div>
-
-      {/* ── Photo Upload Bottom Sheet ─────────────────────────────────── */}
-      {uploadModalOpen && (
-        <div style={S.overlay} onClick={(e) => { if (e.target === e.currentTarget) { setUploadModalOpen(false); setPreview(null); setSelectedFile(null); } }}>
-          <div style={S.sheet}>
-            <div style={S.sheetHandle} />
-            <div style={S.sheetTitle}>📷 Upload Student Photo</div>
-
-            {/* Preview */}
-            {(preview || person.profile_img) && (
-              <div style={{ position: "relative", width: 140, margin: "0 auto 16px" }}>
-                <img
-                  src={preview || `${API_BASE_URL}/uploads/Applicant1by1/${person.profile_img}`}
-                  alt="Preview"
-                  style={{ width: 140, height: 140, objectFit: "cover", borderRadius: 8, border: "2px solid #6D2323" }}
-                />
-                <button
-                  onClick={async () => {
-                    setSelectedFile(null); setPreview(null);
-                    const updated = { ...person, profile_img: "" };
-                    setPerson(updated);
-                    await handleUpdate(updated);
-                    showSnackbar("Photo removed.", "info");
-                  }}
-                  style={{ position: "absolute", top: -8, right: -8, width: 26, height: 26, borderRadius: "50%", backgroundColor: "#d32f2f", color: "#fff", border: "none", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                >×</button>
-              </div>
-            )}
-
-            {/* Guidelines */}
-            <div style={{ backgroundColor: "#f9f9f9", border: "1px dashed #ccc", borderRadius: 8, padding: "12px 14px", marginBottom: 14, fontSize: 12, color: "#444", lineHeight: 1.7 }}>
-              <strong>Guidelines:</strong><br />
-              • Size: 2" x 2" • Colored photo • White background<br />
-              • Face the camera directly • File: JPEG, JPG, PNG<br />
-              • Max file size: 2MB • Formal attire required
-            </div>
-
-            <input
-              type="file"
-              accept=".jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              onClick={(e) => (e.target.value = null)}
-              style={{ display: "block", width: "100%", marginBottom: 12, fontSize: 13 }}
-            />
-
-            <button
-              style={{ ...S.btnPrimary, width: "100%" }}
-              onClick={handleUpload}
-            >
-              ⬆️ Upload Photo
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ── Fixed Bottom Action Bar ───────────────────────────────────── */}
-      <div style={S.bottomBar}>
-        <button style={S.btnSecondary} onClick={() => setUploadModalOpen(true)}>
-          📷 Upload Photo
-        </button>
-        <button style={S.btnPrimary} onClick={handleNext}>
-          Next Step →
-        </button>
-      </div>
+
     </div>
   );
 };
 
-export default StudentDashboard1Mobile;
+export default ApplicantDashboard1Mobile;

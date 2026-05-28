@@ -42,7 +42,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import DescriptionIcon from "@mui/icons-material/Description";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import API_BASE_URL from "../apiConfig";
-
+import { Snackbar, Alert } from "@mui/material";
 const StudentDashboard5 = () => {
   const settings = useContext(SettingsContext);
 
@@ -212,10 +212,21 @@ const StudentDashboard5 = () => {
     fetchPersonById();
   }, [userID]);
 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "warning",
+  });
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
 
   // Real-time save on every character typed
   const handleChange = (e) => {
-    
+
     const { name, type, checked, value } = e.target;
     const updatedPerson = {
       ...person,
@@ -312,13 +323,25 @@ const StudentDashboard5 = () => {
   );
   const [currentStep, setCurrentStep] = useState(0);
 
-  const handleStepClick = (index) => {
+ const handleStepClick = async (index) => {
     if (isFormValid()) {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: "Your record has been saved successfully!",
+        severity: "success",
+      });
+
       setActiveStep(index);
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
+
+      // Delay navigation so snackbar can be seen
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
     } else {
       setSnackbar({
         open: true,
@@ -327,6 +350,7 @@ const StudentDashboard5 = () => {
       });
     }
   };
+
 
   const links = [
     { to: `/student_ecat_application_form`, label: "ECAT Application Form" },
@@ -455,7 +479,7 @@ const StudentDashboard5 = () => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       <Box
@@ -667,7 +691,7 @@ const StudentDashboard5 = () => {
               padding: 4,
               borderRadius: 2,
               boxShadow: 3,
-    
+
             }}
           >
             <Typography
@@ -793,7 +817,7 @@ const StudentDashboard5 = () => {
                 control={
                   <Checkbox
                     name="termsOfAgreement"
-                
+
                     checked={person.termsOfAgreement === 1}
                     onChange={handleChange}
                     onBlur={handleBlur}
@@ -810,8 +834,19 @@ const StudentDashboard5 = () => {
               {/* Previous Page Button */}
               <Button
                 variant="contained"
-                component={Link}
-                to="/student_dashboard4"
+                onClick={async () => {
+                  await handleUpdate(person);
+
+                  setSnackbar({
+                    open: true,
+                    message: "Your record has been saved successfully!",
+                    severity: "success",
+                  });
+
+                  setTimeout(() => {
+                    navigate("/student_dashboard4");
+                  }, 1000);
+                }}
                 startIcon={
                   <ArrowBackIcon
                     sx={{
@@ -838,7 +873,7 @@ const StudentDashboard5 = () => {
 
               {/* Next Step (Submit) Button */}
               <Button
-           
+
                 variant="contained"
                 onClick={(e) => {
                   handleUpdate(person);
@@ -875,6 +910,22 @@ const StudentDashboard5 = () => {
                 Submit (Save Information)
               </Button>
             </Box>
+
+
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={1000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
           </Container>
         </form>
       </Container>

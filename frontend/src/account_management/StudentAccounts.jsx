@@ -312,12 +312,12 @@ export default function StudentAccounts() {
         prev.map((person) =>
           person.person_id === selectedPerson.person_id
             ? {
-              ...person,
-              first_name: payload.first_name,
-              middle_name: payload.middle_name,
-              last_name: payload.last_name,
-              emailAddress: trimmedEmail,
-            }
+                ...person,
+                first_name: payload.first_name,
+                middle_name: payload.middle_name,
+                last_name: payload.last_name,
+                emailAddress: trimmedEmail,
+              }
             : person,
         ),
       );
@@ -476,10 +476,11 @@ export default function StudentAccounts() {
                   ${firstLine}
                 </div>
 
-                ${secondLine
-        ? `<div class="school-name">${secondLine}</div>`
-        : ""
-      }
+                ${
+                  secondLine
+                    ? `<div class="school-name">${secondLine}</div>`
+                    : ""
+                }
 
                 <div style="font-size: 11px;">
                   ${resolvedCampusAddress}
@@ -1473,7 +1474,7 @@ export default function StudentAccounts() {
               variant="contained"
               size="small"
               startIcon={<SendIcon />}
-              disabled={!email}
+              disabled={!generatedPassword || !email}
               onClick={handleNotify}
               sx={{
                 fontWeight: 700,

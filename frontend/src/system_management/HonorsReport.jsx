@@ -218,10 +218,6 @@ export default function HonorsReport() {
   useEffect(() => {
     if (!hasAccess) return;
     axios
-      .get(`${API_BASE_URL}/api/honors/programs`)
-      .then((r) => setPrograms(r.data))
-      .catch(console.error);
-    axios
       .get(`${API_BASE_URL}/api/honors/school_years`)
       .then((r) => setSchoolYears(r.data))
       .catch(console.error);
@@ -230,7 +226,39 @@ export default function HonorsReport() {
       .get(`${API_BASE_URL}/api/honors/semesters`)
       .then((r) => setSemesters(r.data))
       .catch(console.error);
-  }, [hasAccess]);
+    axios
+      .get(`${API_BASE_URL}/active_school_year`)
+      .then((r) => {
+        const activeTerm = Array.isArray(r.data) ? r.data[0] : r.data;
+
+        if (activeTerm && activeTab === "academic") {
+          setSchoolYearId(activeTerm.year_id ?? "");
+          setSemesterId(activeTerm.semester_id ?? "");
+        }
+      })
+      .catch(console.error);
+  }, [hasAccess, activeTab]);
+
+  useEffect(() => {
+    if (!hasAccess) return;
+    axios
+      .get(`${API_BASE_URL}/api/honors/programs`, {
+        params: {
+          campus_id: campusId || undefined,
+        },
+      })
+      .then((r) => setPrograms(r.data))
+      .catch(console.error);
+  }, [hasAccess, activeTab, campusId]);
+
+  useEffect(() => {
+    if (
+      programId &&
+      !programs.some((p) => String(p.program_id) === String(programId))
+    ) {
+      setProgramId("");
+    }
+  }, [programs, programId]);
 
   // ── Fetch list ─────────────────────────────────────────────────────────────
   const endpoint =
@@ -248,8 +276,8 @@ export default function HonorsReport() {
             limit: rowsPerPage,
             search: searchQuery,
             program_id: programId || undefined,
-            school_year_id: schoolYearId || undefined,
-            semester_id: semesterId || undefined,
+            school_year_id: activeTab === "academic" ? schoolYearId || undefined : undefined,
+            semester_id: activeTab === "academic" ? semesterId || undefined : undefined,
             campus_id: campusId || undefined,
           },
           signal,
@@ -272,6 +300,7 @@ export default function HonorsReport() {
       schoolYearId,
       semesterId,
       campusId,
+      activeTab,
     ],
   );
 
@@ -289,6 +318,13 @@ export default function HonorsReport() {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchQuery, programId, schoolYearId, semesterId, campusId]);
+
+  useEffect(() => {
+    if (activeTab !== "academic") {
+      setSchoolYearId("");
+      setSemesterId("");
+    }
+  }, [activeTab]);
 
   // ── Pagination helpers ─────────────────────────────────────────────────────
   const startIndex = (currentPage - 1) * rowsPerPage;
@@ -348,13 +384,15 @@ export default function HonorsReport() {
       (p) => String(p.program_id) === String(programId),
     );
 
-    const selectedSchoolYear = schoolYears.find(
-      (s) => String(s.school_year_id) === String(schoolYearId),
-    );
+    const selectedSchoolYear =
+      activeTab === "academic"
+        ? schoolYears.find((s) => String(s.school_year_id) === String(schoolYearId))
+        : null;
 
-    const selectedSemester = semesters.find(
-      (s) => String(s.semester_id) === String(semesterId),
-    );
+    const selectedSemester =
+      activeTab === "academic"
+        ? semesters.find((s) => String(s.semester_id) === String(semesterId))
+        : null;
 
     const selectedCampus = branches.find(
       (b) => String(b.id) === String(campusId),
@@ -542,7 +580,7 @@ export default function HonorsReport() {
                 <th style="width:15%">Department</th>
                 <th style="width:15%">Program</th>
                 <th style="width:13%">Honor</th>
-                <th style="width:7%">GWA</th>
+                <th style="width:7%">Weighted GWA</th>
                 <th style="width:8%">Subjects</th>
               </tr>
             </thead>
@@ -800,59 +838,61 @@ export default function HonorsReport() {
             </FormControl>
           </Grid>
 
-          {/* School Year */}
-          <Grid item xs={12} sm={2.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel>School Year</InputLabel>
-              <Select
-                value={schoolYearId}
-                label="School Year"
-                onChange={(e) => setSchoolYearId(e.target.value)}
-                sx={{
-                  borderRadius: "12px",
-                  backgroundColor: "#fff",
-                }}
-              >
-                <MenuItem value="">
-                  <em>All Years</em>
-                </MenuItem>
-
-                {schoolYears.map((sy) => (
-                  <MenuItem key={sy.school_year_id} value={sy.school_year_id}>
-                    {sy.school_year_description}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          {/* Semester */}
           {activeTab === "academic" && (
-            <Grid item xs={12} sm={2.5}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Semester</InputLabel>
-
-                <Select
-                  value={semesterId}
-                  label="Semester"
-                  onChange={(e) => setSemesterId(e.target.value)}
-                  sx={{
-                    borderRadius: "12px",
-                    backgroundColor: "#fff",
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>All</em>
-                  </MenuItem>
-
-                  {semesters.map((s) => (
-                    <MenuItem key={s.semester_id} value={s.semester_id}>
-                      {s.semester_description}
+            <>
+              {/* School Year */}
+              <Grid item xs={12} sm={2.5}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>School Year</InputLabel>
+                  <Select
+                    value={schoolYearId}
+                    label="School Year"
+                    onChange={(e) => setSchoolYearId(e.target.value)}
+                    sx={{
+                      borderRadius: "12px",
+                      backgroundColor: "#fff",
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>All Years</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+
+                    {schoolYears.map((sy) => (
+                      <MenuItem key={sy.school_year_id} value={sy.school_year_id}>
+                        {sy.school_year_description}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Semester */}
+              <Grid item xs={12} sm={2.5}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Semester</InputLabel>
+
+                  <Select
+                    value={semesterId}
+                    label="Semester"
+                    onChange={(e) => setSemesterId(e.target.value)}
+                    sx={{
+                      borderRadius: "12px",
+                      backgroundColor: "#fff",
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>All</em>
+                    </MenuItem>
+
+                    {semesters.map((s) => (
+                      <MenuItem key={s.semester_id} value={s.semester_id}>
+                        {s.semester_description}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </>
           )}
 
           {/* Print Button */}
@@ -996,7 +1036,7 @@ export default function HonorsReport() {
                   "Department",
                   "Program",
                   "Honor",
-                  "GWA",
+                  "Weighted GWA",
                   "Subjects",
                 ].map((h, i) => (
                   <TableCell

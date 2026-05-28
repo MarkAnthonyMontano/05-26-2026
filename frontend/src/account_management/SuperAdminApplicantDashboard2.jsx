@@ -772,7 +772,7 @@ const handleGuardianChange = (e) => {
                     marginTop: "25px",
                 }}
             >
-                AVAILABLE PRINTABLE DOCUMENTS
+                PRINTABLE DOCUMENTS
             </h1>
 
 

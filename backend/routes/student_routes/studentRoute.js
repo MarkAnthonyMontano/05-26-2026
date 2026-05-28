@@ -5,6 +5,39 @@ const fs = require("fs");
 const { db, db3 } = require('../database/database');
 
 const router = express.Router();
+
+const GWA_UNIT_SQL =
+  "COALESCE(NULLIF(CAST(ct.course_unit AS DECIMAL(10,4)), 0), NULLIF(COALESCE(CAST(ct.lec_unit AS DECIMAL(10,4)), 0) + COALESCE(CAST(ct.lab_unit AS DECIMAL(10,4)), 0), 0), 0)";
+
+const GWA_EXCLUSION_SQL = `
+  (
+    UPPER(REPLACE(COALESCE(ct.course_code, ''), ' ', '')) LIKE 'NSTP%'
+    OR UPPER(REPLACE(COALESCE(ct.course_code, ''), ' ', '')) LIKE 'NST%'
+    OR UPPER(COALESCE(ct.course_code, '')) LIKE '%CWTS%'
+    OR UPPER(COALESCE(ct.course_code, '')) LIKE '%CTWS%'
+    OR UPPER(COALESCE(ct.course_code, '')) LIKE '%LTS%'
+    OR UPPER(COALESCE(ct.course_code, '')) LIKE '%MTS%'
+    OR UPPER(REPLACE(COALESCE(ct.course_description, ''), ' ', '')) LIKE '%NSTP%'
+    OR UPPER(COALESCE(ct.course_description, '')) LIKE '%NATIONAL SERVICE TRAINING%'
+    OR UPPER(COALESCE(ct.course_description, '')) LIKE '%CIVIC WELFARE TRAINING%'
+    OR UPPER(COALESCE(ct.course_description, '')) LIKE '%LITERACY TRAINING SERVICE%'
+    OR UPPER(COALESCE(ct.course_description, '')) LIKE '%RESERVE OFFICERS TRAINING%'
+    OR EXISTS (
+      SELECT 1
+      FROM program_tagging_table ptt_ex
+      LEFT JOIN year_level_table ylt_ex
+        ON ylt_ex.year_level_id = ptt_ex.year_level_id
+      WHERE ptt_ex.curriculum_id = es.curriculum_id
+        AND ptt_ex.course_id = es.course_id
+        AND (
+          COALESCE(ptt_ex.is_nstp, 0) = 1
+          OR LOWER(COALESCE(CAST(ptt_ex.category AS CHAR), '')) IN ('bridging', 'bridge', 'special')
+          OR LOWER(COALESCE(ylt_ex.year_level_description, '')) LIKE '%bridg%'
+          OR COALESCE(LOWER(ylt_ex.level_type), 'year') = 'special'
+        )
+    )
+  )
+`;
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.get("/student-info", async (req, res) => {
@@ -322,6 +355,8 @@ router.get("/api/student_grade/:id", async (req, res) => {
         es.remarks,
         ct.course_unit,
         ct.lab_unit,
+        ${GWA_UNIT_SQL} AS gwa_units,
+        CASE WHEN ${GWA_EXCLUSION_SQL} THEN 1 ELSE 0 END AS is_gwa_excluded,
 
         pgt.program_code,
         pgt.program_description,
@@ -437,19 +472,26 @@ router.get("/api/student_grade/:id", async (req, res) => {
 
     const gwaByTerm = rows.reduce((acc, row) => {
       const grade = Number(row.numeric_grade);
-      if (!Number.isFinite(grade) || grade <= 0) return acc;
+      const units = Number(row.gwa_units);
+      if (
+        Number(row.is_gwa_excluded) === 1 ||
+        !Number.isFinite(grade) ||
+        grade <= 0 ||
+        !Number.isFinite(units) ||
+        units <= 0
+      ) return acc;
 
       const key = `${row.year_description}-${row.semester_id}`;
-      if (!acc[key]) acc[key] = { total: 0, count: 0 };
-      acc[key].total += grade;
-      acc[key].count += 1;
+      if (!acc[key]) acc[key] = { total: 0, units: 0 };
+      acc[key].total += grade * units;
+      acc[key].units += units;
       return acc;
     }, {});
 
     rows.forEach((row) => {
       const key = `${row.year_description}-${row.semester_id}`;
       const term = gwaByTerm[key];
-      row.gwa = term?.count ? term.total / term.count : null;
+      row.gwa = term?.units ? term.total / term.units : null;
       row.honor_title = null;
     });
 
@@ -460,6 +502,126 @@ router.get("/api/student_grade/:id", async (req, res) => {
     res.status(500).json({
       error: "Database error",
     });
+  }
+});
+
+// GET /api/student/latin-honor-standing/:id
+// Evaluates the student's overall posted GWA using configured Latin honors rules.
+router.get("/api/student/latin-honor-standing/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [[standing]] = await db3.query(
+      `
+      SELECT
+        overall_gwa.student_number,
+        overall_gwa.overall_gwa,
+        overall_gwa.max_grade,
+        overall_gwa.subject_count,
+        hr.title AS latin_honor,
+        gwa_rule.title AS gwa_rule_title
+      FROM (
+        SELECT
+          es.student_number,
+          ROUND(
+            SUM(CAST(gc.equivalent_grade AS DECIMAL(10,4)) * ${GWA_UNIT_SQL})
+            / NULLIF(SUM(${GWA_UNIT_SQL}), 0),
+            4
+          ) AS overall_gwa,
+          MAX(CAST(gc.equivalent_grade AS DECIMAL(10,4))) AS max_grade,
+          COUNT(es.id) AS subject_count
+        FROM enrolled_subject es
+        INNER JOIN student_numbering_table snt
+          ON snt.student_number = es.student_number
+          AND snt.person_id = ?
+        INNER JOIN student_status_table ss
+          ON ss.student_number = es.student_number
+          AND ss.active_school_year_id = es.active_school_year_id
+          AND ss.enrolled_status = '1'
+        INNER JOIN course_table ct
+          ON ct.course_id = es.course_id
+          AND ct.is_latin = 1
+        INNER JOIN grade_conversion gc
+          ON gc.is_disqualified = 0
+          AND gc.min_score IS NOT NULL
+          AND gc.max_score IS NOT NULL
+          AND CAST(es.final_grade AS DECIMAL(8,2)) > 0
+          AND CAST(es.final_grade AS DECIMAL(8,2))
+              BETWEEN gc.min_score AND gc.max_score
+        WHERE es.en_remarks = 1
+          AND ${GWA_UNIT_SQL} > 0
+          AND NOT ${GWA_EXCLUSION_SQL}
+        GROUP BY es.student_number
+      ) overall_gwa
+      LEFT JOIN honors_rules gwa_rule
+        ON gwa_rule.category = 1
+        AND overall_gwa.overall_gwa BETWEEN gwa_rule.min_gwa AND gwa_rule.max_gwa
+      LEFT JOIN honors_rules hr
+        ON hr.category = 1
+        AND overall_gwa.overall_gwa BETWEEN hr.min_gwa AND hr.max_gwa
+        AND overall_gwa.max_grade <= hr.max_subject_grade
+      ORDER BY hr.min_gwa ASC
+      LIMIT 1
+      `,
+      [id],
+    );
+    const [[disqualifiedGrade]] = await db3.query(
+      `
+      SELECT COUNT(es.id) AS count
+      FROM enrolled_subject es
+      INNER JOIN student_numbering_table snt
+        ON snt.student_number = es.student_number
+        AND snt.person_id = ?
+      INNER JOIN student_status_table ss
+        ON ss.student_number = es.student_number
+        AND ss.active_school_year_id = es.active_school_year_id
+        AND ss.enrolled_status = '1'
+      INNER JOIN course_table ct
+        ON ct.course_id = es.course_id
+        AND ct.is_latin = 1
+      INNER JOIN grade_conversion gc
+        ON gc.is_disqualified = 1
+        AND gc.min_score IS NOT NULL
+        AND gc.max_score IS NOT NULL
+        AND CAST(es.final_grade AS DECIMAL(8,2)) > 0
+        AND CAST(es.final_grade AS DECIMAL(8,2))
+            BETWEEN gc.min_score AND gc.max_score
+      WHERE es.en_remarks = 1
+        AND ${GWA_UNIT_SQL} > 0
+        AND NOT ${GWA_EXCLUSION_SQL}
+      `,
+      [id],
+    );
+
+    if (Number(disqualifiedGrade?.count || 0) > 0) {
+      return res.json({
+        ...standing,
+        standing: "disqualified",
+        latin_honor: null,
+      });
+    }
+
+    if (!standing) {
+      return res.json({
+        standing: "not_evaluated",
+        latin_honor: null,
+        overall_gwa: null,
+        max_grade: null,
+        subject_count: 0,
+      });
+    }
+
+    res.json({
+      ...standing,
+      standing: standing.latin_honor
+        ? "qualified"
+        : standing.gwa_rule_title
+          ? "disqualified"
+          : "not_in_standing",
+    });
+  } catch (error) {
+    console.error("Failed to fetch student Latin honor standing:", error);
+    res.status(500).json({ error: "Failed to fetch Latin honor standing" });
   }
 });
 

@@ -35,6 +35,7 @@ const ReportOfGrade = () => {
     const [fetchedLogo, setFetchedLogo] = useState(null);
     const [companyName, setCompanyName] = useState("");
     const [shortTerm, setShortTerm] = useState("");
+    const [branches, setBranches] = useState([]);
     const [gradeConversion, setGradeConversions] = useState([]);
 
     useEffect(() => {
@@ -58,7 +59,20 @@ const ReportOfGrade = () => {
         // 🏷️ School Information
         if (settings.company_name) setCompanyName(settings.company_name);
         if (settings.short_term) setShortTerm(settings.short_term);
-        if (settings.campus_address) setCampusAddress(settings.campus_address);
+        if (settings?.branches) {
+            try {
+                const parsed =
+                    typeof settings.branches === "string"
+                        ? JSON.parse(settings.branches)
+                        : settings.branches;
+                setBranches(Array.isArray(parsed) ? parsed : []);
+            } catch (err) {
+                console.error("Failed to parse branches:", err);
+                setBranches([]);
+            }
+        } else {
+            setBranches([]);
+        }
 
     }, [settings]);
 
@@ -68,12 +82,6 @@ const ReportOfGrade = () => {
     const secondLine = words.slice(middle).join(" ");
 
     const [campusAddress, setCampusAddress] = useState("");
-
-    useEffect(() => {
-        if (settings && settings.address) {
-            setCampusAddress(settings.address);
-        }
-    }, [settings]);
 
     const [userID, setUserID] = useState("");
     const [user, setUser] = useState("");
@@ -95,6 +103,37 @@ const ReportOfGrade = () => {
 
     const [activeStep, setActiveStep] = useState(4);
     const [clickedSteps, setClickedSteps] = useState([]);
+    const currentStudent = Array.isArray(studentData) ? studentData[0] : studentData;
+    const currentStudentCampus = currentStudent?.campus;
+    const studentFullName =
+        currentStudent?.last_name && currentStudent?.first_name
+            ? `${currentStudent.last_name}, ${currentStudent.first_name}${currentStudent.middle_name ? ` ${currentStudent.middle_name}` : ""}`
+            : "";
+
+    useEffect(() => {
+        if (!settings) return;
+
+        const branchId = currentStudentCampus;
+        const matchedBranch = branches.find(
+            (branch) => String(branch?.id) === String(branchId),
+        );
+
+        if (matchedBranch?.address) {
+            setCampusAddress(matchedBranch.address);
+            return;
+        }
+
+        if (settings.campus_address) {
+            setCampusAddress(settings.campus_address);
+            return;
+        }
+
+        setCampusAddress(settings.address || "");
+    }, [
+        settings,
+        branches,
+        currentStudentCampus,
+    ]);
 
     const tabs = [
         { label: "Student List", to: "/student_list", icon: <SchoolIcon fontSize="large" /> },
@@ -705,8 +744,8 @@ const ReportOfGrade = () => {
                             >
                                 Student Name:&nbsp;
                                 <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: "normal", textDecoration: "underline" }}>
-                                    {studentData && studentData.last_name
-                                        ? `${studentData.last_name.toUpperCase()}, ${studentData.first_name.toUpperCase()} ${studentData.middle_name.toUpperCase()}`
+                                    {studentFullName
+                                        ? studentFullName.toUpperCase()
                                         : "N/A"}
                                 </span>
                             </TableCell>
@@ -894,7 +933,7 @@ const ReportOfGrade = () => {
                             <Box sx={{ display: "flex" }}>
                                 <Box style={{ display: "flex", width: "38rem" }}>
                                     <Typography style={{ width: "9rem", fontSize: "1.05rem", letterSpacing: "-1px" }}>Full Name:</Typography>
-                                    <Typography style={{ fontSize: "1.06rem", fontWeight: "500" }}>{studentData.last_name && studentData.first_name && studentData.middle_name ? `${studentData.last_name}, ${studentData.first_name} ${studentData.middle_name}` : ""}</Typography>
+                                    <Typography style={{ fontSize: "1.06rem", fontWeight: "500" }}>{studentFullName}</Typography>
                                 </Box>
                                 <Box style={{ display: "flex", width: "38rem" }}>
                                     <Typography style={{ width: "9rem", fontSize: "1.05rem", letterSpacing: "-1px" }}>Student No:</Typography>

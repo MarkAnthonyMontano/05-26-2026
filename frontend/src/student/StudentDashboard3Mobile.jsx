@@ -26,6 +26,18 @@ import {
   Checkbox,
   IconButton,
 } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
+import SchoolIcon from "@mui/icons-material/School";
+import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
+import InfoIcon from "@mui/icons-material/Info";
+import ErrorIcon from "@mui/icons-material/Error";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { motion } from "framer-motion";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { Snackbar, Alert } from "@mui/material";
+
 // ─── Style tokens (same system as Dashboard1/2 Mobile) ───────────────────────
 const S = {
   screen: {
@@ -240,17 +252,24 @@ const S = {
   }),
 };
 
-const STEP_ICONS = ["👤", "👨‍👩‍👧", "🎓", "🏥", "ℹ️"];
-const STEP_LABELS = ["Personal\nInfo", "Family\nBG", "Education", "Health", "Other"];
+const steps = [
+  { label: "Personal Information", icon: <PersonIcon /> },
+  { label: "Family Background", icon: <FamilyRestroomIcon /> },
+  { label: "Educational Attainment", icon: <SchoolIcon /> },
+  { label: "Health Medical Records", icon: <HealthAndSafetyIcon /> },
+  { label: "Other Information", icon: <InfoIcon /> },
+];
 const STEP_PATHS = [
   "/student_dashboard1", "/student_dashboard2", "/student_dashboard3",
   "/student_dashboard4", "/student_dashboard5",
 ];
 
+
 const handleNext = () => {
   handleUpdate(person);
   if (isFormValid()) {
-    navigate("/student_dashboard4");
+    showSnackbar("Your record has been saved successfully!", "success");
+    setTimeout(() => navigate("/student_dashboard2"), 1000);
   } else {
     showSnackbar("Please fill all required fields before proceeding.", "error");
   }
@@ -302,31 +321,31 @@ const SchoolBlock = ({ suffix = "", labels = {}, person, errors, handleChange })
       </Field>
 
       <Field label="School Last Attended" required error={errors[f("schoolLastAttended")]} helperText="Required">
-        <MInput name={f("schoolLastAttended")} value={person[f("schoolLastAttended")] || ""} onChange={handleChange} error={errors[f("schoolLastAttended")]} placeholder="School name" />
+        <MInput name={f("schoolLastAttended")} value={person[f("schoolLastAttended")] || ""} onChange={handleChange} error={errors[f("schoolLastAttended")]} placeholder="Enter your School Name" />
       </Field>
 
       <Field label="School Full Address" required error={errors[f("schoolAddress")]} helperText="Required">
-        <MInput name={f("schoolAddress")} value={person[f("schoolAddress")] || ""} onChange={handleChange} error={errors[f("schoolAddress")]} placeholder="Street / Brgy / City" />
+        <MInput name={f("schoolAddress")} value={person[f("schoolAddress")] || ""} onChange={handleChange} error={errors[f("schoolAddress")]} placeholder="Enter your School Address" />
       </Field>
 
       <Field label="Course / Program">
-        <MInput name={f("courseProgram")} value={person[f("courseProgram")] || ""} onChange={handleChange} placeholder="Course or Track" />
+        <MInput name={f("courseProgram")} value={person[f("courseProgram")] || ""} onChange={handleChange} placeholder="Enter your Course Program" />
       </Field>
 
       <div style={S.row}>
         <div style={S.flex1}>
           <Field label="Recognition / Awards" required error={errors[f("honor")]} helperText="Required">
-            <MInput name={f("honor")} value={person[f("honor")] || ""} onChange={handleChange} error={errors[f("honor")]} placeholder='e.g. With Honors or "NA"' />
+            <MInput name={f("honor")} value={person[f("honor")] || ""} onChange={handleChange} error={errors[f("honor")]} placeholder="Enter your Recognition / Awards" />
           </Field>
         </div>
         <div style={{ width: 90 }}>
           <Field label="Gen. Average" required error={errors[f("generalAverage")]} helperText="Required">
-            <MInput name={f("generalAverage")} value={person[f("generalAverage")] || ""} onChange={handleChange} error={errors[f("generalAverage")]} placeholder="e.g. 90" />
+            <MInput name={f("generalAverage")} value={person[f("generalAverage")] || ""} onChange={handleChange} error={errors[f("generalAverage")]} placeholder="Enter your General Average" />
           </Field>
         </div>
         <div style={{ width: 80 }}>
           <Field label="Year Grad." required error={errors[f("yearGraduated")]} helperText="Required">
-            <MInput type="number" name={f("yearGraduated")} value={person[f("yearGraduated")] || ""} onChange={handleChange} error={errors[f("yearGraduated")]} placeholder="YYYY" />
+            <MInput type="number" name={f("yearGraduated")} value={person[f("yearGraduated")] || ""} onChange={handleChange} error={errors[f("yearGraduated")]} placeholder="Enter your Year Graduated" />
           </Field>
         </div>
       </div>
@@ -391,6 +410,11 @@ const StudentDashboard3Mobile = () => {
   const [userID, setUserID] = useState("");
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "warning" });
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((p) => ({ ...p, open: false }));
+  };
   const [errors, setErrors] = useState({});
 
   const [person, setPerson] = useState({
@@ -401,6 +425,26 @@ const StudentDashboard3Mobile = () => {
     courseProgram1: "", honor1: "", generalAverage1: "", yearGraduated1: "",
     strand: "",
   });
+
+  const docLinks = [
+    { label: "ECAT Application Form", to: "/student_ecat_application_form" },
+    { label: "Admission Form Process", to: "/student_form_process" },
+    { label: "Personal Data Form", to: "/student_personal_data_form" },
+    { label: `Application For ${shortTerm?.toUpperCase() || ""} Admission`, to: "/student_office_of_the_registrar" },
+    { label: "Admission Services", to: "/student_admission_services" },
+  ];
+
+  const [activeStep, setActiveStep] = useState(2);
+
+  // handleStepClick:
+  const handleStepClick = (index) => {
+    if (isFormValid()) {
+      showSnackbar("Your record has been saved successfully!", "success");
+      setTimeout(() => { setActiveStep(index); navigate(STEP_PATHS[index]); }, 1000);
+    } else {
+      showSnackbar("Please fill all required fields before proceeding.", "error");
+    }
+  };
 
   const showSnackbar = (message, severity = "warning") => {
     setSnackbar({ open: true, message, severity });
@@ -461,57 +505,149 @@ const StudentDashboard3Mobile = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={S.screen}>
-      {snackbar.open && <div style={S.toast(snackbar.severity)}>{snackbar.message}</div>}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={1000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {/* Header */}
-      <div style={{
-        ...S.header,
-        backgroundColor: settings?.header_color || "#1976d2",
-      }}>
-        <div>
-          <div style={S.headerTitle}>EDUCATIONAL ATTAINMENT</div>
-          <div style={S.headerSub}>{companyName || "Student Enrollment"}</div>
-        </div>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", mb: 1, padding: 1, }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: titleColor,
+
+            fontSize: { xs: "22px", sm: "28px", md: "36px" },
+          }}
+        >
+          EDUCATIONAL ATTAINMENT
+        </Typography>
+      </Box>
+      <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+      <br />
 
       {/* Stepper */}
-      <div style={S.stepperWrap}>
-        {STEP_LABELS.map((label, i) => (
-          <React.Fragment key={i}>
-            <div style={S.stepItem} onClick={() => navigate(STEP_PATHS[i])}>
-              <div style={S.stepCircle(i === 2)}>{STEP_ICONS[i]}</div>
-              <div style={S.stepLabel(i === 2)}>{label}</div>
-            </div>
-            {i < STEP_LABELS.length - 1 && <div style={S.stepLine} />}
-          </React.Fragment>
-        ))}
-      </div>
+
+
 
       {/* Notice */}
-      <div style={S.notice}>
-        <div style={S.noticeIcon}>⚠️</div>
-        <div style={S.noticeText}>
-          <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-          <strong></strong>
-          <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span>
-          Please indicate “NA” or “N/A” in fields where the requested information is not applicable or no response can be provided.
-          &nbsp;&nbsp;<br />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 1.5,
+          mx: "12px",
+          mt: "12px",
+          p: "10px 12px",
+          borderRadius: "8px",
+          backgroundColor: "#fffaf5",
+          border: "1px solid #6D2323",
+          boxShadow: "0px 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        {/* Icon */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#800000",
+            borderRadius: "6px",
+            width: 36,
+            height: 36,
+            flexShrink: 0,
+          }}
+        >
+          <ErrorIcon sx={{ color: "white", fontSize: 22 }} />
+        </Box>
 
-          <strong></strong>
-          <span
-            style={{
-              fontSize: '1.2em',
-              margin: '0 15px',
-              marginLeft: '100px',
-            }}
-          >
-            ➔
-          </span>
-          To enter the letter “Ñ”, press and hold the ALT key while typing “165”. For “ñ”, press and hold the ALT key while typing “164”.
-        </div>
-      </div>
+        {/* Text */}
+        <Typography sx={{ fontSize: 12, color: "#3e3e3e", lineHeight: 1.6 }}>
+          <strong style={{ color: "maroon" }}>Notice:</strong>{" "}
+          <span style={{ fontSize: "1.1em", margin: "0 6px" }}>➔</span>
+          Please indicate "NA" or "N/A" in fields where the requested information is not applicable or no response can be provided.
+          <br />
+          <span style={{ marginLeft: 16, fontSize: "1.1em", marginRight: 6 }}>➔</span>
+          To enter the letter "Ñ", press and hold the ALT key while typing "165". For "ñ", press and hold the ALT key while typing "164".
+        </Typography>
+      </Box>
 
-      {/* Step indicator */}
+      <Box sx={{ px: "12px", pt: "12px" }}>
+        <Typography sx={{
+          fontSize: "30px",
+          fontWeight: "bold",
+          textAlign: "center",
+          color: "black",
+          marginTop: "25px",
+          mb: 2
+        }}>
+          PRINTABLE DOCUMENTS
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
+          {docLinks.map((d, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, duration: 0.3 }}
+              style={{ width: "calc(50% - 4px)" }}
+            >
+              <Card
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 0.75,
+                  px: 1.5,
+                  py: 1.25,
+                  height: 52,
+                  width: "100%",
+                  borderRadius: "12px",
+                  border: `1px solid ${borderColor || "#6D2323"}`,
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: settings?.header_color || "#6D2323",
+                    "& .chip-icon": { color: "#fff" },
+                    "& .chip-text": { color: "#fff" },
+                  },
+                }}
+                onClick={() => navigate(d.to)}
+              >
+                <PictureAsPdfIcon
+                  className="chip-icon"
+                  sx={{ fontSize: 18, color: mainButtonColor || "#6D2323", flexShrink: 0 }}
+                />
+                <Typography
+                  className="chip-text"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: mainButtonColor || "#6D2323",
+                    fontFamily: "Poppins, sans-serif",
+                    whiteSpace: "normal",
+                    lineHeight: 1.3,
+                    textAlign: "center",
+                  }}
+                >
+                  {d.label}
+                </Typography>
+              </Card>
+            </motion.div>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Applicant Form Intro */}
       <div style={{ padding: "16px 14px 0", textAlign: "center" }}>
         <Container>
           <h1
@@ -523,11 +659,12 @@ const StudentDashboard3Mobile = () => {
               marginTop: "25px",
             }}
           >
-            APPLICANT FORM
+            STUDENT FORM
           </h1>
+
           <div style={{ textAlign: "center" }}>
-            Complete the applicant form to secure your place for the upcoming
-            academic year at{" "}
+            Please update your personal information to keep your student records
+            accurate and up to date for the upcoming academic year at{" "}
             {shortTerm ? (
               <>
                 <strong>{shortTerm.toUpperCase()}</strong> <br />
@@ -541,16 +678,69 @@ const StudentDashboard3Mobile = () => {
         </Container>
       </div>
 
+      <Box sx={{ display: "flex", justifyContent: "center", width: "100%", px: 2, py: 1.5, borderBottom: "1px solid #e0e0e0" }}>
+        {steps.map((step, index) => (
+          <React.Fragment key={index}>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}
+              onClick={() => handleStepClick(index)}
+            >
+              <Box
+                sx={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: "50%",
+                  border: `2px solid ${borderColor}`,
+                  backgroundColor: activeStep === index ? (settings?.header_color || "#6D2323") : "#E8C999",
+                  color: activeStep === index ? "#fff" : "#333",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  transition: "all 0.2s",
+                }}
+              >
+                {step.icon}
+              </Box>
+              <Typography
+                sx={{
+                  mt: 0.75,
+                  color: activeStep === index ? "#6D2323" : "#555",
+                  fontWeight: activeStep === index ? 700 : 400,
+                  fontSize: { xs: 10, sm: 12 },
+                  textAlign: "center",
+                  maxWidth: 72,
+                  lineHeight: 1.3,
+                }}
+              >
+                {step.label}
+              </Typography>
+            </Box>
+
+            {index < steps.length - 1 && (
+              <Box
+                sx={{
+                  height: "2px",
+                  backgroundColor: mainButtonColor,
+                  flex: 1,
+                  alignSelf: "center",
+                  mx: 1,
+                  mb: 3,
+                }}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </Box>
+
       {/* ── Junior High School ────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🏫 Junior High School Background</div>
+        }}> Junior High School Background</div>
         <div style={S.cardBody}>
-          <div style={{ ...S.sectionLabel, marginBottom: 12 }}>
-            Provide your Junior High School or equivalent details below.
-          </div>
+
           <SchoolBlock
             suffix=""
             labels={{ level: "Educational Attainment (JHS)" }}
@@ -562,15 +752,15 @@ const StudentDashboard3Mobile = () => {
       </div>
 
       {/* ── Senior High School ────────────────────────────────────────── */}
-      <div style={S.card}>
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
         <div style={{
           ...S.cardHeader,
           backgroundColor: settings?.header_color || "#1976d2",
-        }}>🏫 Senior High School Background</div>
+        }}> Senior High School Background</div>
         <div style={S.cardBody}>
           {!requiresSeniorHigh && (
             <div style={{ backgroundColor: "#E8F5E9", border: "1px solid #A5D6A7", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#2E7D32", marginBottom: 12 }}>
-              ℹ️ Senior High fields are optional based on your selected "Applying As" category. Fill in if applicable.
+              Senior High fields are optional based on your selected "Applying As" category. Fill in if applicable.
             </div>
           )}
           <SchoolBlock
@@ -581,68 +771,133 @@ const StudentDashboard3Mobile = () => {
             handleChange={handleChange}
           />
 
-          {/* Strand */}
-          <hr style={S.divider} />
-          <div style={S.sectionLabel}>📌 Strand (For Senior High School)</div>
-          <Field label="SHS Strand" required={requiresSeniorHigh} error={errors.strand} helperText="This field is required.">
-            <MSelect name="strand" value={person.strand || ""} onChange={handleChange} error={errors.strand}>
+        
+        </div>
+
+
+      </div>
+
+
+      <div style={{ ...S.card, border: `1px solid ${borderColor}`, }}>
+        <div
+          style={{
+            ...S.cardHeader,
+            backgroundColor: settings?.header_color || "#1976d2",
+          }}
+        >
+          Senior High School Strand
+        </div>
+
+        <div style={S.cardBody}>
+          <div style={S.sectionLabel}> Strand (For Senior High School)</div>
+          <Field
+            label="SHS Strand"
+            required={requiresSeniorHigh}
+            error={errors.strand}
+            helperText="This field is required."
+          >
+            <MSelect
+              name="strand"
+              value={person.strand || ""}
+              onChange={handleChange}
+              error={errors.strand}
+            >
               <option value="">Select Strand</option>
-              <option value="Accountancy, Business and Management (ABM)">Accountancy, Business and Management (ABM)</option>
-              <option value="Humanities and Social Sciences (HUMSS)">Humanities and Social Sciences (HUMSS)</option>
-              <option value="Science, Technology, Engineering, and Mathematics (STEM)">Science, Technology, Engineering, and Mathematics (STEM)</option>
-              <option value="General Academic (GAS)">General Academic (GAS)</option>
+              <option value="Accountancy, Business and Management (ABM)">
+                Accountancy, Business and Management (ABM)
+              </option>
+              <option value="Humanities and Social Sciences (HUMSS)">
+                Humanities and Social Sciences (HUMSS)
+              </option>
+              <option value="Science, Technology, Engineering, and Mathematics (STEM)">
+                Science, Technology, Engineering, and Mathematics (STEM)
+              </option>
+              <option value="General Academic (GAS)">
+                General Academic (GAS)
+              </option>
               <option value="Home Economics (HE)">Home Economics (HE)</option>
-              <option value="Information and Communications Technology (ICT)">Information and Communications Technology (ICT)</option>
-              <option value="Agri-Fishery Arts (AFA)">Agri-Fishery Arts (AFA)</option>
+              <option value="Information and Communications Technology (ICT)">
+                Information and Communications Technology (ICT)
+              </option>
+              <option value="Agri-Fishery Arts (AFA)">
+                Agri-Fishery Arts (AFA)
+              </option>
               <option value="Industrial Arts (IA)">Industrial Arts (IA)</option>
               <option value="Sports Track">Sports Track</option>
               <option value="Design and Arts Track">Design and Arts Track</option>
             </MSelect>
           </Field>
         </div>
-      </div>
 
-      {/* ── Summary card ─────────────────────────────────────────────── */}
-      {(person.schoolLastAttended || person.schoolLastAttended1) && (
-        <div style={{ ...S.card, margin: "12px 12px 0" }}>
-          <div style={{ ...S.cardHeader, backgroundColor: "#4a4a4a" }}>📋 Your Education Summary</div>
-          <div style={S.cardBody}>
-            {person.schoolLastAttended && (
-              <div style={{ marginBottom: 8, fontSize: 13 }}>
-                <span style={{ fontWeight: 700, color: "#6D2323" }}>JHS: </span>
-                {person.schoolLastAttended}
-                {person.yearGraduated ? ` (${person.yearGraduated})` : ""}
-                {person.generalAverage ? ` — GWA: ${person.generalAverage}` : ""}
-              </div>
-            )}
-            {person.schoolLastAttended1 && (
-              <div style={{ fontSize: 13 }}>
-                <span style={{ fontWeight: 700, color: "#6D2323" }}>SHS: </span>
-                {person.schoolLastAttended1}
-                {person.yearGraduated1 ? ` (${person.yearGraduated1})` : ""}
-                {person.strand ? ` — ${person.strand}` : ""}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Nav */}
-      <div style={S.bottomBar}>
-        <button style={S.btnSecondary} onClick={() => { handleUpdate(person); navigate("/student_dashboard2"); }}>
-          ← Previous
-        </button>
-        <button
-          style={S.btnPrimary}
-          onClick={() => {
-            handleUpdate(person);
-            if (isFormValid()) navigate("/student_dashboard4");
-            else showSnackbar("Please fill all required fields.", "error");
-          }}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          mx="12px"
+          mb={3}
+          mt={2}
         >
-          Next Step →
-        </button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleUpdate(person);
+              showSnackbar("Your record has been saved successfully!", "success");
+              setTimeout(() => navigate(`/dashboard/${keys.step2}`), 1000);
+            }}
+            startIcon={
+              <ArrowBackIcon sx={{ color: "#000", transition: "color 0.3s" }} />
+            }
+            sx={{
+              backgroundColor: subButtonColor,
+              border: `1px solid ${borderColor}`,
+              color: "#000",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "#000",
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              },
+            }}
+          >
+            Previous Step
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => {
+              handleUpdate(person);
+              if (isFormValid()) {
+                showSnackbar("Your record has been saved successfully!", "success");
+                setTimeout(() => navigate(`/dashboard/${keys.step4}`), 1000);
+              } else {
+                showSnackbar(
+                  "Please complete all required fields before proceeding.",
+                  "error"
+                );
+              }
+            }}
+            endIcon={
+              <ArrowForwardIcon sx={{ color: "#fff", transition: "color 0.3s" }} />
+            }
+            sx={{
+              backgroundColor: mainButtonColor,
+              border: `1px solid ${borderColor}`,
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "#000",
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              },
+            }}
+          >
+            Next Step
+          </Button>
+        </Box>
       </div>
+      {/* Bottom Nav */}
+
     </div>
   );
 };

@@ -232,7 +232,7 @@ const RegistrarForgotPassword = () => {
                 display: "block",
               }}
             >
-              Student Number / Employee:
+              Student Number / Employee ID:
             </label>
 
             <TextField

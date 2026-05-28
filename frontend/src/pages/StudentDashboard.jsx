@@ -50,42 +50,6 @@ import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 
-const gradeYearOrder = {
-  "First Year": 1,
-  "Second Year": 2,
-  "Third Year": 3,
-  "Fourth Year": 4,
-  "Fifth Year": 5,
-};
-
-const gradeSemesterOrder = {
-  "First Semester": 1,
-  "Second Semester": 2,
-  Summer: 3,
-};
-
-const parseGradeTerm = (term) => {
-  const parts = String(term || "").split(" ");
-  const yearLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : term;
-  const semesterLabel = parts.slice(2).join(" ");
-
-  return { yearLabel, semesterLabel };
-};
-
-const sortGradeTerms = (terms) =>
-  [...terms].sort((a, b) => {
-    const termA = parseGradeTerm(a);
-    const termB = parseGradeTerm(b);
-    const yA = gradeYearOrder[termA.yearLabel] || 0;
-    const yB = gradeYearOrder[termB.yearLabel] || 0;
-
-    if (yA !== yB) return yB - yA;
-    return (
-      (gradeSemesterOrder[termB.semesterLabel] || 0) -
-      (gradeSemesterOrder[termA.semesterLabel] || 0)
-    );
-  });
-
 const StudentDashboard = ({ profileImage, setProfileImage }) => {
   const navigate = useNavigate();
   const settings = useContext(SettingsContext);
@@ -161,12 +125,13 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
   });
   const [studentAssessment, setStudentAssessment] = useState(null);
   const [studentAssessmentRows, setStudentAssessmentRows] = useState([]);
-  const [gradeSummary, setGradeSummary] = useState({
-    gwa: null,
-    generalAverage: null,
-    latestTermGwa: null,
+  const [honorStanding, setHonorStanding] = useState({
+    title: null,
+    standing: null,
+    overallGwa: null,
+    subjectCount: 0,
     loading: true,
-    message: "Loading GWA...",
+    error: false,
   });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -188,7 +153,6 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         fetchStudentDetails(storedID);
         fetchTotalCourse(storedID);
         fetchStudentAssessment(storedID);
-        fetchGradeSummary(storedID);
         console.log("you are an student");
       }
     } else {
@@ -200,8 +164,25 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/student/${id}`);
       setPerson(res.data);
+
+      try {
+        const honorRes = await axios.get(`${API_BASE_URL}/api/student/latin-honor-standing/${id}`);
+
+        setHonorStanding({
+          title: honorRes.data?.latin_honor || null,
+          standing: honorRes.data?.standing || null,
+          overallGwa: honorRes.data?.overall_gwa || null,
+          subjectCount: honorRes.data?.subject_count || 0,
+          loading: false,
+          error: false,
+        });
+      } catch (error) {
+        console.error("Failed to fetch Latin honors standing:", error);
+        setHonorStanding({ title: null, standing: null, overallGwa: null, subjectCount: 0, loading: false, error: true });
+      }
     } catch (error) {
       console.error(error)
+      setHonorStanding({ title: null, standing: null, overallGwa: null, subjectCount: 0, loading: false, error: true });
     }
   };
 
@@ -315,142 +296,6 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
   const handleCorReadyChange = (isReady) => {
     isCorReadyToPrintRef.current = isReady;
     setIsCorReadyToPrint(isReady);
-  };
-
-  const fetchMatriculationBalance = async (studentNumber) => {
-    if (!studentNumber) return { hasBalance: false, balance: 0 };
-
-    try {
-      const { data } = await axios.post(
-        `${API_BASE_URL}/api/check-student-balance`,
-        { student_number: studentNumber },
-      );
-      const balance = Number(data?.balance || 0);
-
-      return {
-        hasBalance: Boolean(data?.hasBalance) && balance > 0,
-        balance: Number.isFinite(balance) ? balance : 0,
-      };
-    } catch (error) {
-      console.error("Failed to check matriculation balance:", error);
-      return { hasBalance: false, balance: 0 };
-    }
-  };
-
-  const fetchGradeSummary = async (id) => {
-    setGradeSummary({
-      gwa: null,
-      generalAverage: null,
-      latestTermGwa: null,
-      loading: true,
-      message: "Loading GWA...",
-    });
-
-    try {
-      const res = await axios.get(`${API_BASE_URL}/api/student_grade/${id}`);
-      const grades = Array.isArray(res.data) ? res.data : [];
-
-      if (!grades.length) {
-        setGradeSummary({
-          gwa: null,
-          generalAverage: null,
-          latestTermGwa: null,
-          loading: false,
-          message: "No grades posted",
-        });
-        return;
-      }
-
-      const balanceInfo = await fetchMatriculationBalance(grades[0]?.student_number);
-      if (balanceInfo.hasBalance) {
-        setGradeSummary({
-          gwa: null,
-          generalAverage: null,
-          latestTermGwa: null,
-          loading: false,
-          message: "Hidden due to balance",
-        });
-        return;
-      }
-
-      const groupedByTerm = {};
-      grades.forEach((subject) => {
-        const termKey = `${subject.year_level_description || "N/A"} ${subject.semester_description || "N/A"}`;
-        if (!groupedByTerm[termKey]) groupedByTerm[termKey] = [];
-        groupedByTerm[termKey].push(subject);
-      });
-
-      const processedGrades = Object.values(groupedByTerm).flatMap((termSubjects) => {
-        const allReleased = termSubjects.every(
-          (subject) => subject.fe_status === 1 || subject.is_migrated,
-        );
-
-        if (allReleased) return termSubjects;
-
-        return termSubjects.map((subject) => ({
-          ...subject,
-          final_grade:
-            subject.fe_status === 1 || subject.is_migrated ? subject.final_grade : null,
-          numeric_grade:
-            subject.fe_status === 1 || subject.is_migrated ? subject.numeric_grade : null,
-          descriptive_grade:
-            subject.fe_status === 1 || subject.is_migrated ? subject.descriptive_grade : null,
-          en_remarks:
-            subject.fe_status === 1 || subject.is_migrated ? subject.en_remarks : null,
-          gwa: subject.fe_status === 1 || subject.is_migrated ? subject.gwa : null,
-        }));
-      });
-
-      const sortedTerms = sortGradeTerms([
-        ...new Set(
-          processedGrades.map(
-            (row) => `${row.year_level_description} ${row.semester_description}`,
-          ),
-        ),
-      ]);
-      const latestTerm = sortedTerms[0];
-      const latestTermGwa = processedGrades.find(
-        (row) =>
-          `${row.year_level_description} ${row.semester_description}` === latestTerm &&
-          row.gwa !== null &&
-          row.gwa !== undefined &&
-          row.gwa !== "",
-      )?.gwa;
-      const postedTermGwas = sortedTerms
-        .map((term) => {
-          const termGwa = processedGrades.find(
-            (row) =>
-              `${row.year_level_description} ${row.semester_description}` === term &&
-              row.gwa !== null &&
-              row.gwa !== undefined &&
-              row.gwa !== "",
-          )?.gwa;
-          const numericGwa = Number(termGwa);
-          return Number.isFinite(numericGwa) ? numericGwa : null;
-        })
-        .filter((termGwa) => termGwa !== null);
-      const generalAverage = postedTermGwas.length
-        ? postedTermGwas.reduce((sum, termGwa) => sum + termGwa, 0) /
-        postedTermGwas.length
-        : null;
-
-      setGradeSummary({
-        gwa: generalAverage,
-        generalAverage,
-        latestTermGwa: latestTermGwa ?? null,
-        loading: false,
-        message: generalAverage ? "" : "Not yet posted",
-      });
-    } catch (error) {
-      console.error("Failed to fetch grade summary:", error);
-      setGradeSummary({
-        gwa: null,
-        generalAverage: null,
-        latestTermGwa: null,
-        loading: false,
-        message: "Unable to load GWA",
-      });
-    }
   };
 
   const waitForCorReady = () =>
@@ -1330,33 +1175,35 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
               <CardContent sx={{ p: 0, }}>
                 <Grid container>
                   <Grid item xs={12} md={5.2} sx={{ p: 2.5, borderRight: { md: `1px solid ${softBorder}` } }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}><Box sx={iconBoxSx}><StarBorder /></Box><Typography sx={{ fontSize: 18, fontWeight: 700 }}>Grade Summary</Typography></Stack>
-                    <Box sx={{ border: `2px solid ${borderColor}`, borderRadius: "8px", p: 2.5, textAlign: "center", mb: 2.5 }}>
-                      <Typography sx={{ fontSize: 16 }}>Overall GWA</Typography>
-                      <Typography sx={{ fontSize: 42, color: maroon, fontWeight: 800 }}>
-                        {gradeSummary.gwa !== null && gradeSummary.gwa !== undefined
-                          ? Number(gradeSummary.gwa).toFixed(3)
-                          : "N/A"}
+                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}><Box sx={iconBoxSx}><StarBorder /></Box><Typography sx={{ fontSize: 18, fontWeight: 700 }}>Honors Standing</Typography></Stack>
+                    <Box sx={{ border: `2px solid ${borderColor}`, borderRadius: "8px", p: 2.5, textAlign: "center" }}>   
+                      <Typography sx={{ mt: 1.25, fontSize: 24, color: maroon, fontWeight: 800 }}>
+                        {honorStanding.loading
+                          ? "Loading..."
+                          : honorStanding.title ||
+                            (honorStanding.standing === "disqualified"
+                              ? "Disqualified"
+                              : honorStanding.standing === "not_in_standing"
+                                ? "Not In Standing"
+                                : "No Current Standing")}
                       </Typography>
-                      <Divider sx={{ my: 1.5 }} />
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Latest Term GWA</Typography>
-                        <Typography sx={{ color: maroon, fontSize: 18, fontWeight: 800 }}>
-                          {gradeSummary.latestTermGwa !== null &&
-                            gradeSummary.latestTermGwa !== undefined
-                            ? Number(gradeSummary.latestTermGwa).toFixed(3)
-                            : "N/A"}
-                        </Typography>
-                      </Stack>
-                      {gradeSummary.message && (
-                        <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 12 }}>
-                          {gradeSummary.message}
+                      {!honorStanding.loading && honorStanding.overallGwa && (
+                        <Typography sx={{ mt: 0.75, color: maroon, fontSize: 14, fontWeight: 700 }}>
+                          Weighted Overall GWA: {Number(honorStanding.overallGwa).toFixed(4)}
                         </Typography>
                       )}
+                      <Typography sx={{ mt: 1.25, color: "text.secondary", fontSize: 13, lineHeight: 1.5 }}>
+                        {honorStanding.error
+                          ? "Unable to load your honors standing at this time."
+                          : honorStanding.title
+                            ? "You are currently eligible to apply for Latin honors based on the configured rules."
+                            : honorStanding.standing === "disqualified"
+                              ? "You are currently disqualified from applying for Latin honors based on the configured rules."
+                              : honorStanding.standing === "not_in_standing"
+                                ? "You are not currently in standing to apply for Latin honors based on the configured rules."
+                                : "There are no posted grades available for Latin honors evaluation yet."}
+                      </Typography>
                     </Box>
-                    {[["Passed", passed, "#2e7d32"], ["Failed", failed, "#d32f2f"], ["Incomplete", incomplete, "#d97706"], ["Dropped", dropped, "#1d4ed8"]].map(([label, value, color]) => (
-                      <Stack key={label} direction="row" justifyContent="space-between" sx={{ py: 0.65 }}><Typography sx={{ color, fontWeight: 700 }}>{label}</Typography><Typography>{value}</Typography></Stack>
-                    ))}
                   </Grid>
                   <Grid item xs={12} md={6.8} sx={{ p: 2.5 }}>
                     <Typography sx={{ fontSize: 18, fontWeight: 700, mb: 2 }}>Quick Access</Typography>

@@ -574,7 +574,7 @@ const SuperAdminStudentDashboard3 = () => {
                     marginTop: "25px",
                 }}
             >
-                LISTS OF ALL PRINTABLE FILES
+                PRINTABLE DOCUMENTS
             </h1>
 
 

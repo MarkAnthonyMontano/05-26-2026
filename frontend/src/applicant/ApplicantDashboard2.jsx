@@ -214,18 +214,34 @@ const Dashboard2 = (props) => {
     Array(steps.length).fill(false),
   );
 
-  const handleStepClick = (index) => {
+  const handleStepClick = async (index) => {
     if (isFormValid()) {
+      await handleUpdate(person);
+
+      setSnackbar({
+        open: true,
+        message: `Your record has been saved successfully!`,
+        severity: "success",
+      });
+
       setActiveStep(index);
+
       const newClickedSteps = [...clickedSteps];
       newClickedSteps[index] = true;
       setClickedSteps(newClickedSteps);
-      navigate(steps[index].path); // ✅ actually move to step
+
+      // Delay navigation so snackbar can be seen
+      setTimeout(() => {
+        navigate(steps[index].path);
+      }, 1000);
     } else {
-      showSnackbar("Please fill all required fields before proceeding.");
+      setSnackbar({
+        open: true,
+        message: "Please fill all required fields before proceeding.",
+        severity: "error",
+      });
     }
   };
-
   const handleGuardianChange = (e) => {
     const { value } = e.target;
 
@@ -692,7 +708,7 @@ const Dashboard2 = (props) => {
           marginTop: "25px",
         }}
       >
-        AVAILABLE PRINTABLE DOCUMENTS
+        PRINTABLE DOCUMENTS
       </h1>
 
       <Box
@@ -1155,12 +1171,12 @@ const Dashboard2 = (props) => {
                           father_education: isChecked ? 1 : 0,
                           ...(isChecked
                             ? {
-                                father_education_level: "",
-                                father_last_school: "",
-                                father_course: "",
-                                father_year_graduated: "",
-                                father_school_address: "",
-                              }
+                              father_education_level: "",
+                              father_last_school: "",
+                              father_course: "",
+                              father_year_graduated: "",
+                              father_school_address: "",
+                            }
                             : {}),
                         };
 
@@ -1641,12 +1657,12 @@ const Dashboard2 = (props) => {
                           mother_education: isChecked ? 1 : 0,
                           ...(isChecked
                             ? {
-                                mother_education_level: "",
-                                mother_last_school: "",
-                                mother_course: "",
-                                mother_year_graduated: "",
-                                mother_school_address: "",
-                              }
+                              mother_education_level: "",
+                              mother_last_school: "",
+                              mother_course: "",
+                              mother_year_graduated: "",
+                              mother_school_address: "",
+                            }
                             : {}),
                         };
 
@@ -2354,15 +2370,26 @@ const Dashboard2 = (props) => {
               {/* Previous Step Button */}
               <Button
                 variant="contained"
-                onClick={() => {
-                  handleUpdate(person);
+                onClick={async () => {
+                  await handleUpdate(person);
 
                   if (isFormValid()) {
-                    navigate(`/dashboard/${keys.step1}`);
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+
+                    setTimeout(() => {
+                      navigate(`/dashboard/${keys.step1}`);
+                    }, 1000);
                   } else {
-                    showSnackbar(
-                      "Please complete all required fields before proceeding.",
-                    );
+                    setSnackbar({
+                      open: true,
+                      message:
+                        "Please complete all required fields before proceeding.",
+                      severity: "error",
+                    });
                   }
                 }}
                 startIcon={
@@ -2392,15 +2419,26 @@ const Dashboard2 = (props) => {
               {/* Next Step Button */}
               <Button
                 variant="contained"
-                onClick={() => {
-                  handleUpdate(person);
+                onClick={async () => {
+                  await handleUpdate(person);
 
                   if (isFormValid()) {
-                    navigate(`/dashboard/${keys.step3}`); // ✅ Goes to next step
+                    setSnackbar({
+                      open: true,
+                      message: "Your record has been saved successfully!",
+                      severity: "success",
+                    });
+
+                    setTimeout(() => {
+                      navigate(`/dashboard/${keys.step3}`);
+                    }, 1000);
                   } else {
-                    showSnackbar(
-                      "Please complete all required fields before proceeding.",
-                    );
+                    setSnackbar({
+                      open: true,
+                      message:
+                        "Please complete all required fields before proceeding.",
+                      severity: "error",
+                    });
                   }
                 }}
                 endIcon={
@@ -2429,12 +2467,16 @@ const Dashboard2 = (props) => {
             </Box>
             <Snackbar
               open={snackbar.open}
-              autoHideDuration={3000} // 3 seconds
-              onClose={handleCloseSnackbar}
+              autoHideDuration={1000} // 3 seconds
+              onClose={() =>
+                setSnackbar((prev) => ({ ...prev, open: false }))
+              }
               anchorOrigin={{ vertical: "top", horizontal: "center" }}
             >
               <Alert
-                onClose={handleCloseSnackbar}
+                onClose={() =>
+                  setSnackbar((prev) => ({ ...prev, open: false }))
+                }
                 severity={snackbar.severity}
                 sx={{ width: "100%" }}
               >
